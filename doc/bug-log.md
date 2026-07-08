@@ -182,13 +182,17 @@ fixed in one pass (commit: rat spawn rework):
   entering player. Needs care: (b) alone may double-add dynamics.
 - **Repro:** orbit a belt asteroid while mining for several minutes.
 
-### CHAR-4: mined-ore stack merges never notify the client (Tier 1)
-- **Observed:** mining works server-side (ProcessCycle fills cargo) but
-  the client's hold display never updates when ore merges into an
-  existing stack. Capture: 41 OnItemChange packets in the session, zero
-  for the ore stack. ITEM__CHANGE/ITEM__TRACE logging now enabled to
-  locate where the notify flag is dropped (Merge -> AlterQuantity ->
-  SetQuantity -> SendItemChange chain looks correct on inspection).
+### CHAR-4: mined ore invisible to the client (Tier 1 -> FIXED 4ae64bbc)
+- **Observed:** mining works server-side but the client's hold never
+  updates. Originally suspected a missing OnItemChange.
+- **Root cause (from ITEM__CHANGE trace):** the notifications were sent
+  all along -- but the ore was routed to flagOreHold (134) because the
+  ship data (post-Crucible dump) gives barges AttrOreHoldCapacity. The
+  Crucible client (360229) predates ore bays and has no UI for flag 134,
+  so the ore was collected and stored invisibly.
+- **Fix:** MiningLaser now always deposits to the cargo hold (Crucible
+  behavior). Existing hidden stack (34,316 Scordite in the Hulk)
+  migrated to flag 5 by DB update on 2026-07-08.
 
 ### DRONE-1: drone control not implemented (Tier 2 -> deployed, awaiting live verify)
 - Drones launch and appear in space (CHAR-3 fixed launching) but engage
@@ -211,6 +215,45 @@ fixed in one pass (commit: rat spawn rework):
 - Rule: check `docker inspect server --format '{{.State.StartedAt}}'`
   before attributing state loss to a bug, and only deploy while the
   user's client is docked or logged out.
+
+### Live-test batch fixed 2026-07-08 (deployed together)
+
+- **SKILL-1 (d3fe5de9):** GenericModule::Online() never checked skills
+  (the docked path skipped every check), so replica/imported fits could
+  be onlined by unskilled pilots. Player-initiated onlining now runs
+  Skill::FitModuleSkillCheck; login/undock restore exempt.
+- **EFFECT-1 (5f0f6571):** ShipSE::MakeSlimItem sent the fitted-module
+  list as (itemID, typeID) hi-slots-only; the client expects
+  (typeID, itemID) for all modules (per CCP capture-derived
+  ShipGetModuleList). The reversed pairs silently broke client turret
+  mounting, so weapon/mining beams never rendered. Both slim builders
+  now share ShipGetModuleList.
+- **DRONE-2 (4ae64bbc):** DroneSE::StateChange only bubblecast, so a
+  drone scooped off-grid never told its owner -- permanent ghost under
+  "Drones in Distant Space". Owner now always receives the update;
+  null bubble no longer drops it.
+- **DRONE-3 (4ae64bbc):** CmdReturnBay now auto-scoops: drone flagged
+  for bay recall; on arrival DroneAIMgr queues a scoop that
+  SystemManager processes after the entity tic loop (scooping deletes
+  the SE, so it cannot run inside the drone's own Process). Bay-full
+  falls back to idle orbit with a notify.
+- **SPAWN-9 (b2fac126):** the bubble spawn timer permanently disabled
+  itself if it expired while the bubble momentarily read empty
+  (bubble churn), and nothing re-armed it -- belts could silently never
+  spawn rats. Bubbles now re-arm whenever players are present with no
+  spawn, and the timer hit is logged.
+- **GATE-1 (6794134d):** StargateSE::LoadExtras passed 'true' as the
+  gateID when marking its bubble, registering gate itemID 1 and
+  breaking bubble->gate lookups.
+
+### GUARD-1: empire police gate patrols (feature, 6794134d)
+- Gates in >0.90 sec systems spawn faction police (Caldari/Gallente
+  police lieutenants, Amarr Police Frigates, CONCORD fallback) 10-30s
+  after the first pilot enters the gate bubble. Guards idle-orbit the
+  gate at 15km (NPCAIMgr guard-post anchor), never initiate attacks,
+  resume patrol after fights, and are excluded from roam/respawn
+  bookkeeping. First step toward simulated CONCORD/faction-navy
+  response.
 
 ## Fixed
 

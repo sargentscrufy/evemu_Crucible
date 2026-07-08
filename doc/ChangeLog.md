@@ -1,4 +1,12 @@
 *** Private Server Fork — phase-0-foundation (2026-07-08) ***
+- [FEAT] Drone control (DRONE-1/2/3): engage/return-home/return-to-bay wired to DroneAIMgr with ownership checks; return-to-bay auto-scoops on arrival (deferred outside the entity tic loop); off-grid drone state changes now reach the owner (no more "Drones in Distant Space" ghosts). Live-verified: launch, engage, recall, scoop
+- [FEAT] Empire police gate patrols (GUARD-1): gates in >0.90 sec systems spawn faction police 10-30s after a pilot arrives; guards idle-orbit the gate at 15km, retaliate but never initiate, resume patrol after fights. First step toward simulated CONCORD response
+- [FIX] Weapon/mining beams never rendered (EFFECT-1): ship slim sent the fitted-module list in reversed pair order, silently breaking client turret mounting; both slim builders now use the packet-capture-verified order
+- [FIX] Mined ore was invisible (CHAR-4): ore routed to the ore hold (flag 134) which the Crucible client predates; ore now goes to cargo
+- [FIX] Module onlining never checked skills (SKILL-1); docked onlining skipped every check
+- [FIX] Belt spawn timers could permanently disable themselves (SPAWN-9); bubbles re-arm while players are present
+- [FIX] Gate bubbles registered gate itemID 1 (GATE-1: SetGate called with a bool)
+- [FIX] NPC rat spawn rework (SPAWN-1..8): roaming spawns actually roam (timer wired, warp between belts, never yanked from watched grids), stamp comparisons and overflow fixes, spawn-kill iterator guards
 - [FEAT] Warp physics rework (DESTINY-3): CCP warp curve scaled by ship warp speed; continuous velocity through accel/cruise/decel; no more landing overshoot or 10km target shove. Verified live by bot regression (undock -> 2.75AU warp -> return warp -> dock; ~40m landing error)
 - [FEAT] Market Seed v2: hub-weighted market bootstrap — one trade hub per region with full catalog and NPC buy walls (minerals/ore/salvage/PI), thinner fringe stock with hub/fringe price gradients that make hauling profitable; staggered order lifetimes; 14-day price history backfill; re-seedable without touching player orders
 - [FEAT] simchars framework: provision NPC "player characters" end-to-end — archetype fit templates validated against hull slot layouts and the local market, skill grants with prerequisite closure, protocol market purchases, ship assembly/fitting/activation, dock/undock automation, stranded-ship recovery, live warp regression test
