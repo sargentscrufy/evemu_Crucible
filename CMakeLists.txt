@@ -69,7 +69,17 @@ IF (WIN32)
   SET( CMAKE_CXX_FLAGS "/permissive- -DHAVE_WINDOWS_H -DHAVE_WINSOCK2_H /DEBUG /Zi ${CMAKE_CXX_FLAGS}" )
   link_libraries(DbgHelp.lib)
 ELSE()
-  SET( CMAKE_CXX_FLAGS "-std=gnu++17 -march=native -Werror=return-type -fabi-version=14 ${CMAKE_CXX_FLAGS}" )
+  # TARGET_ARCH: the production-test host runs older Xeons (Sandy/Ivy
+  # Bridge -- no BMI2/AVX2), where a -march=native build from a newer
+  # dev box dies with illegal instructions.  Default to the portable
+  # x86-64-v2 baseline (SSE4.2/POPCNT, no AVX2/BMI2); this flag is on
+  # CMAKE_CXX_FLAGS so every in-tree target and static dep inherits it.
+  # Use -DTARGET_ARCH=native for a dev-box-tuned local build.
+  IF( NOT TARGET_ARCH )
+    SET( TARGET_ARCH "x86-64-v2" )
+  ENDIF()
+  MESSAGE( STATUS "Building for -march=${TARGET_ARCH}" )
+  SET( CMAKE_CXX_FLAGS "-std=gnu++17 -march=${TARGET_ARCH} -Werror=return-type -fabi-version=14 ${CMAKE_CXX_FLAGS}" )
 ENDIF()
 # -Wall -Wextra -Weffc++ -Wconversion -Wdouble-promotion
 # -pg -ggdb -pedantic
