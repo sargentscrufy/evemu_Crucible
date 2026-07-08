@@ -1170,8 +1170,8 @@ Prediction service for in-space flight
 """
 */
 void DestinyManager::Orbit() {
-    // data consistency checks...
-    if ((m_targetDistance > BUBBLE_RADIUS_METERS) or (m_followDistance > BUBBLE_RADIUS_METERS)) {
+    // data consistency checks...  (GRID-2: sanity bound is the partition radius)
+    if ((m_targetDistance > GRID_RADIUS_METERS) or (m_followDistance > GRID_RADIUS_METERS)) {
         // well, something fucked up.  stop object and throw error.   player can reset if they want to.
         if (mySE->HasPilot())
             mySE->GetPilot()->SendErrorMsg("Internal Server Error.  Ref: ServerError 35412");
@@ -1662,7 +1662,7 @@ void DestinyManager::WarpAccel(uint16 sec_into_warp) {
      */
     double currentDistance = exp(3 * sec_into_warp);
 
-    if (mySE->SysBubble() != nullptr && currentDistance > BUBBLE_RADIUS_METERS && mySE->SysBubble() != m_targBubble) {
+    if (mySE->SysBubble() != nullptr && currentDistance > GRID_RADIUS_METERS && mySE->SysBubble() != m_targBubble) {
         if (is_log_enabled(DESTINY__WARP_TRACE)) {
             _log(
                 DESTINY__WARP_TRACE,

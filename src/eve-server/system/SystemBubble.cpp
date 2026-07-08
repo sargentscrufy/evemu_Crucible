@@ -1056,7 +1056,7 @@ void SystemBubble::MarkCenter() {
 
     // create jetcan to mark bubble x
     GPoint center = m_center;
-    center.x += BUBBLE_RADIUS_METERS - 5;
+    center.x += m_radius - 5;    // GRID-2: markers track the actual partition radius
     str.clear();
     str = "Bubble #";
     str += std::to_string(m_bubbleID);
@@ -1066,7 +1066,7 @@ void SystemBubble::MarkCenter() {
 
     // create jetcan to mark bubble -x
     center = m_center;
-    center.x -= BUBBLE_RADIUS_METERS - 5;
+    center.x -= m_radius - 5;    // GRID-2: markers track the actual partition radius
     str.clear();
     str = "Bubble #";
     str += std::to_string(m_bubbleID);
@@ -1076,7 +1076,7 @@ void SystemBubble::MarkCenter() {
 
     // create jetcan to mark bubble y
     center = m_center;
-    center.y += BUBBLE_RADIUS_METERS - 5;
+    center.y += m_radius - 5;    // GRID-2: markers track the actual partition radius
     str.clear();
     str = "Bubble #";
     str += std::to_string(m_bubbleID);
@@ -1086,7 +1086,7 @@ void SystemBubble::MarkCenter() {
 
     // create jetcan to mark bubble -y
     center = m_center;
-    center.y -= BUBBLE_RADIUS_METERS - 5;
+    center.y -= m_radius - 5;    // GRID-2: markers track the actual partition radius
     str.clear();
     str = "Bubble #";
     str += std::to_string(m_bubbleID);
@@ -1096,7 +1096,7 @@ void SystemBubble::MarkCenter() {
 
     // create jetcan to mark bubble z
     center = m_center;
-    center.z += BUBBLE_RADIUS_METERS - 5;
+    center.z += m_radius - 5;    // GRID-2: markers track the actual partition radius
     str.clear();
     str = "Bubble #";
     str += std::to_string(m_bubbleID);
@@ -1106,7 +1106,7 @@ void SystemBubble::MarkCenter() {
 
     // create jetcan to mark bubble -z
     center = m_center;
-    center.z -= BUBBLE_RADIUS_METERS - 5;
+    center.z -= m_radius - 5;    // GRID-2: markers track the actual partition radius
     str.clear();
     str = "Bubble #";
     str += std::to_string(m_bubbleID);
