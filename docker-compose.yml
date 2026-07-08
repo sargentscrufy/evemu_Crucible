@@ -8,7 +8,11 @@ services:
       - server_cache:/app/server_cache
       - image_cache:/app/image_cache
     ports:
-      - "26000:26000"
+      # Game port published on 26010: the Crucible client hardwires port
+      # 26000, so the debug proxy (tools/debug-listener) listens on host
+      # 26000 and forwards here. To bypass the proxy, point a client at
+      # 26010 directly.
+      - "26010:26000"
       - "26001:26001"
     depends_on:
       db:
