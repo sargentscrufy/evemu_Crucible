@@ -93,6 +93,27 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 - **Note:** this is exactly why the Phase 0 docker restart policy matters —
   a client-triggerable server crash recovered automatically in seconds.
 
+### SHIP-1: AssembleShip(PyInt) overload silently no-ops (Tier 2)
+- **Observed:** 2026-07-08, simchar provisioning. Calling AssembleShip
+  with a bare shipID returns success but assembles nothing.
+- **Cause:** the PyInt overload wraps the ID in a PyList and delegates,
+  but the delegate re-inspects the ORIGINAL `call.tuple` (still a bare
+  int), falls through every branch, logs "end of conditional", returns
+  nullptr (`ship/ShipService.cpp`). Only real-list calls work.
+- **Workaround:** clients send a list (simchars does). Fix: make the
+  delegate use the built list, not call.tuple.
+
+### DESTINY-4: login warp-in wedges ships in a broken align state (Tier 1)
+- **Observed:** 2026-07-08. Logging in with a ship in space triggers
+  WarpIn(); destiny then loops `ProcessState() Error! ... warp
+  align/speed is incorrect, but time > shipTimeToWarp` and the ship
+  silently ignores dock requests until a CmdStop is sent (the real
+  client happens to send one at login). Also: undock during login
+  invulnerability logs "Invul Timer called but timer already enabled"
+  with a full stack trace — noisy but harmless.
+- **Relation:** same warp math family as DESTINY-1/3; the rework should
+  clear it. Until then: CmdStop after in-space login (simchars does).
+
 ## Fixed
 
 ### CORE-1: XMLParser::ElementParser missing virtual destructor (UB)
