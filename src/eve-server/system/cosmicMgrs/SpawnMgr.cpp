@@ -184,6 +184,7 @@ void SpawnMgr::WarpOutSpawn(SystemBubble* pFrom, SystemBubble* pTo)
     _log(SPAWN__TRACE, "WarpOutSpawn() moving spawn group from bubbleID %u to bubbleID %u", pFrom->GetID(), pTo->GetID());
 
     NPC* rNPC(nullptr);
+    uint8 moved = 0;
     auto range = m_spawns.equal_range(pFrom->GetID());
     auto itr = range.first;
     while (itr != range.second) {
@@ -193,8 +194,18 @@ void SpawnMgr::WarpOutSpawn(SystemBubble* pFrom, SystemBubble* pTo)
         }
         rNPC = m_system->GetNPCSE(itr->second.itemID);
         if (rNPC == nullptr) {
-            ++itr;
+            // SPAWN-10: the npc is gone (despawned, or its bookkeeping
+            // went stale across bubble recreation).  drop the orphan
+            // entry instead of carrying it forever -- accumulated
+            // orphans made this loop grind the whole server.
+            itr = m_spawns.erase(itr);
             continue;
+        }
+        // SPAWN-10: sanity cap.  a healthy spawn group is <= ~8 npcs;
+        // never try to relocate an army in one tic.
+        if (++moved > 12) {
+            _log(SPAWN__ERROR, "WarpOutSpawn: bubble %u holds more than 12 live spawn entries; aborting roam (wave stacking?)", pFrom->GetID());
+            break;
         }
         rNPC->DestinyMgr()->WarpTo(pTo->GetCenter(), MakeRandomFloat(10, 30) *100);
         rNPC->GetAIMgr()->DisableWarpOutTimer();

@@ -127,7 +127,13 @@ void SystemBubble::Process()
     // nothing re-armed it until the next fresh bubble entry -- so belts
     // could silently never spawn.  players are here and there are no
     // rats: arm it.
-    if (!m_spawnTimer.Enabled() and !m_players.empty()) {
+    // SPAWN-10: 'no rats' must be checked for real -- the spawned flag
+    // is cleared by ResetBubbleRatSpawn even while the wave is alive
+    // (and spawn bookkeeping can lose track across bubble recreation),
+    // which turned this self-heal into a wave printer: a new rat wave
+    // every timer cycle while a player camped the belt, until the roam
+    // system choked relocating the army.  CountNPCs() is ground truth.
+    if (!m_spawnTimer.Enabled() and !m_players.empty() and (CountNPCs() == 0)) {
         if (m_belt and sConfig.npc.RoamingSpawns) {
             SetSpawnTimer(true);
         } else if (m_gate and (sConfig.npc.StaticSpawns
@@ -492,6 +498,11 @@ void SystemBubble::ResetBubbleRatSpawn()
     // gates re-armed the guard timer forever (a new police wave every
     // ~65s while a pilot loitered at the gate).
     if (m_gate and (m_system->GetSystemSecurityRating() > 0.90))
+        return;
+    // SPAWN-10: 'the current spawn was killed off' is this method's
+    // contract (see comment below) -- enforce it.  resetting while the
+    // wave is alive let fresh waves stack on top of living ones.
+    if (CountNPCs() > 0)
         return;
 
     /* the current spawn in this bubble was killed off, so reset timers accordingly
