@@ -200,10 +200,9 @@ PyResult EntityBound::CmdEngage(PyCallArgs &call, PyList* droneIDs, PyInt* targe
         DroneSE* pDrone = pSE->GetDroneSE();
         if (pDrone->GetOwner() != pClient)  // control only your own drones
             continue;
-        // Target() locks (range/scan checked) and idles the drone on failure
+        // Target() locks (range/scan checked), then engages and attacks
+        // via CheckDistance(); idles the drone on lock failure
         pDrone->GetAI()->Target(pTSE);
-        if (!pDrone->TargetMgr()->HasNoTargets())
-            pDrone->GetAI()->SetEngaged(pTSE);
     }
     return res;
 }
