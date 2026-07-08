@@ -121,11 +121,27 @@ void SystemBubble::Process()
         return;
     }
 
+    // SPAWN-9: self-heal the spawn timer.  it is disabled whenever it
+    // expires while the bubble reads empty (which bubble-reassignment
+    // churn can cause even with a player sitting in the belt), and
+    // nothing re-armed it until the next fresh bubble entry -- so belts
+    // could silently never spawn.  players are here and there are no
+    // rats: arm it.
+    if (!m_spawnTimer.Enabled() and !m_players.empty()) {
+        if (m_belt and sConfig.npc.RoamingSpawns) {
+            SetSpawnTimer(true);
+        } else if (m_gate and sConfig.npc.StaticSpawns) {
+            SetSpawnTimer(false);
+        }
+    }
+
     // this must run a second time for spawn to actually hit.  first time only sets main system spawn timer.
     // may be nuts, but will remain enabled as long as player in bubble and bubble has no rats.
     if (m_spawnTimer.Enabled()) {
         if (m_spawnTimer.Check()) {
             if (!m_players.empty()) {
+                _log(SPAWN__MESSAGE, "SystemBubble::Process() - spawn timer hit for bubble %u (belt %u); requesting spawn.", \
+                        m_bubbleID, sBubbleMgr.GetBeltID(m_bubbleID));
                 m_system->DoSpawnForBubble(this);
             } else {
                 m_spawnTimer.Disable();
