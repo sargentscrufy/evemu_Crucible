@@ -157,7 +157,14 @@ void DestinyManager::ProcessState() {
                 MoveObject();
                 return;
             }
-            Stop();
+            // broadcast the stop exactly once on transition: calling
+            // Stop() every tick spammed a CmdStop destiny update for
+            // every stationary entity in the bubble (23 asteroids, the
+            // ship, ...) each second -- the Crucible client eventually
+            // drops rigid balls fed movement commands, making belt
+            // asteroids vanish client-side (PHYS-1 in doc/bug-log.md)
+            if (!m_stop)
+                Stop();
         } break;
         case Ball::Mode::GOTO: {
             MoveObject();
