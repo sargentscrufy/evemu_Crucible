@@ -1,0 +1,4 @@
+SQL EXCERPT from agtMissions.sql.gz - mission titles for researched Caldari security + career arcs
+
+INSERT INTO `agtMissions` VALUES (54260,0,'The Guristas Spies',0,0,'\0','\0',0,0,0,0,0,0,0,0,0),(54261,0,'The Guristas Spies',0,0,'\0','\0',0,0,0,0,0,0,0,0,0),(54262,0,'The Angel Cartel Spies',0,0,'\0','\0',0,0,0,0,0,0,0,0,0),(54263,0,'The Guristas Spies',0,0,'\0','\0',0,0,0,0,0,0,0,0,0),(54264,0,'The Angel Cartel Spies',0,0,'\0','\0',0,0,0,0,0,0,0
+---

@@ -1,0 +1,22 @@
+VERIFICATION RUN 2026-07-08
+From agtMissions.sql.gz:
+- 'Guristas Extravaganza' count: 2
+- 'Making Mountains of Molehills' count: 40 (variants for career)
+- 'Balancing the Books' confirmed present in prior extracts
+- 'The Guristas Spies', 'Vengeance', 'The Hidden Stash' present
+
+Cross-ref web source (cyberrodent eve-survival mirror of Guristas Extravaganza4.html):
+- Matches atomic doc exactly: Pocket 2 Initial Group: 2x Battlecruiser (Pithatis Assassin/Death Dealer) + 1x Battleship (Pith Destroyer/Exterminator) + 0-1x Destroyer + 1x Frigate (Guristas Kyoukan/Webifier) **Web** **Trigger**
+- Blitz: Ion Field Projection Battery and Moon Harvester
+- Triggers: webbing frigs main rule; exception last BS pocket 3; structures prevent respawns
+- Pocket 5: mission completes after all BS/BC from first spawn killed
+- Named: Arika Tosch [Pith Extinguisher], Aimon Kuzni [Pith Conquistador]
+- Bonus: Guristas Diamond tag (not consumed); low chance DG (removed post Trinity in some notes)
+- Player reports confirm agent e.g. Lozdod Pousel in Osmon 0.7
+- Era comments 2008-2014 match Crucible window data
+
+Other facts confirmed in atomic: 5 pockets + bonus, sentry aggro pocket1, Amarr batteries pocket4 (EM alpha), jamming in later.
+
+No discrepancies found in core wave counts/types/triggers vs raw. Good for rebuild.
+
+SQL agent names sparse (as expected); use reports for Lozdod Pousel, Rachen Mysuna etc.

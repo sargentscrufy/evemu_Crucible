@@ -1,0 +1,26 @@
+RAW TRANSCRIPT from https://eve-survival.org/?wakka=GuristaSpies1 (fetched 2026)
+
+# Gurista Spies, level 1
+
+Faction: Guristas
+Mission type: Deadspace
+Damage dealt: Kin, Therm
+Reccomended damage dealing: Kin, therm.
+Finished with a t1 fitted kestrel, DR: Easy (Urszeli Kurva)
+
+#### Single pocket
+
+##### Group 1:
+
+20km away from WIP
+4x Pithi Arrogators
+
+##### Group 2:
+
+60km away from WIP
+3x Pithi Arrogator (Frigate class)
+1x Pithi Invader (Frigate class)
+
+There are some med ammo loot from the cargo rig, and Guristas bunker.
+
+Sources: EVE-Survival, era 2012 data.

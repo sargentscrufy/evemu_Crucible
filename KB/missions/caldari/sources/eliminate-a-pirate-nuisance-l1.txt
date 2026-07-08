@@ -1,0 +1,19 @@
+RAW TRANSCRIPT from https://eve-survival.org/?wakka=EliminateaPirateNuisance1gu (fetched 2026-07-08)
+Eliminate a Pirate Nuisance, Level 1
+Faction: Guristas Pirates
+Mission type: Encounter
+Space type: Deadspace
+Jamming: None
+Damage dealt: Kin/Therm
+Recommended: Kin/Therm
+Completed with: Kestrel (super easy)
+
+Single Pocket (45km out)
+Instant aggro on warp in
+1x Pithi Arrogator
+1x Pithi Imputor
+
+Structures:
+Low Tech Structure drops Various ammo and some Carbon (10 units)
+
+END RAW

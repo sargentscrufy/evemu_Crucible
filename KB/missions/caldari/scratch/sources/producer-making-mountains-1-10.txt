@@ -1,0 +1,66 @@
+RAW TRANSCRIPT EXCERPT from https://www.wckg.net/Newbie/career-agents (fetched 2026-07-08)
+Full Career Agent Record - Industrialist - Producer - Making Mountains of Molehills (1 of 10) to (10 of 10)
+Verbatim goals, briefings, notes for rebuild fidelity.
+
+### Making Mountains of Molehills (1 of 10)
+Briefing: "Here is a mission suited for someone of your caliber. Ship Type, war never stops, and we need to stoke it with raw materials. I want you to go mine some Veldspar ore for me. Remember to fit a mining module to your ship before you go, and keep in mind that you might have to make more than one trip before you report back to me. To make it clear, I want you to mine at least some ore from the location I've uploaded for you."
+Goal: In corvette, EXACT location, mine. Move 1 Jump, warp to location, doable in corvette. Bring 1000 units of Veldspar to the agent location.
+Reward: 1 x Miner I, isk
+Notes: <Complete Mission for Miner I and isk> "Well done, my friend. I may have another task for you."
+
+### Making Mountains of Molehills (2 of 10)
+Briefing: "Let's move on to the next stage in the process. First, you'll need at least 100 units of Veldspar. Then, you can reprocess it here at the station using the Reprocessing Plant and give me the results. If you succeed, I'll give you a new mining frigate."
+Goal: Refine veldspar same station. Reprocess veldspar to tritanium.
+Reward: Venture, Isk
+Notes: Acquire these goods: 100 x Tritanium
+
+### Making Mountains of Molehills (3 of 10)
+Briefing: "For you, my friend, there's always something. The next stage in the industrial process is building something. I want you to give me a Civilian Afterburner. I don't care how you do it; you can build one using the blueprint I gave you or just buy it off someone else. But however you get your hands on one, please make sure it is packaged before you give it to me."
+Goal: Strip off 1MN AB, repackage. Build or acquire 1MN Civilian Afterburner (packaged).
+Reward: Expanded Cargohold I, Isk
+Notes: Use corvette repackage trick for free one.
+
+### Making Mountains of Molehills (4 of 10)
+Briefing: "Any industrial mogul worth their salt knows how to fight for their bounty. I'm sending you to mine in an area infested with Rogue Drones. Let's see if you can survive the trip and bring me the processed goods."
+Goal: Kill npc (drone), mine 3.5k veldspar (or equiv 7k trit), refine trit. OR Kill drone, buy 7k trit.
+Reward: Mining Laser Upgrade I, Miner I, Isk
+Location: Rogue drone infested belt. Doable in corvette or venture.
+
+### Making Mountains of Molehills (5 of 10)
+Briefing: "You've mined, processed, built and fought. Now let's see if you can transport my goods safely. Take these electronic parts out to Abagawa IV - Moon 2 - Hyasyoda Corporation Mineral Reserve as fast as possible."
+Goal: Move 40 m^3 7 jumps and return. Haul item.
+Reward: Expanded Cargohold I, 1MN Afterburner I, Isk
+Notes: Location varies by agent.
+
+### Making Mountains of Molehills (6 of 10)
+Briefing: "Now for some more complicated production. I want you to make me 20 units of Cap Booster 25. You'll need the minerals Tritanium, Pyerite, and Mexallon which you can easily acquire by reprocessing ore from Scordite and Plagioclase asteroids."
+Goal: Mine 200 pyroxeres, 200 veldspar OR buy 20 cap booster 25. Build 20 Cap Booster 25.
+Reward: Isk
+Notes: Build job ~9 min.
+
+### Making Mountains of Molehills (7 of 10)
+Briefing: "Now that I have those Cap Boosters, we've got a buyer lined up. ... pick up the Cap Boosters from your hangar here posthaste, and bring them to my buyer at Unpas VIII - Moon 11 - Prompt Delivery Storage (varies)."
+Goal: Move cap boosters 1 jump. Deliver.
+Reward: Damage Control I, Isk
+
+### Making Mountains of Molehills (8 of 10)
+Briefing: "Let's try building something more complicated. A friend of mine needs a fast vessel, so I want you to take this blueprint copy and construct a shuttle for him. Oh, and don’t bother buying it from the market. This needs to be manufactured by you!"
+Goal: Build Shuttle with ~1200 veld / 2.6k trit.
+Reward: Isk
+
+### Making Mountains of Molehills (9 of 10)
+Briefing: "Turns out one of my production assistants was a spy for the enemy. He's gone into hiding, so I need you to draw him out. You'll act as a decoy, mining until enemy forces turn up. Destroy them and bring the spy back to me. You may keep whatever ore you find out there. Make sure you use a mining laser, so they'll notice you out there."
+Goal: Mine to aggro, kill guy (NPC spy/pirate). Acquire Production Assistant from wreck/site.
+Reward: Isk
+Notes: Fit miner + gun. Site has kernite too.
+
+### Making Mountains of Molehills (10 of 10)
+Briefing: "You've done a great job so far, mastering the intricacies of industry - mining, reprocessing, manufacturing, and hauling. All while murdering everyone who stands in your way. You're now ready for your final assignment. You're going to bring me a full-fledged frigate. I'll give you a blueprint copy with more than enough runs for this task. ... Good luck!"
+Goal: Build a Bantam (frigate), buy or build or mine mats. Use ore to reprocess and build.
+Reward: Hauler (e.g. Bantam or similar) and Isk
+Notes: Mats approx 22,800 trit, 4,275 pyer, 1,782 mexallon, 357 isogen. Or use prior kernite.
+
+Sources: wckg.net verbatim excerpts 2026 fetch. Era ~2011-2014 guides match this structure for Caldari STI/SAK agents. SQL confirms 'Making Mountains of Molehills (1 of 10)' in agtMissions.
+Additional notes for rebuild: Exact quantities vary slightly by character but goals as listed; locations agent-specific (e.g. 1 jump for early, variable for courier).
+
+END RAW EXCERPT

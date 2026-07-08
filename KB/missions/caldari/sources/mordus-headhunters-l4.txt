@@ -1,0 +1,59 @@
+RAW TRANSCRIPT from https://eve-survival.org/?wakka=MordusHeadhunters4 (fetched 2026-07-08)
+The Mordus Headhunters, Level 4
+Faction: Mordus
+Mission type: Encounter
+Space type: Deadspace
+Damage dealt: Kinetic (70%)/ EM (30%)
+Web/scramble: Interceptor (Mordus Bounty Hunter)
+Recommended: Kinetic/EM
+
+No Hostiles at the initial gate.
+
+### 1st Pocket
+#### 1st Group (12-30km, Beacon)
+Auto aggro. Attack draws group 2 aggro.
+5x Cruisers (Mordus Leopard/Lion)
+3x Battleship (Mordus Phanti/Gigamar/Sequestor)
+
+#### 2nd Group (65-90km, Minmatar Mining Station)
+4x Frigate (Mordus Gladius)
+2x Interceptor (Bounty Hunter)
+5x Cruiser (Mordus Puma/Lion)
+
+#### 3rd Group (76-90km, Minmatar Trade Station Ruins)
+6x Frigate (Mordus Katana/Gladius)
+4x Cruiser (Mordus Bobcat)
+2x Battleship (Mordus Sequestor)
+
+### 2nd Pocket
+#### 1st Group (16-21km, Veldspar Asteroid)
+8x Frigate (Mordus Sabre/Katana)
+2x Interceptor (Mordus Bounty Hunter) **Webifier/ Warp Disruptor**
+
+#### 2nd Group (39-74km, Ghost Ship)
+5x Frigate (Mordus Gladius)
+12x Cruiser (Mordus Bobcat/Cheetah/Leopard/Lion/Puma)
+5x Battleship (Mordus Sequestor/Phanti/Gigamar)
+
+#### 3rd Group (75-100km, Gallente Station Ruins, Right)
+4x Frigate (Mordus Katana)
+5x Cruiser (Mordus Leopard/Lion)
+3x Battleship (Mordus Sequestor/Mammoth)
+
+#### 4th Group (106-121km, Gallente Station Ruins, Left)
+7x Frigate (Mordus Katana/Mordus Bounty Hunter)
+8x Cruiser (Mordus Cheetah/Mordus Katana)
+
+Blitz:
+1st Pocket: Kill all the ships.
+2nd Pocket: Kill the 3rd group (with the Mordus Mammoth). To avoid getting stage aggro, fly towards the right edge of the group and wait until the group aggro your ship. You can then attack the ships without aggro from the rest of the room.
+
+Tip: Using Sentry drones within ~80km of a group causes the whole room to aggro. Position to take first group safely.
+
+Mining:
+1st: 14x Plagioclase, 8x Pyroxeres, 29x Veldspar (~26-81km)
+2nd: 21x Veldspar (17-101km)
+
+Loot/Bounty era: ~10.6M bounty, ~17.4M loot/salvage.
+
+END RAW

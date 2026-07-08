@@ -1,0 +1,66 @@
+RAW TRANSCRIPT EXCERPT from https://www.wckg.net/Newbie/career-agents (fetched 2026-07-08)
+Full Career Agent Record - Industrialist - Entrepreneur - Balancing the Books (1 of 10) to (10 of 10)
+Verbatim briefings, goals, player notes for exact rebuild.
+
+### Balancing the Books (1 of 10)
+Briefing: "Something just came up that's right up your alley. I need someone to safely transport these Data Sheets. They contain various files that relate to matters of national security — not something we can entrust to anyone less than a capsuleer. Once you have delivered them, contact me and let me know you've completed the mission. I'll have something else ready for you by the time you get back. Don't forget to put the Data Sheets in your cargohold before you set off!"
+Goal: In corvette, move/haul item 1 system. Take Data sheets one jump. Transport these goods.
+Reward: ISK
+Notes: Drag from Item Hangar to Cargo. Set dest, jump, dock, turn in. Right click agent for return dest.
+
+### Balancing the Books (2 of 10)
+Briefing: "A transport ship carrying sensitive cargo has been destroyed by pirates in the area. I'm giving you a Civilian Salvager module so you can go in, use it on the ship's wreckage, and extract anything of use from their databanks. Once you have that Black Box, return it to me. Also, there may be some hostiles still lingering around too, so be ready for combat, Ship Type. If you're successful, I may reward you with a brand new mining frigate."
+Goal: Kill hostiles (Guristas), salvage item (Black Box) at a site (deadspace, acceleration gate, Civilian Transport Ship Wreck).
+Reward: Venture, Civilian Salvager, ISK
+Notes: Fit gun + salvager. Warp, gate, kill Guristas Rookie etc, approach wreck, use salvager for Black Box. Guristas flavor.
+
+### Balancing the Books (3 of 10)
+Briefing: "For a career in business, you will need a basic understanding of crucial industrial processes such as mining ore and reprocessing it (along with a myriad of other materials) into its component minerals. I want you to get onboard your new Venture, fit it with a mining laser and a turret weapon - the former for the asteroids, the latter for any pirates that might attack you - and head out to a certain set of coordinates, where you'll mine ore from Veldspar asteroids. Once you get back, refine the Veldspar ore into Tritanium."
+Goal: Warp to site, mine, turn in trit (333 units Tritanium from Veldspar).
+Reward: Miner I, Reprocessing Skillbook, Isk
+Notes: Mine ~200 Veldspar, refine.
+
+### Balancing the Books (4 of 10)
+Briefing: "The Black Box you retrieved indicates that the Guristas have built a surveillance facility nearby, using it to launch attacks on convoys from the State War Academy. You need to take out the outpost and any vessels defending it. Once the area is clear, use the Civilian Data Analyzer I'm giving you to hack the data storage device in the area. Bring back whatever it contains."
+Goal: Kill NPCs (Guristas at listening post/outpost), use data analyzer on can (Encoded Data Chip from Data Storage Device).
+Reward: Civilian Data Analyzer, ISK
+Notes: Deadspace gates. Kill, hack (minesweeper minigame), loot chip. Guristas pirates.
+
+### Balancing the Books (5 of 10)
+Briefing: "The Guristas have heavily encoded all of their tactical information. Our best hope at decryption is a friend of mine over in Uoyonen IX - Perkone Warehouse (varies), so I want you to safely ferry it to her. I'd be happy to offer you some Inertial Stabilizers for the journey."
+Goal: Take chip 9 jumps (long courier). Deliver Encoded Data Chip.
+Reward: Inertial Stabilizer I, Expanded Cargohold I, ISK
+Notes: Burn jumps, varies.
+
+### Balancing the Books (6 of 10)
+Briefing: "The security forces guarding the pirates' next target aren't operating at full capacity, and have a shortage of Armor Repairer modules. I need you to procure one for them before the next attack, and I don't care where from. Let's see how good your business acumen is, Ship Type."
+Goal: Buy (or acquire) Civilian Armor Repairer off market.
+Reward: Broker Relations Skillbook, Nanofiber Internal Structure I, ISK
+Notes: Market buy shortcut.
+
+### Balancing the Books (7 of 10)
+Briefing: "We've discovered an ancient site that the pirates are using as some kind of staging outpost. We cannot let them continue to gain any kind of foothold in this area. You need to kill them. Since we're businessmen, mind you, I suggest you also fit a Civilian Relic Analyzer to your ship. Once you have cleared the mission area of hostiles, you can use the Analyzer to inspect any ancient ships or ruins in the area."
+Goal: Kill 2 sets of NPCs (Guristas), Hack/analyze can (relic analyzer on Ancient Ship Structure), return loot.
+Reward: Civilian Relic Analyzer, 1mn Afterburner, ISK
+Notes: Multiple gates/rooms. Kill, hack minigame, loot.
+
+### Balancing the Books (8 of 10)
+Briefing: "I've compiled all the information you have gathered so far from the various pirate facilities. It's my belief that with everything going on, we might be able to get more military funding out in these areas. This Central Data Core will provide all the evidence we need to argue for it. Please take it to Unpas VI - Moon 10 - Core Complexion Inc. Storage (varies) for me."
+Goal: Transport chip (Central Data Core) one jump.
+Reward: Limited Social Implant, ISK
+
+### Balancing the Books (9 of 10)
+Briefing: "There is one other thing our security forces need before they are fully prepared for the coming battle with these insufferable pirates. Our forces are suffering a shortage of afterburners for their frigate contingents, and the resulting lack of speed is costing them dearly. I need two 1MN Afterburner I modules from you - buy them, build them, or loot them from the cooling wreckage of other ships."
+Goal: Give/turn in 2 x 1MN Afterburner I.
+Reward: Isk (plus prior Expanded Cargohold etc mentioned)
+Notes: Repackage existing rewards or buy.
+
+### Balancing the Books (10 of 10)
+Briefing: "Your final test as a business mogul is also your opportunity to feed the war machine. You've provided us with utility modules; now it's the basic building blocks of violence: Weapons. I'm giving you a blueprint copy with which you can fulfil my quota. Any remaining production runs are yours, as is this Industrial-class ship I'm going to reward you with."
+Goal: Build small gun (using BPC). Turn in.
+Reward: Extra Small gun BPC, Hauler (Badger), ISK
+Debrief: "Well done, Ship Type. Here is your Badger, as promised; use it well. You've completed all my tasks and shown yourself to be a savvy entrepreneur."
+
+Guristas flavor throughout (pirates, black box, surveillance, encoded data, ancient site with Guristas). Hauling, salvage, mining, hacking, combat, build progression. Caldari corporate / security vs pirates story arc.
+
+END RAW EXCERPT

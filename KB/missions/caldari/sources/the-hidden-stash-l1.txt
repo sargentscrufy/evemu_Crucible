@@ -1,0 +1,19 @@
+RAW TRANSCRIPT from https://eve-survival.org/?wakka=HiddenStash1gu (fetched 2026-07-08, era 2012 data)
+Hidden Stash, level 1
+Faction: Guristas
+Mission type: Encounter
+Space type: Deadspace
+Damage dealt: Kin, Therm
+Recommended: Kin, Therm
+
+Single Pocket
+All aggroes on warp in.
+
+Single Group:
+5x Frigates (Pithi Arrogator/Imputor)
+
+Structures:
+Warehouse drops mission objective.
+Other structures drop various T1 items (destroy power generator first, other structures will be easier to destroy).
+
+END RAW

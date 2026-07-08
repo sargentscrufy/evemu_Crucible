@@ -1,3 +1,16 @@
+*** Private Server Fork — phase-0-foundation (2026-07-08) ***
+- [FEAT] Warp physics rework (DESTINY-3): CCP warp curve scaled by ship warp speed; continuous velocity through accel/cruise/decel; no more landing overshoot or 10km target shove. Verified live by bot regression (undock -> 2.75AU warp -> return warp -> dock; ~40m landing error)
+- [FEAT] Market Seed v2: hub-weighted market bootstrap — one trade hub per region with full catalog and NPC buy walls (minerals/ore/salvage/PI), thinner fringe stock with hub/fringe price gradients that make hauling profitable; staggered order lifetimes; 14-day price history backfill; re-seedable without touching player orders
+- [FEAT] simchars framework: provision NPC "player characters" end-to-end — archetype fit templates validated against hull slot layouts and the local market, skill grants with prerequisite closure, protocol market purchases, ship assembly/fitting/activation, dock/undock automation, stranded-ship recovery, live warp regression test
+- [FEAT] Headless protocol tooling: login smoke bot (nightly CI gate), verified Python marshal codec, transparent debug proxy on the client port with decoded traffic logs and raw byte capture
+- [FEAT] Aura Vasanen PoC: ollama-driven NPC player character — protocol character creation, station presence, converses in Local via a local LLM
+- [FEAT] Sim-character portraits served from the image cache
+- [FIX] XMLParser::ElementParser missing virtual destructor (undefined behavior, caught by the new ASan CI job on its first run)
+- CI: AddressSanitizer/UBSan build job, phase-* branch triggers, nightly dockerized login smoke test
+- Docker: container healthchecks and restart policies (crash auto-recovery), game port remapped behind the capture proxy, Seed v2 wired into first-boot init (Lonetrek added to default regions)
+- Docs: private-server redirection plan, Crucible feature matrix (pinned client 360229), admin API seam design, market economy design, live-testing bug log (open: DESTINY-4 align wedge, CHAR-1 doll validation segfault, SHIP-1 AssembleShip int overload)
+- KB: Crucible-era mission research (Caldari security arcs, career missions) toward future mission fidelity
+
 *** 0.8.6 ***
 - [FEAT] MarketBot
 - Market system fixes

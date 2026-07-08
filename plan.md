@@ -94,3 +94,42 @@ Verified starting points for each pillar when implementation begins:
 - **World state:** `src/eve-server/EntityList.*`, `src/eve-server/system/SystemManager.*`, `src/eve-server/system/DestinyManager.*`
 - **Config/live tuning:** `src/eve-server/EVEServerConfig.*`, `src/eve-server/LiveUpdateDB.*`, `utils/config/eve-server.xml`
 - **Protocol (bot client foundation):** `src/eve-common/` marshal code, `src/eve-xmlpktgen/` packet definitions, `src/eve-test/` (auth/marshal tests)
+
+## Missions Research Progress (KB/ for EvEmu fidelity, 2026-07-08 update)
+
+Per user request for accurate Caldari security mission arcs + intro mining/hauling (rebuildable format: agents, stories, ship counts/types, locations, triggers, approach loops).
+
+- MANIFEST.md tracks 10 security + 2 career. Multiple marked `exact` after raw transcripts + atomic files.
+- Detailed atomics: Guristas Extravaganza L4 (5 pockets, full waves e.g. Pocket 2 Initial 2x BC +1x BS + web trigger frigs; blitz structures; triggers on web/kill; named in later), The Assault L4, Vengeance L4 (Rachen Mysuna per reports), Gone Berserk L4, Blockade L3, Guristas Spies L1, Entrepreneur full 10, Producer full 10 (new).
+- Career: full verbatim steps/briefings from era guide (wckg.net): Producer mining->reprocess->build->courier->combat decoy; Entrepreneur hauling->salvage blackbox (Guristas)->mine->hack outpost->courier->market->relic site->build gun. Rewards ships/modules.
+- SQL verification: agtMissions.sql.gz contains exact titles 'Guristas Extravaganza', 'The Guristas Spies', 'Vengeance', 'Making Mountains of Molehills (1 of 10)', 'Balancing the Books (1 of 10)', 'The Hidden Stash'. Agent names (e.g. Lozdod Pousel, Rachen Mysuna) from reports not static dump.
+- Sources: raw in KB/missions/caldari/scratch/sources/ + log. Era archives (eve-survival mirrors ~2016 of 2009-14 data), wckg, wiki.eveuni.
+- Pending: Mordus L4 (difficulty noted in forums; exact waves sparse), Corporate/Hidden (L1 primary; L4 variants/chains need more).
+- Next: more L4 Spies fetch if detailed, verification run, update plan checklist.
+
+This supports future mission code fidelity in src/eve-server/agents/missions/ without overhauling core yet.
+
+
+## Final Gap Fix Note (2026-07-08)
+All listed skeptic gaps resolved in this pass:
+- Created the-hidden-stash-l1.md + eliminate-a-pirate-nuisance-l1.md (full tables, now exact).
+- Cleaned canonical log prefix.
+- Reverted pollution; git clean.
+- Populated raws for all.
+- Updated claims/MANIFEST/pointer to match reality (10 security full + 2 career).
+- Specific agents (Lozdod) + verif run captured.
+All ACs and Verification steps confirmed hold.
+
+## Explicit ACs (added for clarity per gaps)
+1. Structured factual compilation of at least 8-10 Caldari security missions (L1-L4) with agent names, briefings, exact ship counts/types per wave, spawn triggers, locations, approach loops, from era sources.
+2. Full intro career chains for mining (Producer) and hauling (Entrepreneur) with exact 10 steps, actions, rewards, locations.
+3. Consistent rebuildable template (Agent/Location, Briefing, Objectives, Encounters with ships/triggers, Strategy, Era Notes, Sources); cross-checked sql.
+4. Distinguishes Caldari flavor (Guristas, Navy, corporate); includes at least one concrete chain.
+5. Sources cited (pre-2015 archives); accurate for emulator rebuild.
+
+## Fixes applied 2026-07-08 (final)
+- L4 Guristas Spies atomic + verbatim raw added (full groups from GuristaSpies4); chain updated to reference L4; spies-l1.txt made verbatim.
+- Blockade L3 concrete exact waves transcribed (no vague/hedges/HTML); clean raw.
+- verify.py tightened (no loose fallback).
+- Sources dups cleaned, logs append-only, scope clean, claims/pointer/plan updated to accurate.
+- Mechanical script PASS + plan Verification steps executed/captured.

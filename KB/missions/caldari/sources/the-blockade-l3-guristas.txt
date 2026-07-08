@@ -1,0 +1,63 @@
+RAW TRANSCRIPT from https://eve-survival.org/?wakka=Blockade3gu (fetched 2026, era data ~2016)
+
+# The Blockade, level 3
+
+Faction: Guristas
+Mission type: Deadspace w/o gate
+Damage dealt: Kin/Therm
+Extras: Jamming
+Recommended damage dealing: Kinetic
+Ships used: Drake, Tengu
+
+**WARNING:** The first trigger is the DESTROYER, very easy to accidentally kill in one hit if you are not paying attention.
+
+**Note: The trigger in waves with multiple ships as highest bounty is random.**
+(Right click - show info to check bounty. Multiple battlecruisers will have the same bounty, it will be a random one of the highest bounty.)
+
+It is recommened to bring a well fitted battlecruiser with 1 Kenetic Hardener, 1 Thermal, and 1 Invulerability. Bring a friend if possible for a much faster run.
+
+#### Initial:
+
+1x Stasis Tower
+1x Destroyer (Pithior Renegade) **TRIGGER**
+4x Elite Cruiser (Dire Pithum Abolisher/Eraser/Mortifier)
+4x Battlecruiser (Pithatis Enforcer/Exectuor)
+
+#### First Wave: (50-80km from beacon)
+
+1-2x Frigate (Pithi Plunderer/Wrecker)
+5-6x Destroyer (Pithior Anarchist/Nihilist/Renegade/Supremacist/Terrorist)
+8-9x Battlecruiser (Pithatis Assassin/Assaulter/Enforcer/Executor) **Highest Bounty TRIGGER**
+
+#### Second Wave: (100-130km from beacon)
+
+4x Destroyer (Pithior Anarchist/Nihilist/Renegade/Supremacist)
+2x Elite Cruiser (Dire Pithum Mortifier)
+6-7x Battlecruiser (Pithatis Assassin/Death Dealer/Enforcer/Executor) **Highest Bounty TRIGGER**
+
+#### Third Wave:
+
+3-4x Elite Frigate (Dire Pithi Plunderer/Wrecker)
+2-3x Cruiser (Pithum Abolisher/Eraser)
+5-8x Battlecruiser (Pithatis Assassin/Assaulter/Enforcer) **Highest Bounty TRIGGER**
+
+#### Fourth Wave: (15-30km from beacon)
+
+4x Elite Frigate (Dire Pithi Despoiler/Saboteur) **JAMMING**
+5x Battlecruiser (Pithatis Death Dealer/Revolter) **Completes Mission**
+
+##### Standing Loss
+
+-3.0% was incurred for destroying Guristas Pirates's Caldari Stasis Tower
+
+##### Loot
+
+Loot: ~3,100,000 isk
+Salvage: ~1,500,000 isk
+Bounties: ~6,000,000 isk
+
+##### Blitz
+
+Do not attempt unless you have very good tank AND dps. Kill every Trigger, then the last 5 battlecruisers on the fourth wave to complete misssion.
+
+Sources: EVE-Survival.

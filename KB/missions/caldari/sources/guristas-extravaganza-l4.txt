@@ -1,0 +1,607 @@
+[VERBA TIM TOOL OUTPUT FROM web_fetch https://cyberrodent.github.io/eve-survival-mission-report/reports/GuristaExtravaganza4.html ]
+
+EVE-Survival: Guristas Extravaganza, Level 4 
+
+## [EVE-Survival](./HomePage.html) : [GuristaExtravaganza4](./GuristaExtravaganza4.html/backlinks "Display a list of pages linking to GuristaExtravaganza4")
+
+*   [MissionReports](./MissionReports.html)
+*   [PageIndex](./PageIndex.html)
+*   [RecentChanges](./RecentChanges.html)
+*   [RecentlyCommented](./RecentlyCommented.html)
+*   [Login/Register](./UserSettings.html)
+*   Search:
+
+*   Your hostname is 207.237.82.100
+
+# Guristas Extravaganza, Level 4
+
+  
+
+Last edited by [OdotakMotsu](./OdotakMotsu.html/edit "Create this page")  
+ Sun, 15 May 2016 14:50 UTC
+
+  
+ Faction: Guristas  
+ Mission type: Encounter  
+ Space type: Deadspace with Gates  
+ Damage dealt: Kin, Therm  
+ Extras: Jamming (Dire Pithi Despoiler)  
+ Web/scramble: Guristas Webifier and Kyoukan  
+ Recommended damage dealing: Kin, therm.  
+ Recommended ships: Rattlesnake, Raven, Dominix, Ishtar, **Nighthawk**  
+ Video: [Ishtar](http://youtu.be/O2ocSgmZOKU), [Navy Raven](http://youtu.be/waeFZ_nqBdU), [Vargur](http://www.youtube.com/watch?v=Id-w6-KG9dM)  
+  
+  
+
+### Triggers
+
+Main rule: Webbing frigs like Webifier and Kyoukan  
+ Exception: The last battleship in the next to last wave of pocket 3  
+ The last webifier/Kyoukan in pocket 5 triggers on attack. All others trigger on kill.  
+ Destroying the indicated structures before shooting the triggers will prevent the respawns.  
+  
+ Note: Spawns can be slightly different, such as another type of BC or BS, but the number of each class of NPCs is as reported.  
+  
+
+### Pocket 1
+
+Sentry Guns aggroes at warp-in.  
+ Guristas Bunker drops ammo.  
+  
+
+#### Single Group
+
+3x Tower Sentry Guristas III  
+ 3x Tower Sentry Guristas II  
+ 2x Frigates (Pithi Plunderer/Wrecker)  
+ 2x Cruisers (Pithum Silencer/Ascriber)  
+  
+
+### Pocket 2
+
+##### Blitz
+
+Destroy the Ion Field Projection Battery and Moon Harvester (prevents all spawns)  
+ Starbase Hangar does not need to be destroyed.  
+ Starbase Hanger, Moon Harvester, and Ion Field Projection Battery all dropped loot.  
+  
+
+#### Initial Group
+
+2x Battlecruiser (Pithatis Assassin/Death Dealer)  
+ 1x Battleship (Pith Destroyer/Exterminator)  
+ 0-1x Destroyer (Pithior Supremacist/Terrorist)  
+ 1x Frigate (Guristas Kyoukan/Webifier) **Web** **Trigger**  
+  
+
+#### Spawn 1
+
+2x Battlecruiser (Pithatis Assaulter/Enforcer)  
+ 2x Battleship (Pith Eliminator/Extinguisher)  
+ 2x Frigate (Guristas Kyoukan/Webifier) **Web** **Trigger**  
+  
+
+#### Spawn 2
+
+2x Battleship (Pith Dismantler/Obliterator)  
+ 1x Frigate (Guristas Webifier) **Web** **Trigger**  
+  
+
+#### Spawn 3
+
+2x Cruiser (Pithum Abolisher/Eraser)  
+ 2x Battleship (Pith Eradicator)  
+ 1x Battleship (Arika Tosch\[Pith Extinguisher\])  
+  
+
+### Pocket 3
+
+##### Blitz
+
+Destroy the Guristas Medium Refinery, Subspace Frequency Generator and Asteroid Mining Post before any of the triggers.  
+ Structures drop no loot. Asteroid Factory has so much armor there's not much point in shooting it.  
+  
+
+#### Initial Group
+
+3x Guristas Cruise Missile Battery  
+ 2x Battlecruiser (Pithatis Assaulter/Enforcer)  
+ 3x Battleship (Pith Dismantler/Obliterator)  
+ 1x Frigate (Guristas Kyoukan/Webifier) **Web** **Trigger**  
+  
+
+#### Spawn 1
+
+2x Battlecruiser (Pithatis Enforcer/Executor)  
+ 2x Battleship (Pith Eradicator/Obliterator)  
+ 2x Frigate (Guristas Kyoukan/Webifier) **Web** **Trigger**  
+  
+
+#### Spawn 2:
+
+0-1x Battlecruiser (Pithatis Enforcer/Executor)  
+ 3x Battleship (Pith Dismantler/Extinguisher)  
+ 2x Frigate (Guristas Kyoukan/Webifier) **Web** **Trigger**  
+  
+
+#### Spawn 3: (33-38km) (Auto Aggro)
+
+1x Frigate (Guristas Webifier) **Web**  
+ 2x Battlecruiser (Pithatis Assaulter/Enforcer)  
+ 2x Battleship (Pith Eliminator/Exterminator/Extinguisher) **Jamming Eliminator/Exterminator** **Trigger** (highest bounty BS, is the trigger)  
+  
+
+#### Spawn 4:
+
+1x Frigate (Guristas Kyoukan/ Webifier/) **Web**  
+ 1x Destroyer (Pithor Terrorist)  
+ 2x Battleship (Pith Eliminator/Exterminator/Extinguisher) **Jamming Eliminator/Exterminator**  
+  
+
+### Pocket 4
+
+Amarr batteries doing alpha strike at 1,800 EM dmg so take them first if you aren't tanked against EM.  
+  
+
+##### Blitz
+
+Destroy Starbase Storage Facility, Starbase Reactor, and Guristas Starbase Control Tower before the trigger.  
+ Structures drop no loot.  
+  
+
+#### Initial Group (Auto Aggro)
+
+4x Amarr Heavy Missile Battery  
+ 3x Battleship (Pith Eradicator/Obliterator)  
+ 1x Cruiser (Guristas Emissary)  
+ 2x Frigate (Guristas Kyoukan/Webifier) **Web** **Trigger**  
+  
+
+#### Single Spawn
+
+1x Frigate (Guristas Kyoukan/Webifier) **Web**  
+ 2x Battlecruiser (Pithatis Assassin/Death Dealer)  
+ 2x Battleship (Pith Extinguisher/Eliminator) **Jamming Eliminator**  
+  
+
+### Pocket 5
+
+Prison, Guristas Bunker, Guristas War Installation have loot.  
+ Mission completes after all Battleships and Battlecruisers from the first spawn are killed.  
+  
+
+#### First Spawn: (70km)
+
+2x Tower Sentry Guristas II  
+ 1x Guristas Heavy Missile Battery  
+ 2x Frigate (Guristas Kyoukan/Webifier) **Web** **Trigger**  
+ 4x Destroyer (Pithor Anarchist/Renegade)  
+ 2x Battlecruiser (Pithatis Assaulter/Enforcer)  
+ 1-2x Battleship (Pith Conquistador/Dismantler/Destroyer/Extinguisher)  
+ Guristas Webifier may spawn as a Guristas Kyoukan. Identify trigger as the one that webs you.  
+  
+
+#### Second Spawn: (43km)
+
+4x Elite Frigate (Dire Pithi Despoiler/Saboteur) **Jamming**  
+ 3x Battleship (Pith Conquistador/Destroyer)  
+ 1x Frigate (Guristas Kyoukan) **Web** **Trigger**  
+  
+
+#### Third Spawn: (50km)
+
+3x Battleship (Pith Eradicator/Obliterator)  
+ 3-4x Destroyer (Pithior Guerilla/Supremacist/Terrorist)  
+ 1x Frigate (Guristas Webifier) **Web** **Trigger just by shooting at it**  
+  
+
+#### Fourth Spawn:
+
+2x Frigate (Guristas Kyoukan/Webifier) **Web**  
+ 2-3x Battlecruiser (Pithatis Assaulter/Death Dealer)  
+ 2-3x Battleship (Pith Eradicator/Obliterator)  
+ 1x Battleship (Aimon Kuzni\[Pith Conquistador\])  
+  
+
+#### Blitz
+
+Pocket 1 - Destroy all ships  
+ Pocket 2 - Destroy the Ion Field Projection Battery and Moon Harvester, then kill all ships  
+ Pocket 3 - Destroy the Guristas Medium Refinery, Subspace Frequency Generator and Asteroid Mining Post, then kill all ships  
+ Pocket 4 - There are 3 weak structures in the whole room, destroy them, then kill all ships  
+ Pocket 5 - Kill all Battleships and Battlecruisers from the first spawn  
+  
+
+### Bonus Room
+
+You need a Guristas Diamond tag to activate the gate and is NOT consumed. The gate remains unlocked for another 10 seconds.  
+ The Guristas Storage Facility in this room has a (very low) chance of dropping a Dread Guristas mod. **Faction drop removed since Trinity 1.2 update**  
+  
+
+#### Single Group:
+
+2x Tower Sentry Guristas III  
+ 4x Destroyer (Pithior Supremacist/Terrorist)  
+ 3x Battlecruiser (Pithatis Death Dealer/Revolter)  
+ 4x Battleship (Pith Extinguisher/Eliminator/Usurper)  
+  
+
+* * *
+
+[CategoryMissions](./CategoryMissions.html)  
+ [CategoryLevel4](./CategoryLevel4.html)
+
+Comments \[[Hide comments/form](./GuristaExtravaganza4.html&show_comments=0)\] 
+
+Just did the GE, in stage 5 i blowed up all Structures (including War installation), but the Spawnchain did start.  
+ Can not confirm the blizz for stage 5, stage 2-4 worked!
+
+-- [LeiGrumble](./LeiGrumble.html/edit "Create this page") (2008-06-09 05:10:39) 
+
+It didn't work in stage 5 for me
+
+-- [JanjanJansen](./JanjanJansen.html/edit "Create this page") (2008-06-11 11:23:35) 
+
+3 omber and 3 veld roids in stage 3
+
+-- [DirkFallows](./DirkFallows.html/edit "Create this page") (2008-06-30 08:23:22) 
+
+stage 5 blitz is wrong... but confirm 2-4 working as well.
+
+-- [BoomShaka](./BoomShaka.html/edit "Create this page") (2008-07-23 04:39:14) 
+
+I didn't get a BC spawn 2 of Pocket 3  
+  
+ Also while most the BS names are correct it does seem to vary for the first few pockets
+
+-- [KireHunted](./KireHunted.html/edit "Create this page") (2008-07-30 19:05:40) 
+
+Any agression against the final trigger including NOS causes the spawn.
+
+-- [KireHunted](./KireHunted.html/edit "Create this page") (2008-07-31 11:27:54) 
+
+killed the war installation, got 10 ogre 1s, 350 frozen food, 200 metal scraps, 600 bane torpedos, 1000 antimatter large. Not worth the 1000 cruises ammo to kil the war installation.
+
+-- [SniperLuke](./SniperLuke.html/edit "Create this page") (2008-09-08 20:03:29) 
+
+storage facility NEVER dropped dg mod. Got this mission more than 25 times. (my loot was ALWAYS 50 metal scraps, 10 frozen food, 10 oxygen, 10 livestock, 10 enriched uranium)
+
+-- [WikiLenzman](./WikiLenzman.html/edit "Create this page") (2008-11-30 17:24:18) 
+
+Storage facility has dropped a DG shield boost amp for me.  
+ Only once out of about 20 runs tho.
+
+-- [KerbEros](./KerbEros.html/edit "Create this page") (2008-12-07 15:20:03) 
+
+Pocket 4, spawn 1 I had Guristas Emissary (cruiser) as well, every time i've had it (about 7 or 8) since latest patch.
+
+-- [HarikoTenaga](./HarikoTenaga.html/edit "Create this page") (2008-12-08 19:13:18) 
+
+Pocket 5 spawn 2 was for me:  
+  
+ 4 \* Pith Eliminator BS (jamming)  
+ 1 \* Gurista Webifier (trigger)  
+ 3 \* Dire Pithi Despoiler (jamming)  
+  
+ spawn 3:  
+  
+ 4 \* Pith Eradicator BS  
+ 4 \* Pithior Guerilla  
+ 1 \* Gurista Kyoukan (trigger - shooting on it is enough ;) )
+
+-- [VaLTrantor](./VaLTrantor.html/edit "Create this page") (2009-01-29 14:50:02) 
+
+BONUS Stage Spawn has been as follows for me:-  
+  
+ 2 x Pithior Terrorist (DS)  
+ 2 x Pithior Supremacist (DS)  
+ 3 x Pithatis Death Dealer (BC)  
+ 2 x Pith Eliminator (BS)  
+ 1 x Pith Extinguisher (BS)  
+ 1 x Pith Usurper (BS)  
+  
+ Neither the Storage Facility or the Tactical Outpost dropped anything other than metal scraps and reports the first few times I did this mission and the bonus. However, the fourth time I got this, I had 2 x Dire Pithi Saboteur replacing the Terrorists, and the Tactical Outpost dropped a Dread Guristas BPC.
+
+-- [Peon155](./Peon155.html) (2009-02-11 13:46:38) 
+
+Tactical Outpost and Storage Facility have very low hp, so shooting them doesnt hurt. I didnt have a faction drop in either of these, but what Peon155 said seems reasonable. Try to confirm this.
+
+-- [VaLTrantor](./VaLTrantor.html/edit "Create this page") (2009-02-20 05:20:14) 
+
+Room 3 asteroids only yielded a total of 20K Veldspar and 3K Omber for me.
+
+-- [MelliNok](./MelliNok.html/edit "Create this page") (2009-03-01 18:15:06) 
+
+I have runned this mission maybe more than 50 times but nevet got a DG mod but still blowing those bot structures it doesnt hurt like ValTrantor says.
+
+-- [MrUndertaker](./MrUndertaker.html/edit "Create this page") (2009-03-19 15:45:02) 
+
+It appears that the mission completion trigger is eliminating all Battlecruisers and Battleships from the first spawn of Pocket 5.
+
+-- [IckyThump](./IckyThump.html/edit "Create this page") (2009-04-11 19:51:23) 
+
+Left one Pithatis Enforcer from the pocket 5, group 1 alive last. Mission didn't complete before kill it. So, can partly confirm the group 1 BC/BS completion trigger.
+
+-- [SethDeVeldrin](./SethDeVeldrin.html/edit "Create this page") (2009-04-18 14:52:27) 
+
+Pocket 5, spawn 2 - This one had 3xBattleships (Pith Eliminators) plus destroyers and web(s)
+
+-- [MasterPhoenix](./MasterPhoenix.html/edit "Create this page") (2009-05-21 21:33:32) 
+
+the tag DOESN'T get consumed. you get to keep it after.
+
+-- [BigbangNet](./BigbangNet.html/edit "Create this page") (2009-06-02 23:34:42) 
+
+Mission Completes after all battleships in FIRST wave in pocket 5 are killed.
+
+-- [CrazySpaceHobo](./CrazySpaceHobo.html/edit "Create this page") (2009-06-26 06:53:20) 
+
+Initial Group in Pocket 2 had an extra destroyer (terrorist)  
+  
+ 2nd Spawn in Pocket 3 did not have a BC
+
+-- [NachoCuban](./NachoCuban.html/edit "Create this page") (2009-09-07 16:43:55) 
+
+The Bonus stage Faction loot drop seems tied to whether you get some Dire Pithi ships or not. Have done this roughly 20 times and the 3 times I got a DG drop, I had Dire Pithi ships in the Bonus room. Without those it seems the loot drops are no better than any of the other pockets.
+
+-- [Peon155](./Peon155.html) (2009-09-09 13:02:10) 
+
+\*\*Bonus Room Salvaging Tip\*\*  
+  
+ If you use a salvaging alt or have weaker fleet members, activate the bonus room gate, cancel the activation, jettison the tag for your alt, then activate the gate again. This way, you can have your alt come in later after you have aggro'd all the NPCs.
+
+-- [AleniaCalentas](./AleniaCalentas.html/edit "Create this page") (2009-09-18 17:58:35) 
+
+Had this mission lot of times. Took 70-90 mins in Raven (CN cruises, faction mid, 3bcs), and the only faction stuff i had was a DG invu - from about 20-30 runs.
+
+-- [SpLend0r](./SpLend0r.html) (2009-10-08 11:56:24) 
+
+Just did this in a Enyo blasterfitted, was alot more fun than sitting in the Golem.
+
+-- [ExoTech](./ExoTech.html/edit "Create this page") (2009-10-11 18:34:52) 
+
+The mission takes a long time to complete. Read the guide. Flew away from them in my T2 fitted Rokh. (Big $ mission)  
+ Pocket 1: Very very easy  
+ Pocket 2: Very easy  
+ Pocket 3: Easy  
+ Pocket 4: Easy (A bit hps though)  
+ Pocket 5: Normal (Some hps). Watch the triggers had to warp out.  
+ Bonus pocket: Normal
+
+-- [MrT](./MrT.html/edit "Create this page") (2009-10-16 11:18:45) 
+
+Did this mission, including bonus pocket, in an active tengu.  
+ DR: Easy (Bonus Pocket DR: Easy)  
+ Easily tanked even sitting still.  
+  
+ 6x Heavy Missile launcher II  
+ --  
+ 2x Caldari navy Invul Field  
+ 1xPith A-Type Ballistic Deflection Field  
+ 1x Dread Guristas Shield Boost Amplifier  
+ 1x Pith b-Type Small Shield Booster  
+ 1x Gallente Navy 10mn AB  
+ --  
+ 3x Caldari navy Ballistic Control System  
+ 1x Ballistic Control System II  
+ --  
+ 2x CMedium Capacitor Control Circuit  
+ 1x Medium Warhead Calefaction Catalyst  
+ --  
+ Tengu Electronics - Dissolution Sequencer  
+ Tengu Defensive - Amplification Node  
+ Tengu Engineering - Augmented Capacitor Reservoir  
+ Tengu Offensive - Accelerated Ejection bay  
+ Tengu Propulsion - Fuel Catalyst  
+  
+ No Dire rats, so no DG loot. Also, the Installation did not even drop a can.  
+  
+ Also completed in a Golem.  
+ DR: Easy to normal.  
+ Had to use a cap booster full of charges at most.  
+  
+ 4x Caldari Navy Cruise Missile launcher  
+ Drone Link Augmentor  
+ (2xlooting mods)  
+ --  
+ Thon's Modified large Shield Booster  
+ Dread Guristas Shield Boost Amplifier  
+ 2x Caldari navy Invul Field  
+ Ballisitic Deflection Field II  
+ Heavy Cap Booster II  
+ PWNAGE  
+ --  
+ 3x Caldari navy BCS  
+ Damage Control  
+ --  
+ Large Core Defence Operational Solidifier II  
+ Large Core Defence Capacitor Safeguard II
+
+-- [DennyHaze](./DennyHaze.html/edit "Create this page") (2009-11-19 05:13:44) 
+
+I did this mission very easily in my tech I raven, fitted mostly with Tech I gear. I just made sure I killed the triggers last. Used 5 x Hammerhead I and 5 x Acolyte I to take out smaller ships. Pulsed the shield booster occassionally when needed.  
+  
+ I had:  
+ Hi Slots  
+ 6 x XT Cruise launchers with paradise cruise missiles.  
+ 2 x dual 150mm Railgun (for frigates)  
+  
+ Low Slots  
+ 3 x Ballistic control system II  
+ 2 x Capacitor Flux Coil II  
+  
+ Mid Slots  
+ 2 x Non-intertial ballistic deflection field  
+ 1 x Ditrigonal Thermal Barrier (shield hardner)  
+ 1 x CL5 X-Large shield booster  
+ 2 x Shield Boost Amplifier I  
+  
+ Rigs  
+ 3 x Large Cap Control Circuit
+
+-- [RentBoyUk](./RentBoyUk.html/edit "Create this page") (2010-04-02 16:19:20) 
+
+Full T2 fitted Perma boost raven with damage mod hammerhead II followed the kills to a T and killed the triggers last so not to get overwelmed. Was easy to get finished.
+
+-- [Gunner75](./Gunner75.html/edit "Create this page") (2010-05-17 17:00:29) 
+
+5th pocket was harder cause of permanent jamming. Also dont forget to bring more ammo than usual. I had to make a trip to station cause of it.  
+  
+ Bounty + mission reward: cca 25.5 mil  
+ Slavage and loot: not worth the time
+
+-- [RaikoOsburn](./RaikoOsburn.html/edit "Create this page") (2010-09-05 06:57:32) 
+
+in the 2nd spawn in the 5th room i got 3 exterminators 3 dire pithi despoliers and the trigger (kyoukan)
+
+-- [InspectorDubplate](./InspectorDubplate.html/edit "Create this page") (2011-03-06 03:56:39) 
+
+for some unknown reason,mission now copletes after the killing ever5ything from the 1st wave in the rm, b4 the bonus one  
+  
+ twice now its happened :S
+
+-- [FulmarMusic](./FulmarMusic.html/edit "Create this page") (2011-03-26 13:21:41) 
+
+Got perma jammed (golem) in last pocket. After 10 minutes I gave up and turned in the mission.
+
+-- [LordNikon](./LordNikon.html/edit "Create this page") (2011-08-27 18:49:38) 
+
+Working on this mission now in my navy megathron. I will not be doing this mission again any time soon. The first 4 pockets were rediculously easy but the 5th another story. I could not target anything until I took out the jammers. Killing the jammers causes more to respawn along with bs's. By the time I killed all the jammers, I was facing about 30 BS's. So I kill 2 warp out and make the 5 jump journey in to kill 2 more. At this point I'm wishing to die and put myself out of my misery. Normally I make between 5-15M every 15min cycle. This mission is worth like 25M and took me over 2hrs. Thats like 3m per 15mins. Totally not worth the time and aggrevation. Also used an excessive amount of my faction ammo.
+
+-- [Dethbringer1](./Dethbringer1.html/edit "Create this page") (2012-02-04 06:07:28) 
+
+dock-undock - 60-70 min  
+ bounty 28,1kk  
+ reward 3,28(Hi Sec)  
+ LP 9017  
+ Slavage and loot: poor(1358 М3) 15-16kk isk  
+ CNR(CN Fit)  
+ complexity - easy-medium  
+ ps respect your time and others
+
+-- [Nismo1985](./Nismo1985.html/edit "Create this page") (2012-03-11 16:15:38) 
+
+anybody tell about loot, salvage, standing.... is it interesting to read about your fit? i dont think so.
+
+-- [Nismo1985](./Nismo1985.html/edit "Create this page") (2012-03-11 16:17:35) 
+
+my fit was good - :P @ nismo  
+  
+ pocket 1:  
+ bunker - ammo  
+  
+ pocket 2:  
+ ion, hangar - ammo  
+ moon - hydrogen batteries  
+  
+ pocket 5:  
+ war - some scrap and 10 ogre i  
+ bunker - ammo  
+ prison - janitors  
+  
+ bonus pocket:  
+ storage - some scrap  
+  
+ i.e. structures doesn't worth it  
+  
+ easy mission, 30m bounty, 25m estimated loot and salvage, 115 minutes on sentry dominix and noctis
+
+-- [KartofiusAlAndalus](./KartofiusAlAndalus.html/edit "Create this page") (2012-08-03 14:09:27) 
+
+Guristas Extravaganza (level 4)  
+ Against: Guristas  
+ Damage to do: Kinetic  
+ Damage to defend form: Kinetic (80%), Termal (20%)  
+ Total Bounty: 25M  
+ Total from Loot: 7M  
+ Total from Salvage: 6M  
+ Total from Structures: 2M  
+ Total from Mission Reward: 1710k + 1680k + 7180 LP  
+ Total total: 50M  
+ Time taken: less then 60min (no bonus pocket)  
+ Mission agent: Lozdod Pousel  
+ System: Osmon 0.7 (agent & enconter)  
+  
+ Pocket 0  
+ Nothing.  
+  
+ Pocket 1  
+ Only Wave: 6 Sentry guns, 2 Crusiers, 2 Frigates  
+ Structures: Guristas Bunker (random cheap ammunition)  
+  
+ Pocket 2  
+ Wave 1: 1 Battleship (881k), 2 Crusiers, 2 Frigates  
+ Wave 2: 2 Battleships, 2 Crusiers, 2 Frigates  
+ Wave 3: 2 Battleships, 1 Frigate  
+ Wave 4: 2 Battleships, 2 Crusiers  
+ Structures: Starbase Hangar, Moon Harvester, Ion Field  
+  
+ Projection Battery  
+  
+ Pocket 3  
+ Wave 1: 3 Sentry guns, 3 Battleships, 2 Crusiers, 1 Frigate  
+ Wave 2: 2 Battleships, 2 Crusiers, 2 Frigates  
+ Wave 3: 3 Battleships, 2 Frigates  
+ Wave 4: 2 Battleships (Jammed), 2 Crusiers, 1 Frigate  
+  
+ (Webified)  
+ Wave 5: 2 Battleships, 2 Frigates  
+ Structures: Nothing (didn't destroy Asteroid Factory)  
+  
+ Pocket 4  
+ Wave 1: 4 Sentry guns, 3 Battleships, 1 Crusier, 2 Frigates  
+ Wave 2: 2 Battleships, 2 Crusiers, 1 Frigate  
+ Structures: Nothing  
+  
+ Pocket 5  
+ Wave 1: 3 Sentry guns, 2 Battleships (some 993k), 2  
+  
+ Crusiers, 6 Frigates (Jammed & Webified)  
+ Wave 2: 3 Battleships, 5 Frigates  
+ Wave 3: 4 Battleships, 4 Frigates  
+ Wave 4: 3 Battleships, 3 Crusiers, 6 Frigates  
+ Structures: Guristas War Instalation (2M generic loot),  
+  
+ Guristas Bunker, Prison  
+  
+ Pocket 6 (bonus)  
+ Did not do it.
+
+-- [LjokerMarliac](./LjokerMarliac.html/edit "Create this page") (2014-03-13 22:01:01) 
+
+\===Special Thanks===  
+ Ljoker Marliac, for editing  
+ MelliNok and DirkFallows, for Asteroid rocks  
+ Shintu Felper, for tips on Eve-survival site  
+ SniperLuke, for loot of Guristas War Instalation  
+ KerbEros, for loot of DG shield boost amp  
+ VaLTrantor, for pocket 5  
+ Peon155, for pocket 6  
+ CrazySpaceHobo and BoomShaka, for Blitz information
+
+-- [LjokerMarliac](./LjokerMarliac.html/edit "Create this page") (2014-03-13 22:54:24) 
+
+lol, did not noticed there was already something in here:  
+ ./GuristasExtravaganza4.html
+
+-- [LjokerMarliac](./LjokerMarliac.html/edit "Create this page") (2014-03-13 22:59:05) 
+
+26 Minutes to complete 34m 42 seconds to clear everything including bonus room.  
+  
+ Faction Fit Rattler
+
+-- [EpocWiki](./EpocWiki.html/edit "Create this page") (2014-11-08 16:04:57) 
+
+[R and L Electronics has a TMD710GA](http://www.randl.com/shop/catalog/product_info.php?products_id=71450)  
+KENWOOD TMD710GA , TM-D710GA , 2m/70cm with GPS, TNC, APRS & SKY COMMAND FIRMWARE  
+[RandL has link to Manufacturer info on the TMD710GA here.](http://www.kenwoodusa.com/Communications/Amateur_Radio/Mobiles/TM-D710GA)  
+[R&L has a link to the Eham review on the TMD710GA here.](http://www.eham.net/reviews/review/134218)
+
+*   [\[Source\]](./GuristaExtravaganza4.html/showcode "Display the markup for this page")
+*   [\[History\]](./GuristaExtravaganza4.html/history "Click to view recent edits to this page")
+*   [2016-05-15 14:50:44](./GuristaExtravaganza4.html/revisions "Click to view recent revisions list for this page") [![feed icon](images/feed.png)](./GuristaExtravaganza4.html/revisions.xml "Click to display a feed with the latest revisions to this page")
+*   Owner: [MasterGamer](./MasterGamer.html/edit "Create this page")
+
+[Valid XHTML 1.0 Transitional](http://validator.w3.org/check/referer) :: [Valid CSS](http://jigsaw.w3.org/css-validator/check/referer) :: Powered by [WikkaWiki](http://wikkawiki.org/) 
+
+[END VERBATIM]
