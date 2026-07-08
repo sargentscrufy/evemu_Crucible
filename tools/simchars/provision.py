@@ -68,10 +68,10 @@ def immediate_buy(mch, station_id, tid, price, qty=1):
              False, None)
 
 
-def ensure_docked(mch, station_id, system_id, ship_item, patience=90.0):
+def ensure_docked(mch, station_id, system_id, ship_item, patience=300.0):
     """If the session is undocked, dock at the given station and wait.
 
-    Sends CmdStop first: login warp-in can leave the ship in a stuck
+    Sends CmdStop once first: login warp-in can leave the ship in a stuck
     warp/align state (DestinyError 'warp align/speed is incorrect') that
     silently blocks dock requests — the real client also stops on login.
     """
@@ -84,23 +84,33 @@ def ensure_docked(mch, station_id, system_id, ship_item, patience=90.0):
     except CallError as e:
         log(f"CmdStop: {e}")
     mch.pump(2.0)
+
+    def request_dock():
+        # DockingApproach is progress, not failure: the server accepted
+        # the request and is auto-approaching the dock perimeter.
+        try:
+            mch.call_bound(bey_ref, "CmdDock", station_id, ship_item)
+        except CallError as e:
+            if "DockingApproach" in str(e):
+                log("dock request accepted: approaching perimeter")
+            else:
+                log(f"dock request: {e}")
+
+    # NOTE: no CmdStop between retries — the server-side auto-approach
+    # (minutes for slow hulls starting km off-perimeter) is cancelled by
+    # a stop command; stop-and-retry loops sabotage their own approach.
     deadline = time.time() + patience
-    mch.call_bound(bey_ref, "CmdDock", station_id, ship_item)
-    next_retry = time.time() + 25.0
+    request_dock()
+    next_retry = time.time() + 45.0
     while time.time() < deadline:
         mch.pump(2.0)
         if mch.session.get("stationid"):
             log("docked")
             return True
         if time.time() > next_retry:
-            next_retry = time.time() + 25.0
-            log("dock retry (stop + dock)")
-            try:
-                mch.call_bound(bey_ref, "CmdStop")
-                mch.pump(1.0)
-                mch.call_bound(bey_ref, "CmdDock", station_id, ship_item)
-            except CallError as e:
-                log(f"dock retry: {e}")
+            next_retry = time.time() + 45.0
+            log("dock re-request")
+            request_dock()
     return False
 
 

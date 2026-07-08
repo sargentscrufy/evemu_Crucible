@@ -45,14 +45,19 @@ def main():
     ap.add_argument("--station", type=int, default=60004450)
     ap.add_argument("--celestial", type=int, default=40088642,
                     help="warp target itemID (default: Amsen IV)")
-    ap.add_argument("--warp-wait", type=float, default=75.0,
+    ap.add_argument("--warp-wait", type=float, default=120.0,
                     help="seconds to allow per warp leg")
     args = ap.parse_args()
 
     mch = MachoClient(args.host, args.port, args.user, args.password)
     sess = mch.enter_world(args.char_id)
     system_id = sess["solarsystemid2"]
+    # session change doesn't reliably carry shipid; the DB does
     ship_item = int(mch.session.get("shipid") or 0)
+    if not ship_item:
+        ship_item = int(db.query(
+            "SELECT shipID FROM chrCharacters WHERE characterID = "
+            f"{int(args.char_id)}")[0]["shipID"])
     log(f"in world: station={sess['stationid']} system={system_id} "
         f"ship={ship_item}")
 
@@ -86,8 +91,6 @@ def main():
 
     log(f"warp leg 2: -> station {args.station}")
     try:
-        mch.call_bound(bey_ref, "CmdStop")
-        mch.pump(2.0)
         warp_to(mch, bey_ref, args.station, min_range=0)
     except CallError as e:
         log(f"FAIL: warp 2 rejected: {e}")
