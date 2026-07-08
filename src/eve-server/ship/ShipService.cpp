@@ -352,15 +352,19 @@ PyResult ShipBound::Drop(PyCallArgs &call, PyList* PyToDropList, std::optional <
                     throw CustomError ("Drones are disabled.");
                 }
 
-                if (pClient->GetChar()->GetAttribute(AttrMaxActiveDrones).get_uint32() < 1) {
+                // CHAR-3: nothing ever sets AttrMaxActiveDrones on characters,
+                // so derive drone control from the Drones skill directly (the
+                // same pattern TargetManager uses for max locked targets)
+                uint8 maxActiveDrones = pClient->GetChar()->GetSkillLevel(EvESkill::Drones);
+                if (maxActiveDrones < 1) {
                     throw UserError ("NoDroneManagementAbilities")
                             .AddFormatValue ("typeID", new PyInt (iRef->typeID ()));
                     //{'FullPath': u'UI/Messages', 'messageID': 259203, 'label': u'NoDroneManagementAbilitiesBody'}(u'You cannot launch {[item]typeID.nameWithArticle} because you do not have the ability to control any drones.', None, {u'{[item]typeID.nameWithArticle}': {'conditionalValues': [], 'variableType': 2, 'propertyName': 'nameWithArticle', 'args': 0, 'kwargs': {}, 'variableName': 'typeID'}})
                 }
-                if (pClient->GetChar()->GetAttribute(AttrMaxActiveDrones).get_uint32() <= pClient->GetShipSE()->DroneCount()) {
+                if (maxActiveDrones <= pClient->GetShipSE()->DroneCount()) {
                     throw UserError ("NoDroneManagementAbilitiesLeft")
                             .AddFormatValue ("item", new PyInt (iRef->typeID ()))
-                            .AddFormatValue ("limit", new PyInt (pClient->GetChar ()->GetAttribute (AttrMaxActiveDrones).get_uint32()));
+                            .AddFormatValue ("limit", new PyInt (maxActiveDrones));
                     //{'FullPath': u'UI/Messages', 'messageID': 259140, 'label': u'NoDroneManagementAbilitiesLeftBody'}(u'You cannot launch {[item]item.name} because you are already controlling {[numeric]limit} drones, as much as you have skill to.', None, {u'{[numeric]limit}': {'conditionalValues': [], 'variableType': 9, 'propertyName': None, 'args': 0, 'kwargs': {}, 'variableName': 'limit'}, u'{[item]item.name}': {'conditionalValues': [], 'variableType': 2, 'propertyName': 'name', 'args': 0, 'kwargs': {}, 'variableName': 'item'}})
                 }
 
