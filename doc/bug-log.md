@@ -74,6 +74,25 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
   parameters; server math matching the CCP curve is what keeps client
   and server in agreement. Test with capture diffs before/after.
 
+### CHAR-1: CreateCharacterWithDoll segfaults on incomplete doll data (Tier 2)
+- **Observed:** 2026-07-08, building the Aura NPC bot. Sending an empty
+  `util.KeyVal` for characterInfo/portraitInfo crashes the server
+  (connection dropped; docker restart policy recovered it, RestartCount 1).
+- **Cause:** `CharacterAppearance::Build` / `CharacterPortrait::Build`
+  (`character/Character.cpp`) dereference every doll field with no null
+  check — e.g. `data->GetItemString("colors")->AsList()` on a missing key
+  returns nullptr and is immediately dereferenced.
+- **Also:** SpawnCharacter commits the chrCharacters row *before* the doll
+  Build runs, so a crash there leaves a half-created character (name
+  taken, but not selectable) — a consistency hazard.
+- **Fix (not yet done):** null-check doll fields and return a UserError
+  (the code already returns CharNameInvalidTaken cleanly, so the error
+  path exists); make character creation transactional so a doll failure
+  rolls back the chrCharacters row. Good validation-hardening target
+  once the admin API / bot framework needs robust programmatic creation.
+- **Note:** this is exactly why the Phase 0 docker restart policy matters —
+  a client-triggerable server crash recovered automatically in seconds.
+
 ## Fixed
 
 ### CORE-1: XMLParser::ElementParser missing virtual destructor (UB)
