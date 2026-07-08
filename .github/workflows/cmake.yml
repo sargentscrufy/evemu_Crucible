@@ -31,3 +31,21 @@ jobs:
     - name: Build
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+  build-sanitized:
+    # ASan/UBSan build. Catches the dangling-pointer and UB crash class
+    # (destiny/spawn segfaults) at compile+run time. Compile-only for now;
+    # the Phase 1 smoke bot will run against this binary.
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: sudo apt update;sudo apt -y install libmariadb-dev liblz4-dev build-essential zlib1g-dev libboost-dev libtinyxml2-dev libutfcpp-dev
+
+    - name: Configure CMake (sanitizers)
+      run: cmake -B ${{github.workspace}}/build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSANITIZE=ON
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build-asan --config RelWithDebInfo

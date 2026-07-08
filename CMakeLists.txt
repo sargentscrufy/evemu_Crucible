@@ -33,6 +33,8 @@ SET( EVEMU_ROOT ".."
      CACHE PATH "The root directory of EVEmu workspace." )
 SET( TIXML_USE_STL ON
      CACHE BOOL "tinyxml will use native STL." )
+SET( SANITIZE OFF
+     CACHE BOOL "Build with AddressSanitizer and UndefinedBehaviorSanitizer (GCC/Clang only)." )
 
 IF( CMAKE_CROSSCOMPILING )
   SET( EVEMU_TARGETS_IMPORT ""
@@ -72,6 +74,16 @@ ENDIF()
 # -Wall -Wextra -Weffc++ -Wconversion -Wdouble-promotion
 # -pg -ggdb -pedantic
 # -fsanitize=thread  -fsanitize=address
+
+IF( SANITIZE )
+  IF( WIN32 )
+    MESSAGE( WARNING "SANITIZE is only supported with GCC/Clang; ignoring on MSVC." )
+  ELSE()
+    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined -fno-omit-frame-pointer -g" )
+    SET( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined" )
+    MESSAGE( STATUS "Building with AddressSanitizer + UndefinedBehaviorSanitizer" )
+  ENDIF()
+ENDIF( SANITIZE )
 
 #
 # Try to determine the exact source version using SCM.
