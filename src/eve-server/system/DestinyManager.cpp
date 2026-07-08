@@ -145,6 +145,16 @@ void DestinyManager::Process() {
 
     ProcessState();
 
+    // NPC-3: our npc/drone movement math is not tick-identical to the
+    // client's destiny simulation, so client-side positions drift over a
+    // fight (rats drawn at 2km while actually far off grid: untargetable
+    // and offered warp-to).  periodically snap moving npcs to the
+    // authoritative position; staggered by entityID to spread traffic.
+    if ((mySE->IsNPCSE() or mySE->IsDroneSE())
+    and IsMoving()
+    and ((sEntityList.GetStamp() % 10) == (mySE->GetID() % 10)))
+        SetPosition(m_position, true);
+
     if (sConfig.debug.UseProfiling)
         sProfiler.AddTime(Profile::destiny, GetTimeUSeconds() - profileStartTime);
 }
