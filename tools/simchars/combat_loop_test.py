@@ -166,23 +166,34 @@ def main():
     log(f"rats up: {npcs}")
 
     # --- engage ---
+    # rats warp in after spawning; locks are correctly denied while the
+    # target is warping (DeniedTargetOtherWarping), so retry for a while
     dogma = mch.bind("dogmaIM", (SYSTEM, SOLARSYSTEM_GROUP))
     engaged = []
-    for npc in npcs:
-        try:
-            mch.call_bound(bey, "CmdFollowBall", npc, 1000)
-            mch.pump(1.0)
-        except CallError as e:
-            bug(f"CmdFollowBall {npc} rejected: {e}")
-        try:
-            mch.call_bound(dogma, "AddTarget", npc)
-            engaged.append(npc)
-            log(f"locked {npc}")
-            break   # civilian gun: one target at a time
-        except CallError as e:
-            log(f"AddTarget {npc} failed (may be out of range): {e}")
+    lock_deadline = time.time() + 120
+    while not engaged and time.time() < lock_deadline:
+        for npc in npcs:
+            try:
+                mch.call_bound(bey, "CmdFollowBall", npc, 1000)
+                mch.pump(1.0)
+            except CallError as e:
+                log(f"CmdFollowBall {npc}: {e}")
+            try:
+                mch.call_bound(dogma, "AddTarget", npc)
+                engaged.append(npc)
+                log(f"locked {npc}")
+                break   # civilian gun: one target at a time
+            except CallError as e:
+                msg = str(e)
+                if "OtherWarping" in msg:
+                    log(f"{npc} still warping in; will retry")
+                else:
+                    log(f"AddTarget {npc} failed: {msg[:120]}")
+        if not engaged:
+            mch.pump(8.0)
     if not engaged:
-        bug(f"could not lock any of {len(npcs)} rats (all out of range?)")
+        bug(f"could not lock any of {len(npcs)} rats within 120s "
+            "(warp-in never completed?)")
 
     kills_before = dead_npcs()
     fight_end = time.time() + 300
