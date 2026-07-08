@@ -224,7 +224,10 @@ void SystemBubble::ProcessWander(std::vector<SystemEntity *> &wanderers) {
         }
 
         _log(DESTINY__TRACE, "SystemBubble::ProcessWander() checking if DSE in bubble");
-        if (!InBubble(pDSE->GetPosition())) {
+        // PHYS-2: pilots get the grace band so their grid isn't wiped
+        // the moment combat drifts across the bubble edge
+        if (pDSE->HasPilot() ? !InBubbleGrace(pDSE->GetPosition())
+                             : !InBubble(pDSE->GetPosition())) {
             wanderers.push_back(pDSE);
 
             _log(
@@ -632,6 +635,16 @@ bool SystemBubble::InBubble(const GPoint& pt, bool inWarp/*false*/) const
     }
 
     return (m_center.distance(pt) < m_radius);
+}
+
+// PHYS-2: hysteresis membership test for piloted ships.  reassigning a
+// player at the hard bubble edge wipes their client grid (RemoveBalls
+// for everything they are looking at -- belts vanish mid-fight when
+// combat drifts across the border) and rapid A->B->A churn does the
+// same.  players keep their bubble until they are well past the edge.
+bool SystemBubble::InBubbleGrace(const GPoint& pt) const
+{
+    return (m_center.distance(pt) < (m_radius + 75000.0));
 }
 
 bool SystemBubble::IsOverlap( const GPoint& pt ) const

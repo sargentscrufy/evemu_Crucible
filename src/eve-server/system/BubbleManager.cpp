@@ -123,7 +123,11 @@ void BubbleManager::Process() {
 void BubbleManager::CheckBubble(SystemEntity *pSE) {
     SystemBubble *pBubble = pSE->SysBubble();
     if (pBubble != nullptr) {
-        if (pBubble->InBubble(pSE->GetPosition())) {
+        // PHYS-2: piloted ships keep their bubble through a 75km grace
+        // band -- hard-edge reassignment wiped the client's grid
+        // (belt + rats vanish) whenever combat drifted over the border
+        if (pSE->HasPilot() ? pBubble->InBubbleGrace(pSE->GetPosition())
+                            : pBubble->InBubble(pSE->GetPosition())) {
             _log(DESTINY__BUBBLE_DEBUG, "BubbleManager::CheckBubble() - Entity '%s'(%u) at (%.2f,%.2f,%.2f) is still located in bubble %u at %.2f,%.2f,%.2f.",\
                  pSE->GetName(), pSE->GetID(), pSE->GetPosition().x, pSE->GetPosition().y, pSE->GetPosition().z,\
                  pBubble->GetID(), pBubble->x(), pBubble->y(), pBubble->z());
