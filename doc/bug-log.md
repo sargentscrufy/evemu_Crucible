@@ -152,6 +152,19 @@ fixed in one pass (commit: rat spawn rework):
 8. WarpOutSpawn signature took an unused NPC* (dead code path);
    replaced by the roaming implementation.
 
+### CHAR-2: /giveskill hangs the entire server — FIXED 2026-07-08
+- **Observed:** live. GM command `/giveskill me 22551 3` pinned the main
+  loop at 100% CPU; server unresponsive (port still accepted TCP, so the
+  docker healthcheck stayed green — liveness != progress).
+- **Diagnosis:** gdb attach (`docker exec --privileged ... gdb -p`) on
+  the spinning process: `Character::RemoveFromQueue` erase-loop only
+  advanced its iterator when it erased a matching entry; any other entry
+  in the character's skill queue spun forever.
+- **Fix:** advance the iterator in the non-matching branch.
+- **Lesson for the admin API (Phase 2):** the health endpoint must
+  report main-loop tick progress, not just port liveness — this hang
+  looked "healthy" to docker the whole time.
+
 ## Fixed
 
 ### CORE-1: XMLParser::ElementParser missing virtual destructor (UB)
