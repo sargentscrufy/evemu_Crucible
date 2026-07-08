@@ -1837,6 +1837,15 @@ void DestinyManager::WarpStop(double currentShipSpeed) {
         mySE->GetNPCSE()->GetAIMgr()->WarpOutComplete();
     }
 
+    // broadcast the authoritative stopped state exactly once at warp
+    // exit: PHYS-1 removed the per-tick Stop spam whose side effect was
+    // correcting residual client-side velocity (e.g. a pre-warp bounce),
+    // which left ships visually drifting backwards after landing
+    CmdStop stopDu;
+        stopDu.entityID = mySE->GetID();
+    PyTuple* stopUp = stopDu.Encode();
+    SendSingleDestinyUpdate(&stopUp);
+
     // TODO: when exiting warp, and attempting to warp again shortly after, the
     // ball mode reaches a weird state where it goes from Warp to a regular
     // move. Halting the ship after warp completes seems to fix this, but it's
