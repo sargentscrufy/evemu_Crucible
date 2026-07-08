@@ -643,9 +643,14 @@ void Character::RemoveFromQueue(SkillRef sRef)
 {
     SkillQueue::iterator itr = m_skillQueue.begin();
     while (itr != m_skillQueue.end()) {
-        if (sRef->typeID() == itr->typeID)
-            if (sRef->GetAttribute(AttrSkillLevel).get_uint32() >= itr->level)
-                itr = m_skillQueue.erase(itr);
+        if ((sRef->typeID() == itr->typeID)
+        and (sRef->GetAttribute(AttrSkillLevel).get_uint32() >= itr->level)) {
+            itr = m_skillQueue.erase(itr);
+        } else {
+            // the old loop only advanced by erasing: any non-matching
+            // queue entry spun the whole server forever (/giveskill hang)
+            ++itr;
+        }
     }
     SkillQueueLoop();
 }
