@@ -97,12 +97,35 @@ def main():
         mch.close()
         return finish(t0, args)
 
+    # reship if we are in a capsule (or anything without a gun): board a
+    # spare Ibis from the hangar, like a player replacing a lost ship
     gun_rows = db.query(
         f"SELECT itemID FROM entity WHERE locationID = {ship} AND flag = 27")
     if not gun_rows:
-        bug(f"no gun fitted in hislot0 of ship {ship}")
-        mch.close()
-        return finish(t0, args)
+        spares = db.query(
+            f"SELECT itemID FROM entity WHERE ownerID = {args.char_id} "
+            f"AND locationID = {STATION} AND typeID = 601 AND flag = 4")
+        if not spares:
+            bug(f"active ship {ship} has no gun and no spare Ibis in hangar")
+            mch.close()
+            return finish(t0, args)
+        new_ship = int(spares[0]["itemID"])
+        ship_ref0 = mch.bind("ship", (STATION, STATION_GROUP))
+        try:
+            mch.call_bound(ship_ref0, "ActivateShip", new_ship, ship)
+            mch.pump(3.0)
+            log(f"reshipped: boarded spare Ibis {new_ship} (was in {ship})")
+            ship = new_ship
+        except CallError as e:
+            bug(f"reship ActivateShip failed: {e}")
+            mch.close()
+            return finish(t0, args)
+        gun_rows = db.query(
+            f"SELECT itemID FROM entity WHERE locationID = {ship} AND flag = 27")
+        if not gun_rows:
+            bug(f"spare Ibis {ship} has no fitted gun after boarding")
+            mch.close()
+            return finish(t0, args)
     gun = int(gun_rows[0]["itemID"])
 
     # --- undock ---
