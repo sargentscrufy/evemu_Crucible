@@ -31,6 +31,49 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
   and collision response; add velocity clamp; smoke-bot regression once
   bot can fly.
 
+### DESTINY-3: Warp speed model is dimensionally broken — discontinuous
+### speed, arrival overshoot (Tier 1)
+- **Observed:** 2026-07-07 live test — ship "blasted through the station"
+  on warp arrival; earlier session crashed the client during warp
+  (DESTINY-1); client exception showed `shipBall = None` after landing.
+- **Analysis** (`DestinyManager.cpp` InitWarp/WarpAccel/WarpCruise/
+  WarpDecel/WarpStop):
+  1. For long warps, accel and decel distances are the constants
+     `exp(21) ≈ 1.318e9 m` for **every ship**, though comments claim they
+     scale with warp speed. In CCP's model (k=3 accel, k=1 decel, per the
+     "Warp Drive Active" dev blog) those distances are `v_warp/3` and
+     `v_warp/1` — for a 3 AU/s ship that's 1.5e11 m and 4.5e11 m, i.e.
+     the real decel distance is ~340× what the code uses.
+  2. Speed is discontinuous at phase boundaries: accel hands off at
+     `3·exp(21) ≈ 4e9 m/s`, cruise runs at `v_warp ≈ 4.5e11 m/s` (3 AU/s
+     ship) — an instant ~100× speed jump. Same cliff into decel.
+  3. `WarpCruise` subtracts a full `warpSpeed` per tick without clamping
+     to remaining distance; the decel handoff then **snaps** the ship
+     from up to one cruise-tick away (≈3 AU!) to `decelDist` from the
+     target in a single tick. The client interpolates that as absurd
+     velocity — matches the observed fly-through.
+  4. `WarpStop` shoves `m_targetPoint += warp_vector * 10000` (10 km
+     forward past the intended landing point) before halting, moving the
+     ship closer to the object warped to.
+  5. `WarpStop`'s own TODO documents client/server desync after warp
+     (`Halt()` while the client still shows drift) — consistent with the
+     captured client exception (`AttributeError ... isCloaked`,
+     `shipBall = None`) and DESTINY-2's bounce.
+- **Proposed rework** (replace, not patch):
+  - accelDist = v_warp/3, decelDist = v_warp (meters, v_warp in m/s);
+    short warps cap peak speed at `v_peak = targetDist · 3/4` so phases
+    stay continuous.
+  - Continuous v(t): accel `v = v_peak·e^(3(t−t_a))`, cruise `v_peak`,
+    decel `v = v_peak·e^(−(t−t_d))`; position = integral, no snapping;
+    cruise tick clamped to remaining distance.
+  - Exit warp at `max(100 m/s, v_max_sub/2)` per CCP behavior; land AT
+    the computed warp-in point (remove the +10 km shove).
+  - Trace-log arrival error; smoke-bot warp regression asserts arrival
+    within tolerance and no post-warp velocity spike.
+- **Risk note:** client runs its own warp visualization from the same
+  parameters; server math matching the CCP curve is what keeps client
+  and server in agreement. Test with capture diffs before/after.
+
 ## Fixed
 
 ### CORE-1: XMLParser::ElementParser missing virtual destructor (UB)
