@@ -254,6 +254,32 @@ fixed in one pass (commit: rat spawn rework):
   resume patrol after fights, and are excluded from roam/respawn
   bookkeeping. First step toward simulated CONCORD/faction-navy
   response.
+- **Validated 2026-07-08 09:36 UTC** by bot flight (Aura -> Ekura gate,
+  Amsen 1.0): spawn timer hit, three Caldari Police Lieutenants spawned
+  guarding the gate with live patrol movement. The same run proved the
+  SPAWN-9 timer self-heal and the GATE-1 bubble->gate lookup end to end.
+
+### DESTINY-5: deferred undock push stomped active warps (FIXED e9cd928f)
+- **Found by:** GUARD-1 validation flight 1 -- Aura warped from Amsen
+  station to 9.8e15 m (65,000 AU) instead of the Ekura gate.
+- **Cause:** Client applies the undock ejection via a state timer.  A
+  warp commanded in the gap had m_targetPoint overwritten with
+  (undock vector * 1e16); InitWarp logged the mismatch and flew there
+  anyway. Likely behind earlier player strandings/mis-warps right
+  after undock.
+- **Fix:** DestinyManager::Undock() leaves an in-progress warp untouched.
+  Verified: flight 2 target-vs-calculated error dropped from 1e16 m to
+  1,157 m.
+
+### CAP-1: ships load with a near-empty capacitor (open)
+- Ships appear to start sessions/undock with almost no capacitor charge
+  (no persisted AttrCapacitorCharge), so early warps get cap-clipped
+  far short of the target -- a Badger managed only 0.5 AU of a 1.9 AU
+  warp. Also explains player "warp stopped early / couldn't warp"
+  reports right after undock or heavy module use (Hulk post-mining
+  10 AU warp failure on 2026-07-08 07:52).
+- Direction: persist/restore cap charge, or initialize to full at ship
+  load; also consider cap regen while docked.
 
 ## Fixed
 

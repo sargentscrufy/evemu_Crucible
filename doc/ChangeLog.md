@@ -1,6 +1,7 @@
 *** Private Server Fork — phase-0-foundation (2026-07-08) ***
 - [FEAT] Drone control (DRONE-1/2/3): engage/return-home/return-to-bay wired to DroneAIMgr with ownership checks; return-to-bay auto-scoops on arrival (deferred outside the entity tic loop); off-grid drone state changes now reach the owner (no more "Drones in Distant Space" ghosts). Live-verified: launch, engage, recall, scoop
-- [FEAT] Empire police gate patrols (GUARD-1): gates in >0.90 sec systems spawn faction police 10-30s after a pilot arrives; guards idle-orbit the gate at 15km, retaliate but never initiate, resume patrol after fights. First step toward simulated CONCORD response
+- [FEAT] Empire police gate patrols (GUARD-1): gates in >0.90 sec systems spawn faction police 10-30s after a pilot arrives; guards idle-orbit the gate at 15km, retaliate but never initiate, resume patrol after fights. First step toward simulated CONCORD response. Bot-validated live (3 Caldari Police Lieutenants patrolling the Amsen->Ekura gate)
+- [FIX] Deferred undock push stomped active warps (DESTINY-5): warping right after undock re-aimed the warp at the undock vector x1e16 and flung ships tens of thousands of AU into deep space; found and verified fixed by bot validation flights
 - [FIX] Weapon/mining beams never rendered (EFFECT-1): ship slim sent the fitted-module list in reversed pair order, silently breaking client turret mounting; both slim builders now use the packet-capture-verified order
 - [FIX] Mined ore was invisible (CHAR-4): ore routed to the ore hold (flag 134) which the Crucible client predates; ore now goes to cargo
 - [FIX] Module onlining never checked skills (SKILL-1); docked onlining skipped every check
