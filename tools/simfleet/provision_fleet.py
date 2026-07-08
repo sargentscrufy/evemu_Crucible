@@ -77,6 +77,7 @@ def ensure_character(user, char_name):
 
 
 def insert_item(name, type_id, owner, location, flag, qty=1, singleton=1):
+    name = name.replace("'", "''")      # SQL-escape (pilot names have apostrophes)
     rows = db.query(
         "INSERT INTO entity (itemName, typeID, ownerID, locationID, flag, "
         "contraband, singleton, quantity, x, y, z, customInfo) VALUES "
