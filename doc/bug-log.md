@@ -301,6 +301,29 @@ fixed in one pass (commit: rat spawn rework):
   MissionDataMgr, agent offer routing by division, runtime spawn via
   SpawnMgr/DungeonMgr, completion on wave cleared.
 
+### FLEET trial findings (2026-07-09, trio: Cormorant FC + Merlin + Rifter)
+
+- **WORKS: fleet formation over the wire.** CreateFleet -> bind(fleetID)
+  -> Invite(charID) -> AcceptInvite all function; fleet 950000000 formed
+  with 3 members across 3 concurrent sessions; composition query OK;
+  fleet survived undock/warp/dock cycles at 3 belts; all pilots returned
+  and docked.
+- **FLEET-1: fleet warp is a server-side no-op.** CmdWarpToStuff parses
+  the fleet=True byname and drops it; warp-to-member ('char' type) is
+  an explicit "not implemented" stub. Server logs prove members never
+  moved on the FC's warp (their warps initiated only when they issued
+  their own, 75s later). Implementable: BeyonceService has the flag,
+  FleetService has the member list -- on fleet=True, WarpTo each
+  on-grid member to the same destination (staggered a few hundred ms).
+- **Formation-flight precision note:** members warping to the same belt
+  land within meters of each other (exit points differ by <400m) --
+  visual formation will look good once fleet warp exists.
+- **SPAWN-11 (minor, new):** unwatched leftover rat waves never despawn;
+  they park in belt bubbles indefinitely, and via the SPAWN-10 CountNPCs
+  guard they suppress fresh waves there (trio found 3 belts occupied by
+  stale suite-era spawns, no new spawns offered). Need a stale-wave
+  despawn/warp-out pass when a bubble has had no players for N minutes.
+
 ## Fixed
 
 ### CORE-1: XMLParser::ElementParser missing virtual destructor (UB)
