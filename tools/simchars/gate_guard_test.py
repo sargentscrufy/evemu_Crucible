@@ -65,6 +65,13 @@ def main():
     except CallError as e:
         log(f"CmdStop: {e}")
 
+    # ships load with a near-empty capacitor; an immediate warp gets
+    # cap-clipped short of the gate.  let it regenerate first.
+    log("waiting 100s for capacitor regen")
+    deadline = time.time() + 100.0
+    while time.time() < deadline:
+        mch.pump(2.0)
+
     log(f"warping to gate {args.gate}")
     try:
         mch.call_bound(bey_ref, "CmdWarpToStuff", "item", int(args.gate),
