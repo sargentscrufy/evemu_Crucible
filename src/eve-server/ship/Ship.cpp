@@ -2249,15 +2249,14 @@ PyList* ShipItem::ShipGetModuleList() {
     }
 
     PyList* result = new PyList();
-    // Create entries in "onslimitemchange" modules list for ALL modules, rigs, and subsystems present on ship:
+    // GUN-1: the wire format for slim 'modules' is a flat list of module
+    // typeIDs (SlimItem listInt in Destiny.xmlp) -- the earlier
+    // (typeID, itemID) tuples were unreadable by the client's turret
+    // mounting, so other ships' weapon fire never rendered.
     std::vector<InventoryItemRef> moduleList;
     m_ModuleManager->GetModuleListOfRefsAsc(moduleList);
-    for (auto cur : moduleList) {
-        PyTuple* module = new PyTuple(2);
-        module->SetItem(0, new PyInt(cur->typeID()));
-        module->SetItem(1, new PyInt(cur->itemID()));
-        result->AddItem(module);
-    }
+    for (auto cur : moduleList)
+        result->AddItemInt(cur->typeID());
 
     return result;
 }

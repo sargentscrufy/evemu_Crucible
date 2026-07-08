@@ -757,9 +757,12 @@ void NPCAIMgr::AttackTarget(SystemEntity* pSE) {
     uint32 gfxID = 0;
     if (m_self->HasAttribute(AttrGfxTurretID))// graphicID for turret for drone type ships
         gfxID = m_self->GetAttribute(AttrGfxTurretID).get_uint32();
+    // GUN-1: repeat=1 (one-shot event) per live CCP OnSpecialFX captures;
+    // repeat=0 encodes as None (none_marker) which the client's
+    // fxSequencer triggers choke on
     m_destiny->SendSpecialEffect(m_self->itemID(), m_self->itemID(), m_self->typeID(),
                                  pSE->GetID(),0,guid,1,1,
-                                 1,m_attackSpeed,0,gfxID);
+                                 1,m_attackSpeed,1,gfxID);
 
     Damage d(m_npc,
              m_self,

@@ -392,7 +392,12 @@ void DestinyManager::SetSpeedFraction(float fraction/*1.0*/, bool startMovement/
             du.fraction = fraction;
         updates.push_back(du.Encode());
     }
-    if (((mySE->IsNPCSE() or mySE->IsDroneSE()) and !m_hasSentShipUpdates)
+    // NPC-1b: BeginMovement consumes m_hasSentShipUpdates before this
+    // method runs, so the npc/drone SetBallSpeed was never actually sent
+    // and clients simulated them at 0 m/s (motionless rats that teleport
+    // on position snaps).  always include speed for pilotless movers --
+    // one small update per speed change.
+    if (mySE->IsNPCSE() or mySE->IsDroneSE()
     or mySE->IsMissileSE() or mySE->IsContainerSE() or mySE->IsWreckSE()) {
         SetBallSpeed ms;   //NPCs and Missiles only.
             ms.entityID = mySE->GetID();

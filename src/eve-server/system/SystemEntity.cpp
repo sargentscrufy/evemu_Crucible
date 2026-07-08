@@ -721,6 +721,22 @@ PyDict *DynamicSystemEntity::MakeSlimItem() {
             slim->SetItemString("allianceID",       IsAlliance(m_allyID) ? new PyInt(m_allyID) : PyStatic.NewNone());
             slim->SetItemString("warFactionID",     IsFaction(m_warID) ? new PyInt(m_warID) : PyStatic.NewNone());
             slim->SetItemString("securityStatus",   new PyFloat(0.0f));
+        // GUN-1: the client mounts turret models for non-player ships
+        // from slim 'modules' (flat list of module typeIDs -- see the
+        // SlimItem listInt in Destiny.xmlp); without a mounted turret
+        // the fxSequencer has nothing to animate, so npc weapon fire
+        // never rendered.  pick a small turret by damage profile.
+        {
+            uint32 turret = 564;                    // hybrid: Light Neutron Blaster I
+            if (m_self->GetAttribute(AttrEmDamage).get_float() > 0) {
+                turret = 450;                       // laser: Gatling Pulse Laser I
+            } else if (m_self->GetAttribute(AttrExplosiveDamage).get_float() > 0) {
+                turret = 484;                       // projectile: 125mm Gatling AutoCannon I
+            }
+            PyList* mods = new PyList();
+                mods->AddItemInt(turret);
+            slim->SetItemString("modules", mods);
+        }
         return slim;
     }
 
