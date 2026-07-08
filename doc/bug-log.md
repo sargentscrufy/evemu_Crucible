@@ -126,6 +126,32 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 - **Relation:** same warp math family as DESTINY-1/3; the rework should
   clear it. Until then: CmdStop after in-space login (simchars does).
 
+### SPAWN-1..8: Rat spawn system defects — FIXED 2026-07-08
+Audit of SpawnMgr/SystemBubble/SystemManager found eight defects; all
+fixed in one pass (commit: rat spawn rework):
+1. **Respawn stamp comparison inverted** (`stamp < now` skipped entries
+   whose time HAD come): belt rats respawned in ≤150s ignoring
+   RespawnTimer, or never respawned if the group timer ticked late.
+2. **SpawnEntry.stamp was uint16** vs uint32 GetStamp(): respawn times
+   truncated after ~18h of server uptime — rats silently stop
+   respawning on long-running servers.
+3. **Roaming never happened**: m_ratTimer ("Main Spawn Timer") was
+   started nowhere and checked nowhere. Now started in Init() and
+   checked in Process(); new RoamSpawns() periodically warps an idle,
+   unwatched spawn group to another belt — rats now arrive at belts
+   where players are mining.
+4. **StartRatTimer stored the interval in uint16 ms**: any RoamingTimer
+   over 65s truncated (600s became ~10s).
+5. **WarpOutSpawn iterator UB**: `m_spawns.erase(itr); ++itr;` —
+   increment of an invalidated iterator (belt-crash class). Rewritten
+   bubble-to-bubble with erase() return-value iteration.
+6. **SpawnKilled belt-wipe UB**: `m_bubbles.erase(std::find(...))`
+   without an end() check.
+7. **GetRandBeltID out-of-range**: MakeRandomInt's upper bound is
+   inclusive; indexing .at(m_beltCount) could throw (rare crash).
+8. WarpOutSpawn signature took an unused NPC* (dead code path);
+   replaced by the roaming implementation.
+
 ## Fixed
 
 ### CORE-1: XMLParser::ElementParser missing virtual destructor (UB)

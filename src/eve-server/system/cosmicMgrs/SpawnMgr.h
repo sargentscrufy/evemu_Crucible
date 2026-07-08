@@ -32,8 +32,11 @@ public:
 
     void Process();
     void SetDungMgr(DungeonMgr* pDmgr)                  { m_dungMgr = pDmgr; }
-    // not working... warp a spawned npc group from one location to another (change bubbles)
-    void WarpOutSpawn(NPC* pNPC, SystemBubble* pBubble);
+    // warp an idle spawned npc group from one bubble to another
+    void WarpOutSpawn(SystemBubble* pFrom, SystemBubble* pTo);
+    // periodic roaming: pick an idle, unwatched spawn group and warp it
+    // to another belt (driven by m_ratTimer in Process())
+    void RoamSpawns();
     // update SpawnMgr on npcs new location (change bubbles)
     void MoveSpawn(NPC* pNPC, SystemBubble* pBubble);
 

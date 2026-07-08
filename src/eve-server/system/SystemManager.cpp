@@ -1302,7 +1302,11 @@ void SystemManager::RemoveSpawnBubble(SystemBubble* pBubble)
 
 uint32 SystemManager::GetRandBeltID()
 {
-    return m_beltVector.at(MakeRandomInt(0, m_beltCount));
+    if (m_beltVector.empty())
+        return 0;
+    // MakeRandomInt's upper bound is inclusive; indexing with m_beltCount
+    // was a rare std::out_of_range crash
+    return m_beltVector.at(MakeRandomInt(0, m_beltVector.size() - 1));
 }
 
 void SystemManager::MakeSetState(const SystemBubble* pBubble,  SetState& into) const {
