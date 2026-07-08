@@ -165,6 +165,37 @@ fixed in one pass (commit: rat spawn rework):
   report main-loop tick progress, not just port liveness — this hang
   looked "healthy" to docker the whole time.
 
+### PHYS-2: bubble thrash wipes belt contents from the client (Tier 1)
+- **Observed:** asteroids (and launched drones) vanish client-side while
+  mining, even after PHYS-1. Raw capture frame evidence: a single
+  RemoveBalls listing all 22 belt asteroids + 5 drones; server bubble
+  trace shows the ship removed from bubble 5 then bubble 6 twice within
+  one second ("removing balls" each time) while orbiting a rock.
+- **Mechanism:** the belt sits near a bubble boundary; orbit/approach
+  motion bounces the ship between adjacent bubbles. Every exit sends the
+  client RemoveBalls for the old bubble's contents, and re-entry does
+  not re-send AddBalls for static entities (asteroids), so the belt
+  never comes back visually. Session state is otherwise fine.
+- **Fix direction:** (a) hysteresis on bubble reassignment (require
+  leaving by a margin beyond BUBBLE_RADIUS before switching), and/or
+  (b) on bubble entry always AddBalls the full bubble contents to the
+  entering player. Needs care: (b) alone may double-add dynamics.
+- **Repro:** orbit a belt asteroid while mining for several minutes.
+
+### CHAR-4: mined-ore stack merges never notify the client (Tier 1)
+- **Observed:** mining works server-side (ProcessCycle fills cargo) but
+  the client's hold display never updates when ore merges into an
+  existing stack. Capture: 41 OnItemChange packets in the session, zero
+  for the ore stack. ITEM__CHANGE/ITEM__TRACE logging now enabled to
+  locate where the notify flag is dropped (Merge -> AlterQuantity ->
+  SetQuantity -> SendItemChange chain looks correct on inspection).
+
+### DRONE-1: drone control not implemented (Tier 2 -> in progress)
+- Drones launch and appear in space (CHAR-3 fixed launching) but engage
+  commands return "drone control not implemented yet". DroneAIMgr
+  exists (npc/DroneAI.cpp); the beyonce CmdEngage path needs wiring to
+  it. User requested this feature build 2026-07-08.
+
 ## Fixed
 
 ### CORE-1: XMLParser::ElementParser missing virtual destructor (UB)
