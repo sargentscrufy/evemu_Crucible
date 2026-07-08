@@ -552,6 +552,73 @@ bool SpawnMgr::DoSpawnForBubble(SystemBubble* pBubble)
     return true;
 }
 
+bool SpawnMgr::DoGuardSpawn(SystemBubble* pBubble)
+{
+    // GUARD-1: empire police patrol stargates in high-security systems.
+    // the rat class/faction tables only hold pirate factions, so guard
+    // ship types are selected directly by the system's owning empire.
+    if ((pBubble == nullptr) or !pBubble->IsGate())
+        return false;
+
+    uint32 gateID = sBubbleMgr.GetBeltID(pBubble->GetID());     // gate bubbles register their gateID in the spawnID map
+    SystemEntity* pGate = m_system->GetSE(gateID);
+    if (pGate == nullptr) {
+        _log(SPAWN__ERROR, "DoGuardSpawn: gateID %u not found in %s(%u).", gateID, m_system->GetName(), m_system->GetID());
+        return false;
+    }
+
+    uint32 factionID = m_system->GetSystemFactionID();
+    // police frigates per empire; CONCORD frigate where an empire has no
+    // police types in the crucible data (e.g. Minmatar)
+    std::vector<uint32> types = { 1896, 1896 };                 // Concord Police Frigate
+    switch (factionID) {
+        case factionCaldari:  types = { 9970, 10660, 9971 };  break;  // Caldari Police Lieutenants
+        case factionGallente: types = { 9991, 9983, 9984 };   break;  // Gallente Police Sgt/MSgt/Capt
+        case factionAmarr:    types = { 3768, 3768, 3768 };   break;  // Amarr Police Frigate
+    }
+
+    uint32 corpID = sDataMgr.GetFactionCorp(factionID);
+    FactionData data = FactionData();
+        data.allianceID = factionID;
+        data.corporationID = corpID;
+        data.factionID = factionID;
+        data.ownerID = corpID;
+
+    NPC* pNPC(nullptr);
+    InventoryItemRef iRef(nullptr);
+    uint8 spawned = 0;
+    for (uint32 typeID : types) {
+        GPoint pos(pGate->GetPosition());
+        pos.MakeRandomPointOnSphere(MakeRandomInt(15, 25) *1000);   // patrol posts 15-25km off the gate
+        ItemData idata(typeID, corpID, m_system->GetID(), flagNone, "", pos, "GateGuard");
+        iRef = sItemFactory.SpawnItem(idata);
+        if (iRef.get() == nullptr) {
+            _log(SPAWN__ERROR, "DoGuardSpawn: failed to spawn item type %u.", typeID);
+            continue;
+        }
+        pNPC = new NPC(iRef, m_services, m_system, data, this);
+        if (!pNPC->Load()) {
+            _log(SPAWN__ERROR, "DoGuardSpawn: failed to load NPC %u type %u.", pNPC->GetID(), typeID);
+            pNPC->Delete();
+            continue;
+        }
+        m_system->AddNPC(pNPC);
+        pNPC->DestinyMgr()->SetPosition(pos);
+        // patrol the gate; never hunt (retaliation only)
+        pNPC->GetAIMgr()->SetGuardPost(pGate);
+        ++spawned;
+        _log(SPAWN__POP, "DoGuardSpawn: %s(%u) now guarding %s(%u) in %s.", \
+                iRef->name(), iRef->itemID(), pGate->GetName(), gateID, m_system->GetName());
+    }
+
+    if (spawned == 0)
+        return false;
+
+    pBubble->SetSpawned(true);      // avoid re-spawning guards for this gate
+    m_system->IncGateSpawnCount();
+    return true;
+}
+
 bool SpawnMgr::PrepSpawn(SystemBubble* pBubble, uint8 sClass/*Spawn::Class::None*/, uint8 level/*0*/)
 {
     if (pBubble == nullptr)

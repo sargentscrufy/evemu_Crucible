@@ -1295,6 +1295,15 @@ void SystemManager::DoSpawnForBubble(SystemBubble* pBubble)
     if (!m_spawnMgr->IsInitialized())
         return;
 
+    // GUARD-1: gates in high-security empire space get police patrols
+    // instead of pirate rats.  routed before the belt checks -- guards
+    // have no belt requirement.
+    if (pBubble->IsGate() and (m_data.securityRating > 0.90)) {
+        if (m_spawnMgr->DoGuardSpawn(pBubble))
+            m_ratBubbles.emplace(pBubble->GetID(), pBubble);
+        return;
+    }
+
     if (m_beltCount < 1)
         return;
 

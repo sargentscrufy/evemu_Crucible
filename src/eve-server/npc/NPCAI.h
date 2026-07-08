@@ -82,6 +82,11 @@ public:
     void LaunchMissile(uint16 typeID, SystemEntity* pTargSE);   // us to them
     void MissileLaunched(Missile* pMissile); // them to us
 
+    // GUARD-1: gate guards patrol an anchor and never hunt; they only
+    // retaliate when attacked (Targeted() path is unchanged)
+    void SetGuardPost(SystemEntity* pSE);
+    bool IsGuard()                                      { return (m_guardPost != nullptr); }
+
 protected:
     void Attack(SystemEntity* pTargSE);
     void SetIdle();
@@ -145,6 +150,8 @@ private:
     NPC* m_npc;
     DestinyManager* m_destiny;
     InventoryItemRef m_self;
+
+    SystemEntity* m_guardPost = nullptr;    // orbit anchor for gate guards.  not owned
 
     TurretFormulas m_formula;
 

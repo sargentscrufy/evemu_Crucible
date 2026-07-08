@@ -287,6 +287,15 @@ void NPCAIMgr::Process() {
      */
     switch(m_state) {
         case NPCAI::State::Idle: {
+            // GUARD-1: guards do not hunt.  hold the patrol orbit around
+            // the guard post; retaliation is handled by Targeted().
+            if (m_guardPost != nullptr) {
+                if (!m_destiny->IsMoving()) {
+                    m_destiny->SetMaxVelocity(m_orbitSpeed);
+                    m_destiny->Orbit(m_guardPost, 15000);
+                }
+                break;
+            }
             if (m_beginFindTarget.Check()) {
                 std::vector<Client*> clientVec;
                 clientVec.clear();
@@ -439,6 +448,15 @@ void NPCAIMgr::SetWander()
     }
 }
 
+void NPCAIMgr::SetGuardPost(SystemEntity* pSE) {
+    // GUARD-1: police guarding a static object (stargate).  they orbit
+    // their post while idle and never initiate attacks.
+    m_guardPost = pSE;
+    m_state = NPCAI::State::Idle;
+    m_destiny->SetMaxVelocity(m_orbitSpeed);
+    m_destiny->Orbit(pSE, 15000);
+}
+
 void NPCAIMgr::SetIdle() {
     if (m_state == NPCAI::State::Idle)
         return;
@@ -450,6 +468,10 @@ void NPCAIMgr::SetIdle() {
     m_state = NPCAI::State::Idle;
     m_destiny->Stop();
     m_destiny->SetMaxVelocity(m_orbitSpeed);
+
+    // guards resume their patrol orbit after a fight ends
+    if (m_guardPost != nullptr)
+        m_destiny->Orbit(m_guardPost, 15000);
 
     m_missileTimer.Disable();
     m_webifierTimer.Disable();

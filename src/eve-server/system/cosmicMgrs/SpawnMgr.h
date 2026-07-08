@@ -44,6 +44,10 @@ public:
     std::string GetSpawnGroupName(int8 sGroup);
 
     bool DoSpawnForBubble(SystemBubble* pBubble);
+    // GUARD-1: empire police guarding gates in high-security systems.
+    // spawned outside the rat class/faction tables (those only hold
+    // pirate factions); guards do not roam, respawn, or aggress.
+    bool DoGuardSpawn(SystemBubble* pBubble);
     void DoSpawnForAnomaly(SystemBubble* pBubble, GPoint pos, uint8 level, uint16 typeID);
     void DoSpawnForMission(SystemBubble* pBubble, uint32 regionID);
     void DoSpawnForIncursion(SystemBubble* pBubble, uint32 regionID);

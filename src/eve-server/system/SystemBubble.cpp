@@ -130,7 +130,8 @@ void SystemBubble::Process()
     if (!m_spawnTimer.Enabled() and !m_players.empty()) {
         if (m_belt and sConfig.npc.RoamingSpawns) {
             SetSpawnTimer(true);
-        } else if (m_gate and sConfig.npc.StaticSpawns) {
+        } else if (m_gate and (sConfig.npc.StaticSpawns
+        or (m_system->GetSystemSecurityRating() > 0.90))) {     // GUARD-1
             SetSpawnTimer(false);
         }
     }
@@ -337,7 +338,10 @@ void SystemBubble::Add(SystemEntity* pSE) {
             }
         }
 
-        if (m_gate and sConfig.npc.StaticSpawns) {
+        // GUARD-1: high-security gates arm regardless of StaticSpawns --
+        // that flag governs lowsec pirate gate camps, not police patrols
+        if (m_gate and (sConfig.npc.StaticSpawns
+        or (m_system->GetSystemSecurityRating() > 0.90))) {
             if (!m_spawnTimer.Enabled()) {
                 SetSpawnTimer(false);
             }
@@ -495,7 +499,9 @@ void SystemBubble::ResetBubbleRatSpawn()
 
 void SystemBubble::SetSpawnTimer(bool isBelt/*false*/)
 {
-    if (m_system->GetSystemSecurityRating() > 0.90)
+    // the high-security block applies to BELT rats only: gates in
+    // high-security systems spawn police patrols instead (GUARD-1)
+    if (isBelt and (m_system->GetSystemSecurityRating() > 0.90))
         return;
     if (sConfig.debug.SpawnTest) {
         m_spawnTimer.Start(5000); /* 5s for testing */
@@ -503,6 +509,9 @@ void SystemBubble::SetSpawnTimer(bool isBelt/*false*/)
         // these randoms should be changed to reflect this npc's faction presence in system
         if (isBelt) {
             m_spawnTimer.Start(MakeRandomInt(30, sConfig.npc.RoamingTimer) *1000);
+        } else if (m_system->GetSystemSecurityRating() > 0.90) {
+            // GUARD-1: police patrols muster quickly at highsec gates
+            m_spawnTimer.Start(MakeRandomInt(10, 30) *1000);
         } else {
             m_spawnTimer.Start(MakeRandomInt(60, sConfig.npc.StaticTimer) *1000);
         }

@@ -361,7 +361,9 @@ bool StargateSE::LoadExtras() {
     if (m_bubble == nullptr)
         sBubbleMgr.Add(this);
 
-    m_bubble->SetGate(true);
+    // register the actual gateID (was 'true', which registered gate
+    // itemID 1 and broke gate lookups from the bubble)
+    m_bubble->SetGate(m_self->itemID());
     _log(DESTINY__BUBBLE_DEBUG, "StargateSE::LoadExtras() - IsGate set to true for bubble %u.", m_bubble->GetID() );
     m_jumps = SystemDB::ListJumps(m_self->itemID());
     if (m_jumps != nullptr)

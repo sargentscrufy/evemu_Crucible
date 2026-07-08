@@ -84,6 +84,7 @@ public:
     const char* GetName() const                         { return m_data.name.c_str(); }
     const char* GetSystemSecurityClass()                { return m_data.securityClass.c_str(); }
     const float GetSystemSecurityRating()               { return m_data.securityRating; }
+    uint32 GetSystemFactionID()                         { return m_data.factionID; }
 
     EVEServiceManager& GetServiceMgr()                  { return m_services; }
     Inventory* GetSystemInv()                           { return m_solarSystemRef->GetMyInventory(); }
