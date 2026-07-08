@@ -31,7 +31,19 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
   and collision response; add velocity clamp; smoke-bot regression once
   bot can fly.
 
-### DESTINY-3: Warp speed model is dimensionally broken — discontinuous
+### DESTINY-3: Warp speed model — FIXED 2026-07-08, verified live
+- **Fix:** speed-scaled CCP curve in DestinyManager (accelDist=v/3,
+  decelDist=v, short-warp peak capping, absolute per-tick remaining,
+  clamped cruise handoff, no +10km landing shove, uint16 phase times).
+- **Verification:** 1Hz simulation (landing error 38-85m across
+  150km..60AU cases) + live bot regression `tools/simchars/warp_test.py`:
+  undock -> 2.75AU warp to Amsen IV -> warp back -> dock PASSED. Warp
+  trace shows textbook decay (each tick e^-1 of the last) ending
+  "Exit velocity 42.54 m/s with 42.54 m left to go" — speed == remaining
+  exactly as the k=1 model requires, landing ~1km from station center.
+- Original analysis follows for reference.
+
+### (was) DESTINY-3: Warp speed model is dimensionally broken — discontinuous
 ### speed, arrival overshoot (Tier 1)
 - **Observed:** 2026-07-07 live test — ship "blasted through the station"
   on warp arrival; earlier session crashed the client during warp
