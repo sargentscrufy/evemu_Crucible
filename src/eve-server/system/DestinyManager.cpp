@@ -2372,6 +2372,16 @@ bool DestinyManager::IsAligned(GPoint& targetPoint)
 }
 
 void DestinyManager::Undock(GPoint dir) {
+    // DESTINY-5: the undock push is applied by a deferred state timer.
+    // if the pilot has already issued a movement order (warp especially),
+    // stomping m_targetPoint here re-aims the warp at the undock vector
+    // *1e16 -- ships warped 65,000 AU into deep space.  keep the new
+    // order; just clear the undocking flag.
+    if (m_ballMode == Destiny::Ball::Mode::WARP) {
+        if (mySE->IsShipSE())
+            mySE->GetShipSE()->GetShipItemRef()->SetUndocking(false);
+        return;
+    }
     //set movement direction
     m_targetPoint = dir *1.0e16;
     m_shipHeading = GVector(dir);
