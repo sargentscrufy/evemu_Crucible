@@ -34,7 +34,16 @@ services:
       - SEED_REGIONS=${SEED_REGIONS:-Derelik,The Citadel,The Forge,Essence,Lonetrek} # Define regions to be seeded
       - RUN_WITH_GDB=${RUN_GDB:-FALSE} #Set to TRUE to run evemu with gdb automatically
     stdin_open: true # Enables stdin for the container. Attach to it with 'docker attach'
-    tty: true
+    # HANG-1: tty:true routed stdout through a pty; when the pty reader
+    # stalled, the single-threaded server blocked forever inside a log
+    # write (main loop frozen, healthcheck still green). json-file
+    # logging is drained by the daemon and size-capped below.
+    tty: false
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
     # cap_add: #This is required for gdb to work
     #   - SYS_PTRACE
 
