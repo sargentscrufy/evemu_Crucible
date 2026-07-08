@@ -235,8 +235,11 @@ protected:
     bool m_hasSentShipUpdates;
 
     //things dictated by our entity's configuration:
-    uint8 m_warpAccelTime;              //in s      - calculated internally for warp stages
-    uint8 m_warpDecelTime;              //in s      - calculated internally for warp stages
+    // in s - calculated in InitWarp(); m_warpDecelTime is rewritten with
+    // the actual decel start tick at phase handoff. uint16: slow ships on
+    // long warps exceed 255s of accel+cruise (uint8 overflowed).
+    uint16 m_warpAccelTime;
+    uint16 m_warpDecelTime;
 
     float m_mass;                       //in kg
     float m_massMKg;                    //in mg     - Millionths of kg (mg)
