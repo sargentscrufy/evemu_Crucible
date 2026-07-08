@@ -54,7 +54,10 @@ public:
          * @retval false Parsing failed.
          */
         virtual bool Parse( const TiXmlElement* field ) = 0;
-        //virtual ~ElementParser();
+
+        // Parsers are deleted through this base pointer (ClearParsers /
+        // RemoveParser), so the destructor must be virtual.
+        virtual ~ElementParser() = default;
     };
 
     /**
