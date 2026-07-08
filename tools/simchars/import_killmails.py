@@ -36,6 +36,9 @@ LO = list(range(11, 19))
 MID = list(range(19, 27))
 HI = list(range(27, 35))
 RIG = [92, 93, 94]
+# flags valid in the Crucible era; anything else (ore holds, fuel bays,
+# subsystem slots from later expansions) is remapped to cargo
+VALID_FLAGS = {FLAG_HANGAR, FLAG_CARGO, FLAG_DRONEBAY, *LO, *MID, *HI, *RIG}
 
 EFFECT_LO, EFFECT_HI, EFFECT_MID, EFFECT_RIG = 11, 12, 13, 2663
 
@@ -99,6 +102,10 @@ def import_killmail(km, char_id, station_id):
         if flag == 0:
             deferred.append((tid, info, qty))
             continue
+        if flag not in VALID_FLAGS:
+            log(f"  flag {flag} not valid in this era; {info['typeName']} "
+                f"x{qty} -> cargo")
+            flag = FLAG_CARGO
         singleton = 1 if (flag in LO + MID + HI + RIG
                           and int(info["categoryID"]) in (7, 32)) else 0
         if flag in LO + MID + HI + RIG and singleton:

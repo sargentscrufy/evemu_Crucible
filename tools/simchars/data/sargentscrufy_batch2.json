@@ -1,0 +1,63 @@
+{
+  "character": "SARGENTSCRUFY",
+  "source": "user-selected killmails via zkillboard/ESI, fetched 2026-07-08",
+  "killmails": [
+    {
+      "killmail_id": 9194696, "time": "2009-10-04", "ship_type_id": 24702,
+      "note": "slot flags absent (era)",
+      "items": [
+        {"type": 187, "flag": 0, "qty": 354}, {"type": 16367, "flag": 0, "qty": 1},
+        {"type": 2048, "flag": 0, "qty": 1}, {"type": 519, "flag": 0, "qty": 1},
+        {"type": 31011, "flag": 0, "qty": 1}, {"type": 12058, "flag": 0, "qty": 1},
+        {"type": 9800, "flag": 0, "qty": 1}, {"type": 9135, "flag": 0, "qty": 6},
+        {"type": 19814, "flag": 0, "qty": 1}, {"type": 3638, "flag": 5, "qty": 1},
+        {"type": 2032, "flag": 0, "qty": 2}, {"type": 16375, "flag": 0, "qty": 1},
+        {"type": 187, "flag": 5, "qty": 11535}, {"type": 31023, "flag": 0, "qty": 1},
+        {"type": 3530, "flag": 0, "qty": 1}, {"type": 31658, "flag": 0, "qty": 1},
+        {"type": 16383, "flag": 0, "qty": 1}, {"type": 9728, "flag": 0, "qty": 1}
+      ]
+    },
+    {
+      "killmail_id": 7719816, "time": "2009-06-27", "ship_type_id": 642,
+      "note": "slot flags absent (era)",
+      "items": [
+        {"type": 12625, "flag": 5, "qty": 4988}, {"type": 3025, "flag": 5, "qty": 3},
+        {"type": 464, "flag": 0, "qty": 8}, {"type": 10688, "flag": 5, "qty": 1},
+        {"type": 2364, "flag": 0, "qty": 1}, {"type": 1236, "flag": 5, "qty": 1},
+        {"type": 29011, "flag": 5, "qty": 1}, {"type": 2032, "flag": 0, "qty": 4},
+        {"type": 1541, "flag": 0, "qty": 2}, {"type": 2889, "flag": 5, "qty": 3},
+        {"type": 2048, "flag": 0, "qty": 1}, {"type": 2454, "flag": 87, "qty": 10},
+        {"type": 440, "flag": 5, "qty": 1}, {"type": 262, "flag": 0, "qty": 8},
+        {"type": 499, "flag": 5, "qty": 1}, {"type": 1353, "flag": 0, "qty": 1},
+        {"type": 1355, "flag": 5, "qty": 1}, {"type": 1999, "flag": 0, "qty": 1},
+        {"type": 12822, "flag": 5, "qty": 4}, {"type": 3540, "flag": 0, "qty": 1},
+        {"type": 1952, "flag": 5, "qty": 1}, {"type": 564, "flag": 5, "qty": 1}
+      ]
+    },
+    {
+      "killmail_id": 14785538, "time": "2010-09-23", "ship_type_id": 11371,
+      "note": "slot flags absent (era)",
+      "items": [
+        {"type": 29148, "flag": 5, "qty": 1}, {"type": 21898, "flag": 0, "qty": 512},
+        {"type": 21898, "flag": 5, "qty": 1718}, {"type": 519, "flag": 0, "qty": 2},
+        {"type": 31788, "flag": 0, "qty": 1}, {"type": 25, "flag": 5, "qty": 2},
+        {"type": 31752, "flag": 0, "qty": 1}, {"type": 1236, "flag": 0, "qty": 2},
+        {"type": 380, "flag": 0, "qty": 1}, {"type": 11370, "flag": 0, "qty": 1},
+        {"type": 2881, "flag": 0, "qty": 4}, {"type": 440, "flag": 0, "qty": 1}
+      ]
+    },
+    {
+      "killmail_id": 39099809, "time": "2014-05-26", "ship_type_id": 22544,
+      "note": "Hulk mining loss; flag 134 (ore hold) is post-Crucible -> cargo",
+      "items": [
+        {"type": 17482, "flag": 28, "qty": 1}, {"type": 31796, "flag": 92, "qty": 1},
+        {"type": 8521, "flag": 21, "qty": 1}, {"type": 17470, "flag": 134, "qty": 6246},
+        {"type": 17482, "flag": 29, "qty": 1}, {"type": 2466, "flag": 87, "qty": 5},
+        {"type": 8521, "flag": 20, "qty": 1}, {"type": 22542, "flag": 12, "qty": 1},
+        {"type": 17482, "flag": 27, "qty": 1}, {"type": 22542, "flag": 11, "qty": 1},
+        {"type": 8521, "flag": 19, "qty": 1}, {"type": 31796, "flag": 93, "qty": 1},
+        {"type": 2281, "flag": 22, "qty": 1}
+      ]
+    }
+  ]
+}
