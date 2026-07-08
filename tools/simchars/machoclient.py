@@ -102,7 +102,11 @@ class MachoClient:
         `call` may be (method, args, kwargs) to piggyback a call; then
         returns (ref, call_result).
         """
-        arg = (tuple(bind_params),
+        # bind params may be a tuple (locationID, groupID) or a bare int
+        # (e.g. agent binds use just the agentID)
+        bp = tuple(bind_params) if isinstance(bind_params, (tuple, list)) \
+            else int(bind_params)
+        arg = (bp,
                (call[0], tuple(call[1]), call[2]) if call else None)
         rsp = self.call(service, "MachoBindObject", *arg)
         refs = find_bound_refs(rsp)

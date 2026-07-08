@@ -281,6 +281,26 @@ fixed in one pass (commit: rat spawn rework):
 - Direction: persist/restore cap charge, or initialize to full at ship
   load; also consider cap regen while docked.
 
+### MISSION arc findings (2026-07-09, QA pilot Sera Auvinen @ Spacelane Patrol L1)
+
+- **MISSION-1 (minor):** AgentBound::GetInfoServiceDetails always embeds
+  the standings-denial string ("must be -2.0 or higher") even when the
+  char qualifies; verify whether the live client displays it.
+- **MISSION-2 (content):** placeholder agent dialogue is profane ("Why
+  the fuck am I looking at you again") -- agentSays.h needs a civil
+  rewrite before friends-facing production.
+- **MISSION-3 (core gap):** Security-division agents deal COURIER
+  missions. MissionDataMgr has no encounter loader (the boot line
+  "0(0) Encounter Mission Data Sets" is a hardcoded string;
+  EncounterServer.cpp is pasted research notes). Client protocol
+  supports dungeon-objective missions (briefing keywords carry
+  dungeonSolarSystemID/dungeonLocationID). Plan: qstEncounter +
+  qstEncounterWaves tables authored from KB/missions/caldari/security
+  exact tables (L1: Eliminate a Pirate Nuisance, The Hidden Stash,
+  Corporate Records, Guristas Spies; L2 scaled variants), loader in
+  MissionDataMgr, agent offer routing by division, runtime spawn via
+  SpawnMgr/DungeonMgr, completion on wave cleared.
+
 ## Fixed
 
 ### CORE-1: XMLParser::ElementParser missing virtual destructor (UB)
