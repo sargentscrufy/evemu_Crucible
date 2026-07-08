@@ -190,11 +190,27 @@ fixed in one pass (commit: rat spawn rework):
   locate where the notify flag is dropped (Merge -> AlterQuantity ->
   SetQuantity -> SendItemChange chain looks correct on inspection).
 
-### DRONE-1: drone control not implemented (Tier 2 -> in progress)
+### DRONE-1: drone control not implemented (Tier 2 -> deployed, awaiting live verify)
 - Drones launch and appear in space (CHAR-3 fixed launching) but engage
   commands return "drone control not implemented yet". DroneAIMgr
   exists (npc/DroneAI.cpp); the beyonce CmdEngage path needs wiring to
   it. User requested this feature build 2026-07-08.
+- **Fix (d67736b7):** EntityBound::CmdEngage resolves the target and each
+  drone (ownership-checked) and calls DroneAIMgr::Target(), which runs
+  the full engage chain (lock -> CheckDistance -> orbit -> attack).
+  CmdReturnHome/CmdReturnBay clear targets and call DroneAIMgr::Return()
+  (follow home ship; Process() sets idle-orbit on arrival). Deployed
+  2026-07-08 ~08:15 UTC. Remaining: auto-scoop on bay return, guard/
+  assist/mine verbs still stubs.
+
+### OPS-1: parallel-session deploys clobber live playtests (process bug)
+- 2026-07-08 07:40 UTC: a second agent session (Grok) built and
+  recreated the server container while the user was mining in space.
+  The restart wiped in-space state (belt asteroids/drones respawn as
+  bubbles reload) and was initially mis-read as PHYS-2 recurring.
+- Rule: check `docker inspect server --format '{{.State.StartedAt}}'`
+  before attributing state loss to a bug, and only deploy while the
+  user's client is docked or logged out.
 
 ## Fixed
 
