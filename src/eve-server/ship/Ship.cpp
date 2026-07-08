@@ -2713,16 +2713,17 @@ PyDict* ShipSE::MakeSlimItem() {
         slim->SetItemString("groupID",              new PyInt(m_self->groupID()));
     }
 
-    //encode the hiSlot and Subsystem modules list ONLY
-    std::vector<InventoryItemRef> items;
-    m_self->GetMyInventory()->GetItemsByFlagRange(flagHiSlot0, flagHiSlot7, items);
-    //m_self->GetMyInventory()->GetItemsByFlagRange(flagSubSystem0, flagSubSystem7, items);
-    if (!items.empty()) {
-        PyList *list = new PyList();
-        for (auto cur : items)
-            list->AddItem(new_tuple(cur->itemID(), cur->typeID()));
-
-        slim->SetItemString("modules", list );
+    // module list for client hardpoint/turret mounting.
+    // EFFECT-1: this previously sent (itemID, typeID) pairs for hi-slots
+    // only; live CCP captures (see ShipItem::ShipGetModuleList) show the
+    // client expects (typeID, itemID) for all fitted modules.  the
+    // reversed order made turret mounting fail silently, so weapon and
+    // mining beams never rendered.
+    PyList* list = m_shipRef->ShipGetModuleList();
+    if ((list != nullptr) and !list->empty()) {
+        slim->SetItemString("modules", list);
+    } else if (list != nullptr) {
+        PyDecRef(list);
     }
 
     if (is_log_enabled(DESTINY__DEBUG)) {
