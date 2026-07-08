@@ -487,6 +487,13 @@ void SystemBubble::RemoveExclusive(SystemEntity *pSE) {
 
 void SystemBubble::ResetBubbleRatSpawn()
 {
+    // GUARD-1: police patrols are spawned once per gate.  this reset is
+    // belt chain-ratting logic; letting it clear m_spawned for highsec
+    // gates re-armed the guard timer forever (a new police wave every
+    // ~65s while a pilot loitered at the gate).
+    if (m_gate and (m_system->GetSystemSecurityRating() > 0.90))
+        return;
+
     /* the current spawn in this bubble was killed off, so reset timers accordingly
      *   once the timer hits, it will do all needed checks for players and respawn as needed.
      *  this enables creating a new spawn after previous group was killed off

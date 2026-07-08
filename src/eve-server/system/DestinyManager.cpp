@@ -1772,6 +1772,13 @@ void DestinyManager::WarpUpdate(double currentShipSpeed) {
     m_velocity = (m_warpState->warp_vector * currentShipSpeed);
     SetPosition(m_targetPoint - (m_warpState->warp_vector * m_targetDistance));
 
+    // GRID-3: m_targBubble is a raw pointer held for the whole align+warp
+    // while BubbleManager::RemoveEmpty() reaps empty bubbles every 60s.
+    // warping toward a grid nobody occupies dereferenced freed memory
+    // here (use-after-free segfault).  re-resolve it every warp tick;
+    // GetBubble recreates the bubble if it was reaped.
+    m_targBubble = sBubbleMgr.GetBubble(mySE->SystemMgr(), m_targetPoint);
+
     if (is_log_enabled(DESTINY__WARP_TRACE)) {
         _log(
             DESTINY__WARP_TRACE,
