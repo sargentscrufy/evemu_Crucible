@@ -1,0 +1,40 @@
+name: Smoke Test
+
+# Boots the full docker stack and runs the protocol-level login smoke test
+# (tools/smoke-bot). Heavier than the build jobs, so it runs nightly and on
+# demand rather than per push.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"
+
+jobs:
+  login-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build and start stack
+      run: docker compose up --build -d
+
+    - name: Wait for server health
+      run: |
+        for i in $(seq 1 90); do
+          status=$(docker inspect -f '{{.State.Health.Status}}' server 2>/dev/null || echo unknown)
+          echo "server health: $status ($i)"
+          if [ "$status" = "healthy" ]; then exit 0; fi
+          if [ "$status" = "unhealthy" ]; then break; fi
+          sleep 10
+        done
+        echo "server never became healthy"
+        docker logs server --tail 200
+        exit 1
+
+    - name: Run login smoke test
+      run: python3 tools/smoke-bot/smoke_test.py --retries 3 --retry-delay 15
+
+    - name: Dump server logs on failure
+      if: failure()
+      run: docker logs server --tail 300 || true
