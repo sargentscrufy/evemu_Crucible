@@ -200,6 +200,7 @@ PyResult EntityBound::CmdEngage(PyCallArgs &call, PyList* droneIDs, PyInt* targe
         DroneSE* pDrone = pSE->GetDroneSE();
         if (pDrone->GetOwner() != pClient)  // control only your own drones
             continue;
+        pDrone->SetBayRecall(false);    // engage cancels a pending bay recall
         // Target() locks (range/scan checked), then engages and attacks
         // via CheckDistance(); idles the drone on lock failure
         pDrone->GetAI()->Target(pTSE);
@@ -324,6 +325,7 @@ PyResult EntityBound::CmdReturnHome(PyCallArgs &call, PyList* droneIDs) {
         DroneSE* pDrone = pSE->GetDroneSE();
         if (pDrone->GetOwner() != pClient)
             continue;
+        pDrone->SetBayRecall(false);
         pDrone->GetAI()->ClearAllTargets();
         pDrone->GetAI()->Return();
     }
@@ -363,8 +365,8 @@ PyResult EntityBound::CmdReturnBay(PyCallArgs &call, PyList* droneIDs) {
     _log(DRONE__TRACE, "EntityBound::Handle_CmdReturnBay()");
     call.Dump(DRONE__DUMP);
 
-    // v1: same as ReturnHome; scooping to bay happens when the drone
-    // reaches its ship (ship/AI layer handles the pickup)
+    // like ReturnHome, but flagged so SystemManager scoops the drone to
+    // the bay when it reaches its home ship
     Client* pClient = call.client;
     SystemManager* pSystem = pClient->SystemMgr();
     if (pSystem != nullptr) {
@@ -376,6 +378,7 @@ PyResult EntityBound::CmdReturnBay(PyCallArgs &call, PyList* droneIDs) {
             DroneSE* pDrone = pSE->GetDroneSE();
             if (pDrone->GetOwner() != pClient)
                 continue;
+            pDrone->SetBayRecall(true);
             pDrone->GetAI()->ClearAllTargets();
             pDrone->GetAI()->Return();
         }

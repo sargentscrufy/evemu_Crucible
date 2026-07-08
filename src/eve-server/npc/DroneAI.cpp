@@ -12,6 +12,7 @@
 #include "Client.h"
 #include "inventory/AttributeEnum.h"
 #include "system/DestinyManager.h"
+#include "system/SystemManager.h"
 #include "npc/Drone.h"
 #include "npc/DroneAI.h"
 #include "system/Damage.h"
@@ -94,8 +95,13 @@ void DroneAIMgr::Process() {
         } break;
 
         case DroneAI::State::Departing: { // return to ship.  when close enough, set lazy orbit
-            if (m_pDrone->GetPosition().distance(m_assignedShip->GetPosition()) < m_entityOrbitRange)
+            if (m_pDrone->GetPosition().distance(m_assignedShip->GetPosition()) < m_entityOrbitRange) {
                 SetIdle();
+                // bay recall: queue the scoop; SystemManager runs it
+                // outside the tic loop because it deletes this drone
+                if (m_pDrone->IsBayRecall())
+                    m_pDrone->SystemMgr()->QueueDroneScoop(m_pDrone->GetID());
+            }
         } break;
         // not sure how im gonna do these...
         case DroneAI::State::Fleeing:

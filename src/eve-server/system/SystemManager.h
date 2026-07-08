@@ -121,6 +121,10 @@ public:
     void RemoveNPC(NPC* pNPC);
     void AddEntity(SystemEntity* pSE, bool addSignal=true);    // add entity to system, and (optionally) add signal to AnomalyMgr
     void RemoveEntity(SystemEntity* pSE);   // this also removes SE* from bubble and sig from AnomalyMgr (if applicable)
+    // drone-bay recall: DroneAIMgr queues the scoop when the drone reaches
+    // its home ship; Process() runs it after the tic loop, since scooping
+    // deletes the drone SE and cannot happen inside its own Process()
+    void QueueDroneScoop(uint32 droneID)                { m_droneScoops.push_back(droneID); }
     void AddClient(Client* pClient, bool count=false, bool jump=false);
     void AddMarker(SystemEntity* pSE, bool sendBall=false, bool addSignal=false);    // rather specific here.
     void RemoveClient(Client* pClient, bool count=false, bool jump=false);
@@ -219,6 +223,10 @@ private:
     bool SafeToUnload();
     uint16 m_players;           // current total count
     uint32 m_activityTime;
+
+    // deferred drone-bay scoops; processed after the entity tic loop
+    std::vector<uint32> m_droneScoops;
+    void ProcessDroneScoops();
 
     // system entity lists:
     bool m_entityChanged :1;

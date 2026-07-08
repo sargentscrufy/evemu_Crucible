@@ -112,6 +112,12 @@ public:
 
     ShipSE* GetHomeShip()                               { return m_pShipSE; }
 
+    // CmdReturnBay recall: when set, SystemManager scoops the drone to
+    // the owner's drone bay once it reaches its home ship (deferred to
+    // run outside the entity tic loop, since scooping deletes the SE)
+    void SetBayRecall(bool set)                         { m_bayRecall = set; }
+    bool IsBayRecall()                                  { return m_bayRecall; }
+
 protected:
     Client* m_pClient;          //we do not own this
     DroneAIMgr* m_AI;           //we do own this
@@ -119,6 +125,7 @@ protected:
     SystemManager* m_system;    //we do not own this
 
 private:
+    bool m_bayRecall = false;   // scoop to bay on arrival at home ship
     bool m_online;              // is drone within ship's control range?
     uint32 m_targetID;
     uint32 m_controllerID;
