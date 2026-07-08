@@ -2695,10 +2695,15 @@ Battleships 0.155
     m_alignTime = (-log(0.25) * m_shipAgility);
     m_timeToEnterWarp = m_alignTime;
 
-    m_hasSentShipUpdates = true;
-
-    if (!mySE->HasPilot())
+    if (!mySE->HasPilot()) {
+        // NPC-1: leave m_hasSentShipUpdates false for pilotless entities.
+        // setting it here suppressed the one-time SetBallSpeed/agility
+        // bubblecast for NPCs, so clients simulated their movement at
+        // 0 m/s -- rats sat motionless in combat while dealing damage.
+        m_hasSentShipUpdates = false;
         return;
+    }
+    m_hasSentShipUpdates = true;
     if (mySE->GetPilot()->IsInSpace() and (mySE->SysBubble() != nullptr)) {
         std::vector<PyTuple*> updates;
         SetBallAgility sbagility;

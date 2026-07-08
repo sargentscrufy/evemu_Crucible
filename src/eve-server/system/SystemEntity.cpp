@@ -705,8 +705,24 @@ DynamicSystemEntity::~DynamicSystemEntity()
 }
 
 PyDict *DynamicSystemEntity::MakeSlimItem() {
-    if (IsNPCSE())
-        return SystemEntity::MakeSlimItem();
+    if (IsNPCSE()) {
+        // NPC-2: npcs previously sent a bare {typeID, ownerID, itemID}
+        // slim.  the client needs category/group and owner data to
+        // classify the ball as a combat npc -- turret fire fx, overview
+        // treatment, and combat cues key off this classification.
+        _log(SE__SLIMITEM, "MakeSlimItem for NPC %s(%u)", GetName(), m_self->itemID());
+        PyDict *slim = new PyDict();
+            slim->SetItemString("itemID",           new PyLong(m_self->itemID()));
+            slim->SetItemString("typeID",           new PyInt(m_self->typeID()));
+            slim->SetItemString("categoryID",       new PyInt(m_self->categoryID()));
+            slim->SetItemString("groupID",          new PyInt(m_self->groupID()));
+            slim->SetItemString("ownerID",          new PyInt(m_ownerID));
+            slim->SetItemString("corpID",           IsCorp(m_corpID) ? new PyInt(m_corpID) : PyStatic.NewNone());
+            slim->SetItemString("allianceID",       IsAlliance(m_allyID) ? new PyInt(m_allyID) : PyStatic.NewNone());
+            slim->SetItemString("warFactionID",     IsFaction(m_warID) ? new PyInt(m_warID) : PyStatic.NewNone());
+            slim->SetItemString("securityStatus",   new PyFloat(0.0f));
+        return slim;
+    }
 
     _log(SE__SLIMITEM, "MakeSlimItem for DSE %s(%u)", GetName(), m_self->itemID());
     PyDict *slim = new PyDict();
