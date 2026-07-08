@@ -378,8 +378,13 @@ void DestinyManager::SetSpeedFraction(float fraction/*1.0*/, bool startMovement/
         UpdateVelocity(false);
     }
 
-    if (m_ballMode == Destiny::Ball::Mode::WARP) {
+    if ((m_ballMode == Destiny::Ball::Mode::WARP) and (m_warpState != nullptr)) {
         // set state to Ball::Mode::GOTO after setting warp decel variables, so warp completion will decel properly
+        // DESTINY-6: only when actually IN warp (m_warpState set).  this
+        // also fired during the pre-warp ALIGN phase, silently demoting
+        // the pending warp to a sublight GOTO -- ships crawled for AU
+        // (the 07:52 wedge) and the demoted mode re-opened the undock
+        // stomp (ships flung to the 1e16 sentinel under load).
         m_ballMode = Destiny::Ball::Mode::GOTO;
         return;
     }
@@ -2399,7 +2404,11 @@ void DestinyManager::Undock(GPoint dir) {
     // stomping m_targetPoint here re-aims the warp at the undock vector
     // *1e16 -- ships warped 65,000 AU into deep space.  keep the new
     // order; just clear the undocking flag.
-    if (m_ballMode == Destiny::Ball::Mode::WARP) {
+    // DESTINY-6: WARP-mode alone was not enough -- the align phase can
+    // be demoted to GOTO, and under multi-client load the push fires
+    // late.  yield to ANY movement the pilot has commanded.
+    if ((m_ballMode == Destiny::Ball::Mode::WARP)
+    or  (m_userSpeedFraction > 0.01f)) {
         if (mySE->IsShipSE())
             mySE->GetShipSE()->GetShipItemRef()->SetUndocking(false);
         return;
