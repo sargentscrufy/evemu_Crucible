@@ -27,6 +27,7 @@
 #define __STREAM_PACKETIZER_H__INCL__
 
 #include "utils/Buffer.h"
+#include "threading/Mutex.h"
 
 class StreamPacketizer
 {
@@ -43,6 +44,13 @@ public:
 protected:
     Buffer mBuffer;
 
+    // NETWORK-1: mPackets is pushed on the connection thread (Process,
+    // driven by socket recv) and popped on the main game-loop thread
+    // (PopPacket via ProcessNet); ClearBuffers also runs on the connection
+    // thread during DoDisconnect.  Without this lock the concurrent
+    // front()/pop()/push() race corrupts the queue and segfaults on
+    // disconnect (StreamPacketizer.cpp:65).
+    Mutex mPacketLock;
     std::queue<Buffer*> mPackets;
 };
 

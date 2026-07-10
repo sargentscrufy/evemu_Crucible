@@ -50,7 +50,11 @@ void StreamPacketizer::Process()
         if (*len > (uint32)(end - start))
             break;
 
-        mPackets.push( new Buffer(start, start + *len));
+        Buffer* pkt = new Buffer(start, start + *len);
+        {
+            MutexLock lock(mPacketLock);
+            mPackets.push(pkt);
+        }
         cur = (start + *len);
     }
 
@@ -60,6 +64,7 @@ void StreamPacketizer::Process()
 
 Buffer* StreamPacketizer::PopPacket()
 {
+    MutexLock lock(mPacketLock);
     Buffer* buf(nullptr);
     if (!mPackets.empty()) {
         buf = mPackets.front();
@@ -71,7 +76,17 @@ Buffer* StreamPacketizer::PopPacket()
 
 void StreamPacketizer::ClearBuffers()
 {
-    Buffer* buf(nullptr);
-    while ((buf = PopPacket()))
-        SafeDelete( buf );
+    // NETWORK-1: drain under the lock; ClearBuffers runs on the connection
+    // thread during disconnect while PopPacket runs on the main loop.
+    while (true) {
+        Buffer* buf(nullptr);
+        {
+            MutexLock lock(mPacketLock);
+            if (mPackets.empty())
+                break;
+            buf = mPackets.front();
+            mPackets.pop();
+        }
+        SafeDelete(buf);
+    }
 }
