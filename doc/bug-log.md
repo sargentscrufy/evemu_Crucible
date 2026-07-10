@@ -5,6 +5,21 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 
 ## Open
 
+### CRASH-1: segfault when escort docked after multi-system fleet run (Tier 1, OPEN)
+- **Observed:** 2026-07-10 11:47.  Mira (escort, fleet member) docked at
+  Jita 4-4 at the end of an escorted trade run; segfault immediately after
+  her dock ItemChange.  Fleet leader (Ilsa) had logged off ~10 min earlier
+  without disbanding; Mira had traveled multiple systems in the fleet.
+- **Repro attempts:** minimal case (fleet of 2, leader logs out, member
+  docks) does NOT reproduce — the travel/session history matters.
+- **Instrumentation:** dev server now runs `gdb -batch -ex run -ex "bt
+  full"` (start.sh, RUN_GDB env); next occurrence produces a full
+  backtrace in docker logs.
+- **Suspects:** fleet boost update on dock session-change touching stale
+  member/leader state (RemoveMember has a booster-vs-role comparison bug
+  at FleetService.cpp:1199 that only works because Booster::Fleet ==
+  Role::FleetLeader == 1); or escort's target/follow state at dock.
+
 ### MKT-1: PlaceCharOrder sell with no itemID aborts the server — FIXED 2026-07-10
 - **Observed:** bot trader sold with `itemID=None`; server terminated with
   `std::bad_optional_access` (SIGABRT) inside `marketProxy::PlaceCharOrder()`.
