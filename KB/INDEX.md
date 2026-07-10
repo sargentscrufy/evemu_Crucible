@@ -11,6 +11,7 @@ Welcome to the knowledge base. This is a growing collection of history, stories,
 
 - [Incursions](history/incursions.md) — The first major live events
 - [Timeline 2009–2014](history/timeline-2009-2014.md)
+- [Ichoria and Samanuni Systems](history/ichoria_and_samanuni.md) — Agents and details for these Black Rise mission hubs (Caldari Navy focus) in the era.
 
 ## Missions (Caldari Security & Intros 2009-2014)
 
@@ -22,11 +23,13 @@ These describe how people actually spent their time in the game:
 
 - [Level 4 Mission Running](gameplay-loops/level-4-mission-running.md)
 - [Null-Sec Ratting](gameplay-loops/nullsec-ratting.md)
+- [Asteroid Belt Rats](gameplay-loops/asteroid-belt-rats.md) — Spawns, behavior, aggro, special spawns (faction/haulers/officers), music cues, and Caldari/Guristas specifics for 2009-2014.
 - [Station Trading](gameplay-loops/station-trading.md)
 
 ## Player Stories
 
 - [Hulkageddon](player-stories/the-hulkageddon.md) — The great mining massacres
+- [SARGENTSCRUFY (1781735478)](player-stories/sargentscrufy.md) — Full character profile, extensive corp history (2008+), and associated corporations (including Ichoriya Navy and various Caldari/small player corps). Low public zKillboard activity.
 
 ## How to Use This
 

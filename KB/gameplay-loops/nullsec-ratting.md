@@ -32,7 +32,7 @@ Ratting in null security space was the primary way most null-sec residents made 
 
 ### Anomalies vs Belts
 - **Anomalies** (Havens, Sanctums, etc.) were the main content after they were introduced.
-- Belt ratting still existed, especially for lower-skilled characters or when farming specific rats (e.g. for tags or officer spawns).
+- Belt ratting still existed, especially for lower-skilled characters or when farming specific rats (e.g. for tags or officer spawns). See [Asteroid Belt Rats](asteroid-belt-rats.md) for detailed spawn mechanics, behavior, aggro, special spawns, music cues, and era notes.
 - "Ratting in a Haven" was the standard phrase.
 
 ### The Actual Gameplay
