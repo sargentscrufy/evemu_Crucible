@@ -32,8 +32,11 @@ public:
 
     void Process();
     void SetDungMgr(DungeonMgr* pDmgr)                  { m_dungMgr = pDmgr; }
-    // not working... warp a spawned npc group from one location to another (change bubbles)
-    void WarpOutSpawn(NPC* pNPC, SystemBubble* pBubble);
+    // warp an idle spawned npc group from one bubble to another
+    void WarpOutSpawn(SystemBubble* pFrom, SystemBubble* pTo);
+    // periodic roaming: pick an idle, unwatched spawn group and warp it
+    // to another belt (driven by m_ratTimer in Process())
+    void RoamSpawns();
     // update SpawnMgr on npcs new location (change bubbles)
     void MoveSpawn(NPC* pNPC, SystemBubble* pBubble);
 
@@ -41,6 +44,10 @@ public:
     std::string GetSpawnGroupName(int8 sGroup);
 
     bool DoSpawnForBubble(SystemBubble* pBubble);
+    // GUARD-1: empire police guarding gates in high-security systems.
+    // spawned outside the rat class/faction tables (those only hold
+    // pirate factions); guards do not roam, respawn, or aggress.
+    bool DoGuardSpawn(SystemBubble* pBubble);
     void DoSpawnForAnomaly(SystemBubble* pBubble, GPoint pos, uint8 level, uint16 typeID);
     void DoSpawnForMission(SystemBubble* pBubble, uint32 regionID);
     void DoSpawnForIncursion(SystemBubble* pBubble, uint32 regionID);

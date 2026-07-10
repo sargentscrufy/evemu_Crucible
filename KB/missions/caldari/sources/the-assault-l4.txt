@@ -1,0 +1,94 @@
+RAW TRANSCRIPT from https://eve-survival.org/?wakka=Assault4gu (fetched 2026, era data)
+
+# The Assault, Level 4 (Guristas)
+
+Faction: Guristas
+Mission type: Encounter
+Space type: Deadspace
+Damage dealt: Kinetic (92%)/ Thermal (from elite cruisers)
+Web/ Scramble: Elite Frigates
+Extras: ECM Jammer
+Recommended damage dealing: Kinetic/ Thermal
+Recommended ship classes: Battleship, Command Ship, HAC.
+
+Spawn triggers are the highest bounty battleships in a particular group. Their names will randomly change, so be sure to identify them correctly via their bounty.
+
+### Pocket 1
+
+Auto aggro from 1st group. 2nd group and spawn will aggro drones.
+
+#### 1st Group (15- 31km)
+
+Auto aggro.
+
+2x Elite Frigates (Dire Pithi Wrecker/ Plunderer)
+4x Battleships (Pith Dismantler/ Obliterator/ Destroyer/ Eliminator) **Trigger, Jam**
+
+#### 2nd Group (75- 85km)
+
+4x Elite Cruiser (Dire Pithum Inferno/ Mortifier)
+3x Battlecruiser (Pithatis Assassin/ Assaulter)
+
+#### Reinforcement Spawn (117- 120km)
+
+Auto aggro.
+
+3-4x Battlecruiser (Pithatis Assassin/ Enforcer/ Executor/ Revolter)
+3-4x Battleship (Pith Conquistador/ Eliminator/ Exterminator/ Destroyer) **Jam**
+
+Tip: There's fleet aggro in this pocket. First pilot to warp in will get the aggro from the 1st Group, but no aggro from the 2nd Group. Remaining fleet members who warp in later will receive aggro from 2nd Group when they start to open fire on the 1st Group.
+
+Structures drop no loot.
+
+### Pocket 2
+
+Attacking the 2nd Group will aggro the 3rd Group. Reinforcement spawn will aggro drones.
+
+#### 1st Group (50- 60km, Ship Carcass)
+
+2x Elite Frigate (Dire Pithi Invader/ Infiltrator) **Web/ Scramble**
+2x Elite Cruiser (Dire Pithum Abolisher/ Eraser)
+3x Battleship (Pith Dismantler/ Extinguisher)
+
+#### 2nd Group (65- 70km, Starbase Control Tower)
+
+2x Elite Cruiser (Dire Pithum Annihilator/ Killer/ Murderer/ Nullifier) **Jam**
+5x Battleship (Pith Extinguisher/ Destroyer/ Eliminator/ Conquistador) **Trigger, Jam**
+
+#### 3rd Group (110km, Caldari Station Ruins)
+
+2x Elite Frigate (Dire Pithi Infiltrator/ Invader) **Web/ Scramble**
+3x Destroyer (Pithior Guerilla/ Renegade)
+3x Battlecruiser (Pithatis Assaulter/ Enforcer)
+2x Battleship (Pith Exterminator/ Extinguisher/ Destroyer/ Conquistador) **Jam**
+
+#### 1st Reinforcement Spawn (40km)
+
+Auto aggro. Last ship triggers spawn.
+
+4x Cruiser (Pithum Eraser/ Inferno/ Mortifier/ Abolisher)
+4x Battleship (Pith Eliminator/ Exterminator/ Conquistador) **Jam**
+
+#### 2nd Reinforcement Spawn
+
+2x Cruiser (Pithum Eraser/ Inferno/ Mortifier)
+
+Blitz:
+1st Pocket: warp through the gate without killing anything.
+2nd Pocket: eliminate all ships in Group 3. Warp out.
+
+Tip: Destroying the Starbase Control Tower will prevent reinforcement group from appearing. It will however, aggro Group 2 in the process.
+Recommended order of elimination: 1st, 3rd and finally 2nd group (also including reinforcement spawn when triggered).
+Mission is flagged completed once you have eliminated all ships from the 3rd Group.
+
+Mining:
+1st Pocket: 60 Veldspar asteroids (100- 130km, 2,402,354 units).
+
+Structure:
+One Habitation Module drops 10 each of 2 low value trade goods.
+
+Loot and Bounty:
+Loot + Salvage: ~6.2 mil
+Bounty: ~ 20 mil
+
+Sources: EVE-Survival era data.

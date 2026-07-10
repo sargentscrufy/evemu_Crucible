@@ -123,7 +123,11 @@ void BubbleManager::Process() {
 void BubbleManager::CheckBubble(SystemEntity *pSE) {
     SystemBubble *pBubble = pSE->SysBubble();
     if (pBubble != nullptr) {
-        if (pBubble->InBubble(pSE->GetPosition())) {
+        // PHYS-2: piloted ships keep their bubble through a 75km grace
+        // band -- hard-edge reassignment wiped the client's grid
+        // (belt + rats vanish) whenever combat drifted over the border
+        if (pSE->HasPilot() ? pBubble->InBubbleGrace(pSE->GetPosition())
+                            : pBubble->InBubble(pSE->GetPosition())) {
             _log(DESTINY__BUBBLE_DEBUG, "BubbleManager::CheckBubble() - Entity '%s'(%u) at (%.2f,%.2f,%.2f) is still located in bubble %u at %.2f,%.2f,%.2f.",\
                  pSE->GetName(), pSE->GetID(), pSE->GetPosition().x, pSE->GetPosition().y, pSE->GetPosition().z,\
                  pBubble->GetID(), pBubble->x(), pBubble->y(), pBubble->z());
@@ -192,7 +196,7 @@ void BubbleManager::Add(SystemEntity* pSE, bool isPostWarp /*false*/) {
 
 void BubbleManager::NewBubbleCenter(GVector shipVelocity, GPoint &newCenter) {
     shipVelocity.normalize();
-    newCenter += (shipVelocity * (BUBBLE_RADIUS_METERS /2));
+    newCenter += (shipVelocity * (GRID_RADIUS_METERS /2));
 }
 
 void BubbleManager::Remove(SystemEntity *ent) {
@@ -276,11 +280,11 @@ SystemBubble* BubbleManager::MakeBubble(SystemManager* sysMgr, GPoint pos) {
             dir.normalize();
             _log(DESTINY__BUBBLE_DEBUG, "BubbleManager::MakeBubble()::IsOverlap() - dir: %.3f,%.3f,%.3f", dir.x, dir.y, dir.z);
             // move pos away from center
-            pos = itr->second->GetCenter() + (dir * (BUBBLE_RADIUS_METERS * 2));
+            pos = itr->second->GetCenter() + (dir * (GRID_RADIUS_METERS * 2));
             break;
         }
 
-    SystemBubble* pBubble = new SystemBubble(sysMgr, pos, BUBBLE_RADIUS_METERS);
+    SystemBubble* pBubble = new SystemBubble(sysMgr, pos, GRID_RADIUS_METERS);
     if (pBubble != nullptr) {
         m_bubbles.push_back(pBubble);
         m_bubbleIDMap.emplace(pBubble->GetID(), pBubble);

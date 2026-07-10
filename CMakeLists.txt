@@ -33,6 +33,8 @@ SET( EVEMU_ROOT ".."
      CACHE PATH "The root directory of EVEmu workspace." )
 SET( TIXML_USE_STL ON
      CACHE BOOL "tinyxml will use native STL." )
+SET( SANITIZE OFF
+     CACHE BOOL "Build with AddressSanitizer and UndefinedBehaviorSanitizer (GCC/Clang only)." )
 
 IF( CMAKE_CROSSCOMPILING )
   SET( EVEMU_TARGETS_IMPORT ""
@@ -67,11 +69,31 @@ IF (WIN32)
   SET( CMAKE_CXX_FLAGS "/permissive- -DHAVE_WINDOWS_H -DHAVE_WINSOCK2_H /DEBUG /Zi ${CMAKE_CXX_FLAGS}" )
   link_libraries(DbgHelp.lib)
 ELSE()
-  SET( CMAKE_CXX_FLAGS "-std=gnu++17 -march=native -Werror=return-type -fabi-version=14 ${CMAKE_CXX_FLAGS}" )
+  # TARGET_ARCH: the production-test host runs older Xeons (Sandy/Ivy
+  # Bridge -- no BMI2/AVX2), where a -march=native build from a newer
+  # dev box dies with illegal instructions.  Default to the portable
+  # x86-64-v2 baseline (SSE4.2/POPCNT, no AVX2/BMI2); this flag is on
+  # CMAKE_CXX_FLAGS so every in-tree target and static dep inherits it.
+  # Use -DTARGET_ARCH=native for a dev-box-tuned local build.
+  IF( NOT TARGET_ARCH )
+    SET( TARGET_ARCH "x86-64-v2" )
+  ENDIF()
+  MESSAGE( STATUS "Building for -march=${TARGET_ARCH}" )
+  SET( CMAKE_CXX_FLAGS "-std=gnu++17 -march=${TARGET_ARCH} -Werror=return-type -fabi-version=14 ${CMAKE_CXX_FLAGS}" )
 ENDIF()
 # -Wall -Wextra -Weffc++ -Wconversion -Wdouble-promotion
 # -pg -ggdb -pedantic
 # -fsanitize=thread  -fsanitize=address
+
+IF( SANITIZE )
+  IF( WIN32 )
+    MESSAGE( WARNING "SANITIZE is only supported with GCC/Clang; ignoring on MSVC." )
+  ELSE()
+    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined -fno-omit-frame-pointer -g" )
+    SET( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined" )
+    MESSAGE( STATUS "Building with AddressSanitizer + UndefinedBehaviorSanitizer" )
+  ENDIF()
+ENDIF( SANITIZE )
 
 #
 # Try to determine the exact source version using SCM.

@@ -1,0 +1,404 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>EVE-Survival: Vengeance4gu</title>
+	<base href="https://eve-survival.org/?wakka="/>
+		<meta name="generator" content="WikkaWiki"/>
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"/>
+	<meta name="keywords" content="Eve missions, R and L Electronics"/>
+	<meta name="description" content=""/>
+	<link rel="stylesheet" type="text/css"
+		  href="templates/default/css/wikka.css?3d9f4"/>
+	<link rel="stylesheet" type="text/css" href="templates/default/css/print.css" media="print"/>
+	<link rel="icon" href="templates/default/images/favicon.ico" type="image/x-icon"/>
+	<link rel="shortcut icon" href="templates/default/images/favicon.ico" type="image/x-icon"/>
+		<link rel="alternate" type="application/rss+xml" title="EVE-Survival: revisions for Vengeance4gu (RSS)" href="https://eve-survival.org/?wakka=Vengeance4gu/revisions.xml" />
+	<link rel="alternate" type="application/rss+xml" title="EVE-Survival: recently edited pages (RSS)" href="https://eve-survival.org/?wakka=Vengeance4gu/recentchanges.xml" />
+</head>
+<body>
+<!-- BEGIN PAGE WRAPPER -->
+<div id="page">
+		<!-- BEGIN PAGE HEADER -->
+	<div id="header">
+		<h2><a id="homepage_link" href="https://eve-survival.org/?wakka=HomePage">EVE-Survival</a> : <a
+					href="https://eve-survival.org/?wakka=Vengeance4gu/backlinks"
+					title="Display a list of pages linking to Vengeance4gu">Vengeance4gu</a></h2>
+		<ul class="menu" id="main_menu">
+<li><a class="" href="https://eve-survival.org/?wakka=MissionReports">MissionReports</a></li>
+<li><a class="" href="https://eve-survival.org/?wakka=PageIndex">PageIndex</a></li>
+<li><a class="" href="https://eve-survival.org/?wakka=RecentChanges">RecentChanges</a></li>
+<li><a class="" href="https://eve-survival.org/?wakka=RecentlyCommented">RecentlyCommented</a></li>
+<li><a class="" href="https://eve-survival.org/?wakka=UserSettings">Login/Register</a></li>
+<li><form action="https://eve-survival.org/?wakka=TextSearch" id="form_c2b696fff2">
+<fieldset class="hidden">
+	<input type="hidden" name="wakka" value="TextSearch" />
+</fieldset>
+<label for="searchbox">Search: </label><input id="searchbox" name="phrase" size="15" class="searchbox" /></form></li>
+</ul>
+	</div>
+	<!-- END PAGE HEADER -->
+
+<!--starting page content-->
+<div id="content">
+<!-- Header ID generation took 0.000024 seconds --><h1 id="hn_Vengeance_level_4"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Vengeance, level 4</a></h1>
+
+<br />
+<div class="lastedit">Last edited by <span class="user">GeoEclipse</span>:<br/><span class="lastedit_notes">Replaces old-style internal links with new pipe-split links.</span><br /> Mon, 16 Oct 2017 08:49 UTC</div><br />
+Faction: Guristas<br />
+Mission type: Encounter<br />
+Space type: Deadspace<br />
+Damage dealt: Kinetic, thermal. EM on stage 3<br />
+Extras: Medium jamming (Pith Eliminator)<br />
+Recommended damage dealing: Kinetic, secondary thermal (Don't bring thermal for last guy)<br />
+Recommended ships:  CNR, Dominix, Ishtar, Tengu others<br />
+Video: <a class="ext" href="http://youtu.be/_TL8ttQIAeY">Ishtar</a>, <a class="ext" href="http://www.youtube.com/watch?v=dHc4xRCOn-k">Golem</a>, <a class="ext" href="http://www.youtube.com/watch?v=-IYVUPLwkCw">Sniper Maelstrom</a> , <a class="ext" href="https://www.youtube.com/watch?v=tfrOF5h3jDA">Bastion Kronos</a>, <a class="ext" href="http://www.youtube.com/watch?v=WjganHwkQG4">Astarte</a> <a class="ext" href="https://youtu.be/AM1asGfarA4">CNR</a><br />
+<br />
+<h3 id="hn_Pocket_1"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Pocket 1</a></h3>
+
+<br />
+Drones might aggro.<br />
+<br />
+<h4 id="hn_Group_1:_-_24km"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Group 1:  - 24km</a></h4>
+
+3x Battlecruisers (Pithatis Assaulter)<br />
+<br />
+<h4 id="hn_Group_2:_-_23km"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Group 2: - 23km</a></h4>
+
+3x Frigates (Guristas Kyoukan/Webifier)  <strong>Web / Scram</strong><br />
+4x Cruisers (Pithum Abolisher/Eraser)<br />
+1x Battleship (Pith Eradicator)<br />
+<br />
+<h4 id="hn_Group_3:_-_21km"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Group 3: - 21km</a></h4>
+
+3x Cruisers (Pithum Eraser/Abolisher)<br />
+2x Battleship (Pith Dismantler/Eliminator) (Eliminator <strong>Jamming</strong>)<br />
+<br />
+<h4 id="hn_Group_4:_-_18km"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Group 4: - 18km</a></h4>
+
+2x Destroyers (Pithior Terrorist)<br />
+2x Battlecruisers (Pithatis Assassin)<br />
+<br />
+<br />
+<br />
+<h4 id="hn_Pocket_1_Ships_detail:"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Pocket 1 Ships detail:</a></h4>
+
+<table class="data" cellspacing="0" cellpadding="4" border="1"><tr>
+<td rowspan="2"></td>
+
+<td rowspan="2" align="center" style="border-bottom-width:3px;border-right-width:3px;"><b>Orbit</b></td>
+<td rowspan="2" align="center" style="border-bottom-width:3px;border-right-width:3px;"><b>Max.<br />Velocity</b></td>
+
+<td rowspan="2" align="center" style="border-bottom-width:3px;border-right-width:3px;"><b>Shield<br />(hp)</b></td>
+<td rowspan="2" align="center" style="border-bottom-width:3px;border-right-width:3px;"><b>Armor<br />(hp)</b></td>
+
+
+
+<td colspan="4" align="center" style="border-right-width:3px;"><b>Shield Resistances (%)</b></td>
+
+<td colspan="4" align="center" style="border-right-width:3px;"><b>Armor Resistances (%)</b></td>
+
+<td colspan="4" align="center" style="border-right-width:3px;"><b>DPS (hp/s)</b></td>
+</tr>
+<tr>
+<td style="border-bottom-width:3px;">EM</td>
+<td style="border-bottom-width:3px;">EXP</td>
+<td style="border-bottom-width:3px;">KIN</td>
+<td style="border-bottom-width:3px;border-right-width:3px;">THERM</td>
+
+<td style="border-bottom-width:3px;">EM</td>
+<td style="border-bottom-width:3px;">EXP</td>
+<td style="border-bottom-width:3px;">KIN</td>
+<td style="border-bottom-width:3px;border-right-width:3px;">THERM</td>
+
+<td style="border-bottom-width:3px;">EM</td>
+<td style="border-bottom-width:3px;">EXP</td>
+<td style="border-bottom-width:3px;">KIN</td>
+<td style="border-bottom-width:3px;border-right-width:3px;">THERM</td>
+</tr>
+
+<tr>
+<td style="border-right-width:3px;">5x <a class="ext" href="http://npc.elfarto.com/view.php?id=24015">Pithatis Assaulter</a></td>
+<td align="right" style="border-right-width:3px;">35,000m</td>
+<td align="right" style="border-right-width:3px;">320m/s</td>
+<td align="right" style="border-right-width:3px;">1800</td>
+<td align="right" style="border-right-width:3px;">1150</td>
+
+
+<td align="right">60</td>
+<td align="right">50</td>
+<td align="right">30</td>
+<td align="right" style="border-right-width:3px;">40</td>
+
+<td align="right">60</td>
+<td align="right">50</td>
+<td align="right">30</td>
+<td align="right" style="border-right-width:3px;">40</td>
+
+<td align="right">-</td>
+<td align="right">-</td>
+<td align="right">51</td>
+<td align="right" style="border-right-width:3px;">-</td>
+
+</tr>	
+	
+<tr>
+<td style="border-right-width:3px;">3x <a class="ext" href="http://npc.elfarto.com/view.php?id=16565">Guristas Kyoukan</a></td>
+<td align="right" style="border-right-width:3px;">7,500m</td>
+<td align="right" style="border-right-width:3px;">600m/s</td>
+<td align="right" style="border-right-width:3px;">425</td>
+<td align="right" style="border-right-width:3px;">310</td>
+
+
+<td align="right">13</td>
+<td align="right">62</td>
+<td align="right">33</td>
+<td align="right" style="border-right-width:3px;">33</td>
+
+<td align="right">60</td>
+<td align="right">10</td>
+<td align="right">25</td>
+<td align="right" style="border-right-width:3px;">25</td>
+
+<td align="right">-</td>
+<td align="right">-</td>
+<td align="right">20</td>
+<td align="right" style="border-right-width:3px;">11</td>
+
+</tr>	
+	
+<tr>
+<td style="border-right-width:3px;">6x <a class="ext" href="http://npc.elfarto.com/view.php?id=24088">Pithum Abolisher</a></td>
+<td align="right" style="border-right-width:3px;">23,000m</td>
+<td align="right" style="border-right-width:3px;">360m/s</td>
+<td align="right" style="border-right-width:3px;">1800</td>
+<td align="right" style="border-right-width:3px;">1150</td>
+
+
+<td align="right">59</td>
+<td align="right">49</td>
+<td align="right">29</td>
+<td align="right" style="border-right-width:3px;">39</td>
+
+<td align="right">59</td>
+<td align="right">49</td>
+<td align="right">29</td>
+<td align="right" style="border-right-width:3px;">39</td>
+
+<td align="right">-</td>
+<td align="right">-</td>
+<td align="right">32</td>
+<td align="right" style="border-right-width:3px;">11</td>
+
+</tr>	
+	
+<tr>
+<td style="border-right-width:3px;">1x <a class="ext" href="http://npc.elfarto.com/view.php?id=16992">Pith Eradicator</a></td>
+<td align="right" style="border-right-width:3px;">27,000m</td>
+<td align="right" style="border-right-width:3px;">280m/s</td>
+<td align="right" style="border-right-width:3px;">4250</td>
+<td align="right" style="border-right-width:3px;">3500</td>
+
+
+<td align="right">70</td>
+<td align="right">60</td>
+<td align="right">40</td>
+<td align="right" style="border-right-width:3px;">50</td>
+
+<td align="right">70</td>
+<td align="right">60</td>
+<td align="right">40</td>
+<td align="right" style="border-right-width:3px;">50</td>
+
+<td align="right">-</td>
+<td align="right">-</td>
+<td align="right">58</td>
+<td align="right" style="border-right-width:3px;">21</td>
+
+</tr>	
+	
+<tr>
+<td style="border-right-width:3px;">2x <a class="ext" href="http://npc.elfarto.com/view.php?id=17005">Pith Extinguisher</a></td>
+<td align="right" style="border-right-width:3px;">35,000m</td>
+<td align="right" style="border-right-width:3px;">280m/s</td>
+<td align="right" style="border-right-width:3px;">6750</td>
+<td align="right" style="border-right-width:3px;">4250</td>
+
+
+<td align="right">73</td>
+<td align="right">63</td>
+<td align="right">43</td>
+<td align="right" style="border-right-width:3px;">53</td>
+
+<td align="right">73</td>
+<td align="right">63</td>
+<td align="right">43</td>
+<td align="right" style="border-right-width:3px;">53</td>
+
+<td align="right">-</td>
+<td align="right">-</td>
+<td align="right">86</td>
+<td align="right" style="border-right-width:3px;">-</td>
+
+</tr>	
+	
+<tr>
+<td style="border-right-width:3px;">2x <a class="ext" href="http://npc.elfarto.com/view.php?id=23988">Pithior Supremacist</a></td>
+<td align="right" style="border-right-width:3px;">16,500m</td>
+<td align="right" style="border-right-width:3px;">400m/s</td>
+<td align="right" style="border-right-width:3px;">300</td>
+<td align="right" style="border-right-width:3px;">250</td>
+
+
+<td align="right">40</td>
+<td align="right">30</td>
+<td align="right">10</td>
+<td align="right" style="border-right-width:3px;">20</td>
+
+<td align="right">40</td>
+<td align="right">30</td>
+<td align="right">10</td>
+<td align="right" style="border-right-width:3px;">20</td>
+
+<td align="right">-</td>
+<td align="right">-</td>
+<td align="right">90</td>
+<td align="right" style="border-right-width:3px;">12</td>
+
+</tr>	
+	
+<tr>
+<td style="border-top-width:3px;">19 total ships</td>
+<td style="border-top-width:3px;" align="right" colspan="2"><b>Averages/Totals:</b></td>
+<td align="right" style="border-top-width:3px;border-right-width:3px;">39,425</td>
+<td align="right" style="border-top-width:3px;border-right-width:3px;">26,080</td>
+
+
+
+<td align="right" style="border-top-width:3px;">63.4</td>
+<td align="right" style="border-top-width:3px;">55.3</td>
+<td align="right" style="border-top-width:3px;font-weight:bold;background-color:#c0c0c0;">35</td>
+<td align="right" style="border-top-width:3px;border-right-width:3px;">44.7</td>
+
+<td align="right" style="border-top-width:3px;">64.9</td>
+<td align="right" style="border-top-width:3px;">53.5</td>
+<td align="right" style="border-top-width:3px;font-weight:bold;background-color:#c0c0c0;">34.8</td>
+<td align="right" style="border-right-width:3px;border-top-width:3px;">44.4</td>
+
+<td align="right" style="border-top-width:3px;">-</td>
+<td align="right" style="border-top-width:3px;">-</td>
+<td align="right" style="border-top-width:3px;">917</td>
+<td align="right" style="border-top-width:3px;border-right-width:3px;">141</td>
+
+</tr>	
+	</table><br />
+<br />
+Structures drop no loot. Asteroid Factory doesn't take armor damage.<br />
+<br />
+<br />
+<h3 id="hn_Pocket_2"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Pocket 2</a></h3>
+
+No loot from structures (Control Tower and Tactical Outpost).<br />
+Drones don't aggro.<br />
+<br />
+<h4 id="hn_Group_1:_5-10km_Auto_Aggro"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Group 1: (5-10km) (Auto Aggro)</a></h4>
+
+3x Cruisers (Pithum Ambolisher/Eraser)<br />
+<br />
+<h4 id="hn_Group_2:_30-35km"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Group 2: (30-35km)</a></h4>
+
+1x Battleship (Pith Eliminator/Extinguisher) (Eliminator <strong>Jamming</strong>)<br />
+3x Battlecruisers (Pithatis Assassin/Assaulter)<br />
+<br />
+<h4 id="hn_Group_3:_35-40km"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Group 3: (35-40km)</a></h4>
+
+2x Battleships (Pith Eliminator/Extinguisher)<br />
+<br />
+<h4 id="hn_Group_4:_30-35km"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Group 4: (30-35km)</a></h4>
+
+3x Cruisers (Pithum Abolisher/Eraser)<br />
+2x Destroyers (Pithior Supremecist/Terrorist)<br />
+<br />
+<h3 id="hn_Pocket_3"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Pocket 3</a></h3>
+
+<br />
+<h4 id="hn_Group_1:_2-5km_Auto_Aggro"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Group 1: (2-5km) (Auto Aggro)</a></h4>
+
+2x Battlecruisers (Pithatis Assaulter/Enforcer)<br />
+<br />
+<h4 id="hn_Group_2:_70-100km"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Group 2: (70-100km)</a></h4>
+
+4x Tower Sentry Guristas III<br />
+4x Frigates (Guristas Kyoukan/Webifier) <strong>Web / Scram</strong><br />
+3x Battlecruisers (Pithatis Assasin/Assaulter)<br />
+2x Battleships (Pith Extinguisher/Rachen Mysuna)<br />
+<br />
+When you start shooting at sentries (they lightly hit for everything, mostly EM and Thermal) the whole pocket aggros.<br />
+<br />
+Rachen Mysuna has a 50km orbit range and 75% chance for shield boost (1000hp each 10 seconds) so low SP BS pilots can have problems breaking his tank. Rachen's 25% chance for defender doesn't help either. If you are a Raven pilot and can't handle it from distance, warp out and warp in again, then get closer (afterburner can help) and wait until he starts shooting you. Loot can be quite good (like Arbalest Cruise + Siege, named 350mm Railgun etc.).<br />
+<br />
+To be honest, I heard a few times that it isn't possible to kill Mysuna without Torps. :) Well I personally finished him from 50km using T1 Wrath Cruise Missiles, without drones. All depends on skills and equipment. If you're droning be aware that he is VERY resistant to thermal. Wasps or even Wardens are preferable to Gardes and Ogres.<br />
+<br />
+Rachen Mysuna is easier to kill when webbed to slow down.  Was able to take her out with a heavy missile t1 drake once a friend put 2 webs on her and slowed the speed down to 40; took less than 12 volleys then.  Without the speed her tank dies quickly under scourge heavy missiles (xr-3200 launchers too) (10/15/11)<br />
+<br />
+Guristas War Installation drops rubbish loot (like 100 Light Missiles, Small NOS, 250mm T1 Railgun and Malkuth Rocket launcher).<br />
+<br />
+<strong>Blitz</strong> No real blitz must clear first 2 pockets to proceed into 3rd room<br />
+<br />
+<strong>TIP</strong><br />
+<br />
+I did the mission while flying a HAMGu (Heavy Assault Missle Tengu), I directly burned towards Rachen and orbitted at 7500m he couldnt hit me and since it was the first target i did not have any problems with an insane tank. So it might be that his tank gets triggered after you kill something else first. Mind it was a t2 fitted hamgu, only high meta item was the AB. It might be that you get webbed by the frigs while burning towards him, just dispatch them. It was easier than i expected. <br />
+<br />
+<h3 id="hn_Mining"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Mining</a></h3>
+
+<strong>Pocket 1:</strong> 1,290,000 Veldspar (19 Roids 8*50K+5*70K+6*90K)<br />
+<strong>Pocket 2:</strong> 705,000 Veldspar (15 Roids 5*25K+8*50K+2*90K)<br />
+<strong>Pocket 3:</strong> 255,000 Scordite (5 Roids 3*25K+2*90K)<br />
+<br />
+<h3 id="hn_Bounty"><a class="heading" href="https://eve-survival.org/?wakka=Vengeance4gu#">Bounty</a></h3>
+
+Mission Reward + Bonus ~ 2Mil<br />
+Bounty ~ 9.67 Mil<br />
+Loot + Salvage ~ 4.41 Mil<br />
+Doable in under 20 Minutes<br />
+<br />
+<hr />
+
+<a class="" href="https://eve-survival.org/?wakka=CategoryMissions">CategoryMissions</a><br />
+<a class="" href="https://eve-survival.org/?wakka=CategoryLevel4">CategoryLevel4</a>
+<div style="clear: both"></div>
+
+</div><!--closing page content-->
+
+<!-- starting comments block-->
+<div id="comments">
+<!--starting comments header (hide)-->
+<div id="commentheader">
+There are 52 comments on this page. [<a href="https://eve-survival.org/?wakka=Vengeance4gu&amp;show_comments=3#comments">Show comments</a>]
+</div><!--closing commentheader (hide)-->
+</div><!--closing comments block-->
+
+<!-- BEGIN PAGE FOOTER -->
+<div id="footer">
+	<ul class="menu" id="options_menu">
+<li><a href="https://eve-survival.org/?wakka=Vengeance4gu/showcode" title="Display the markup for this page">[Source]</a></li>
+<li><a href="https://eve-survival.org/?wakka=Vengeance4gu/history" title="Click to view recent edits to this page">[History]</a></li>
+<li><a class="datetime" href="https://eve-survival.org/?wakka=Vengeance4gu/revisions" title="Click to view recent revisions list for this page">2017-10-16 08:49:41</a> <a href="https://eve-survival.org/?wakka=Vengeance4gu/revisions.xml" title="Click to display a feed with the latest revisions to this page"><img src="images/feed.png" class="icon" width="14" height="14" alt="feed icon" /></a></li>
+<li>Owner: <a class="" href="https://eve-survival.org/?wakka=ZaraSkyray">ZaraSkyray</a></li>
+<li>Your hostname is <tt>208.118.193.141</tt></li>
+</ul>
+</div>
+<!-- END PAGE FOOTER -->
+<!-- BEGIN SYSTEM INFO -->
+<div id="smallprint">
+	<a class="ext" href="http://validator.w3.org/check/referer">Valid XHTML 1.0 Transitional</a> ::
+	<a class="ext" href="http://jigsaw.w3.org/css-validator/check/referer">Valid CSS</a> ::
+	Powered by <a class="ext" href="http://wikkawiki.org/">WikkaWiki </a>
+
+</div>
+<!-- END SYSTEM INFO -->
+<!--Page was generated in 0.0732 seconds-->
+</div>
+<!-- END PAGE WRAPPER -->
+
+</body>
+</html>

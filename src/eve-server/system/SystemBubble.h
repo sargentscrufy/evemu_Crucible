@@ -128,6 +128,9 @@ public:
     void BubblecastDestinyUpdateExclusive(PyTuple** payload, const char* desc, SystemEntity* pSE) const;
 
     bool InBubble(const GPoint &pt, bool inWarp=false) const;
+    // PHYS-2: membership with a 75km grace band; used for piloted ships
+    // so grid-wiping bubble reassignment only happens well past the edge
+    bool InBubbleGrace(const GPoint &pt) const;
     bool IsOverlap(const GPoint &pt) const;
     void MarkCenter();
     void RemoveMarkers();

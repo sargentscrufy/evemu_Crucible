@@ -195,6 +195,12 @@ int main( int argc, char* argv[] )
 {
     double profileStartTime(GetTimeMSeconds());
 
+    // line-buffer stdout even when it is a pipe (container json logging):
+    // block buffering hid the final log lines whenever the main loop
+    // stalled, which made hangs self-concealing (HANG-1/SPAWN-10
+    // diagnosis pain)
+    setvbuf(stdout, nullptr, _IOLBF, 0);
+
     /* set current time for timer */
     Timer::SetCurrentTime();
 

@@ -15,6 +15,7 @@ MODULE__DEBUG
 MODULE__TRACE
 */
 #include "Client.h"
+#include "character/Skill.h"
 #include "ship/modules/GenericModule.h"
 #include "ship/modules/ActiveModule.h"
 
@@ -63,6 +64,19 @@ m_launcher(false)
 // throwing an error negates further processing
 void GenericModule::Online()
 {
+    // modules the pilot lacks skills for may sit fitted but must stay
+    // offline (live behavior).  fitting via MoveItems is skill-checked,
+    // but imported/replica fits and trades can bypass it, and onlining
+    // while docked previously skipped every check.  skip the check on
+    // login/undock restore so saved fits still load.
+    if (m_shipRef->HasPilot()
+    and !m_shipRef->GetPilot()->IsLogin()
+    and !m_shipRef->IsUndocking()
+    and !Skill::FitModuleSkillCheck(m_modRef, m_shipRef->GetPilot()->GetChar())) {
+        m_shipRef->GetPilot()->SendNotifyMsg("You do not have the skills required to put the %s online.", m_modRef->name());
+        return;
+    }
+
     if (m_shipRef->GetPilot()->IsDocked() and (!m_shipRef->IsUndocking())) {
         m_ModuleState = Module::State::Online;
         SetAttribute(AttrOnline, EvilOne, !m_shipRef->GetPilot()->IsLogin());

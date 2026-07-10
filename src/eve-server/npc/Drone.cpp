@@ -203,6 +203,7 @@ void DroneSE::Abandon() {
 
 void DroneSE::StateChange() {
     //OnDroneStateChange(droneID, ownerID, controllerID, activityState, droneTypeID, controllerOwnerID, targetID)
+    PyTuple* up(nullptr);
     if (m_online) {
         OnDroneStateChange du;
             du.droneID = m_self->itemID();
@@ -212,10 +213,7 @@ void DroneSE::StateChange() {
             du.controllerOwnerID = m_controllerOwnerID;
             du.activityState = m_AI->GetState();
             du.targetID = m_targetID;
-        PyTuple* up = du.Encode();
-        // bubblecast is faster than destiny::update
-        m_bubble->BubblecastDestinyUpdate(&up, "destiny");
-        //pShipSE->DestinyMgr()->SendSingleDestinyUpdate(&up);
+        up = du.Encode();
     } else {
         PyList* list = new PyList();
             list->AddItemInt(m_self->itemID());
@@ -225,10 +223,27 @@ void DroneSE::StateChange() {
             list->AddItem(PyStatic.NewNone());
             list->AddItem(PyStatic.NewNone());
             list->AddItem(PyStatic.NewNone());
-        PyTuple* tuple = new PyTuple(2);
-            tuple->SetItem(0, new PyString("OnDroneStateChange"));
-            tuple->SetItem(1, list);
-        m_bubble->BubblecastDestinyUpdate(&tuple, "destiny");
+        up = new PyTuple(2);
+            up->SetItem(0, new PyString("OnDroneStateChange"));
+            up->SetItem(1, list);
+    }
+
+    // the controlling pilot's drone window tracks these updates, so they
+    // must reach him even when the drone is off-grid or unbubbled --
+    // otherwise scooping a distant drone leaves a permanent ghost entry
+    // under "Drones in Distant Space"
+    if ((m_pClient != nullptr)
+    and (m_pClient->GetShipSE() != nullptr)
+    and ((m_bubble == nullptr) or (m_pClient->GetShipSE()->SysBubble() != m_bubble))) {
+        PyTuple* dup = static_cast<PyTuple*>(up->Clone());
+        m_pClient->QueueDestinyUpdate(&dup);
+    }
+
+    if (m_bubble != nullptr) {
+        // bubblecast is faster than destiny::update
+        m_bubble->BubblecastDestinyUpdate(&up, "destiny");
+    } else {
+        PyDecRef(up);
     }
 }
 

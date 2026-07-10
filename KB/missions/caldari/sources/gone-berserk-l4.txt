@@ -1,0 +1,190 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>EVE-Survival: GoneBerserk4</title>
+	<base href="https://eve-survival.org/?wakka="/>
+		<meta name="generator" content="WikkaWiki"/>
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"/>
+	<meta name="keywords" content="Eve missions, R and L Electronics"/>
+	<meta name="description" content=""/>
+	<link rel="stylesheet" type="text/css"
+		  href="templates/default/css/wikka.css?3d9f4"/>
+	<link rel="stylesheet" type="text/css" href="templates/default/css/print.css" media="print"/>
+	<link rel="icon" href="templates/default/images/favicon.ico" type="image/x-icon"/>
+	<link rel="shortcut icon" href="templates/default/images/favicon.ico" type="image/x-icon"/>
+		<link rel="alternate" type="application/rss+xml" title="EVE-Survival: revisions for GoneBerserk4 (RSS)" href="https://eve-survival.org/?wakka=GoneBerserk4/revisions.xml" />
+	<link rel="alternate" type="application/rss+xml" title="EVE-Survival: recently edited pages (RSS)" href="https://eve-survival.org/?wakka=GoneBerserk4/recentchanges.xml" />
+</head>
+<body>
+<!-- BEGIN PAGE WRAPPER -->
+<div id="page">
+		<!-- BEGIN PAGE HEADER -->
+	<div id="header">
+		<h2><a id="homepage_link" href="https://eve-survival.org/?wakka=HomePage">EVE-Survival</a> : <a
+					href="https://eve-survival.org/?wakka=GoneBerserk4/backlinks"
+					title="Display a list of pages linking to GoneBerserk4">GoneBerserk4</a></h2>
+		<ul class="menu" id="main_menu">
+<li><a class="" href="https://eve-survival.org/?wakka=MissionReports">MissionReports</a></li>
+<li><a class="" href="https://eve-survival.org/?wakka=PageIndex">PageIndex</a></li>
+<li><a class="" href="https://eve-survival.org/?wakka=RecentChanges">RecentChanges</a></li>
+<li><a class="" href="https://eve-survival.org/?wakka=RecentlyCommented">RecentlyCommented</a></li>
+<li><a class="" href="https://eve-survival.org/?wakka=UserSettings">Login/Register</a></li>
+<li><form action="https://eve-survival.org/?wakka=TextSearch" id="form_c2b696fff2">
+<fieldset class="hidden">
+	<input type="hidden" name="wakka" value="TextSearch" />
+</fieldset>
+<label for="searchbox">Search: </label><input id="searchbox" name="phrase" size="15" class="searchbox" /></form></li>
+</ul>
+	</div>
+	<!-- END PAGE HEADER -->
+
+<!--starting page content-->
+<div id="content">
+<!-- Header ID generation took 0.000023 seconds --><h1 id="hn_Gone_Berserk_Level_4"><a class="heading" href="https://eve-survival.org/?wakka=GoneBerserk4#">Gone Berserk, Level 4</a></h1>
+
+<br />
+<div class="lastedit">Last edited by <a class="user" href="https://eve-survival.org/?wakka=JeanInkura" title="Open user profile for JeanInkura">JeanInkura</a>:<br/><span class="lastedit_notes">Replaces old-style internal links with new pipe-split links.</span><br /> Mon, 16 Oct 2017 08:49 UTC</div><br />
+<br />
+Faction: EoM<br />
+Mission type: Encounter<br />
+Space type: Normal (MWD works)<br />
+Damage dealt: Kinetic (68.76%)/ Thermal (31.24%)<br />
+Web/ Scramble: EoM Saboteur  (Extra spawn, from the left group wave)<br />
+Recommended damage dealing: Kinetic/ Explosive<br />
+Recommended ship classes: Battleship, T2 or T3 Cruiser<br />
+Video: <a class="ext" href="http://youtu.be/b30LVm-AHFg">Ishtar</a>, <a class="ext" href="https://youtu.be/ZEO-tOdZgCY">Raven Navy Issue</a><br />
+<br />
+<br />
+Auto aggro from Initial Group and spawns.<br />
+May [Fleet] warp to preferred distance. <br />
+The initial formation is composed of three groups with a Cruiser and a Battleship in each.<br />
+<ul>
+	<li> Each Cruiser killed will trigger a spawn wave.</li>
+</ul>
+
+<ul>
+	<li> Each wave is composed of four spawns for a total of 12 spawns.</li>
+</ul>
+
+<strong>Reminder</strong>: set your drones to passive to avoid triggering a swarm.<br />
+Spawn composition and distance may vary with each wave.<br />
+<br />
+<br />
+<h2 id="hn_Single_Pocket"><a class="heading" href="https://eve-survival.org/?wakka=GoneBerserk4#">Single Pocket</a></h2>
+
+<br />
+<h3 id="hn_Initial_Formation_70-_90km_3_groups"><a class="heading" href="https://eve-survival.org/?wakka=GoneBerserk4#">Initial Formation (70- 90km, 3 groups)</a></h3>
+
+3x Cruiser (EoM Crusader) <strong>Trigger</strong><br />
+3x Battleship (EoM Hydra)<br />
+<br />
+<h3 id="hn_Reinforcement_Spawn_Wave_x3"><a class="heading" href="https://eve-survival.org/?wakka=GoneBerserk4#"> Reinforcement Spawn Wave (x3) </a></h3>
+
+<br />
+<h4 id="hn_1st_Spawn_40-_60km"><a class="heading" href="https://eve-survival.org/?wakka=GoneBerserk4#"> 1st Spawn (40- 60km) </a></h4>
+
+2x Cruiser (EoM Death Knight) <strong>Trigger</strong><br />
+ <br />
+<h4 id="hn_2nd_Spawn_20-_30km"><a class="heading" href="https://eve-survival.org/?wakka=GoneBerserk4#"> 2nd Spawn (20- 30km) </a></h4>
+
+<em>2x Frigate (EoM Saboteur) <strong>Web</strong></em><br />
+1x Battleship (EoM Hydra) <strong>Trigger</strong><br />
+<br />
+<h4 id="hn_3rd_Spawn_30-_40km"><a class="heading" href="https://eve-survival.org/?wakka=GoneBerserk4#"> 3rd Spawn (30- 40km) </a></h4>
+
+1x Battleship (EoM Hydra)<br />
+1x Battleship (EoM Ogre) <strong>Trigger</strong><br />
+<br />
+<h4 id="hn_4th_Spawn_45-_66km"><a class="heading" href="https://eve-survival.org/?wakka=GoneBerserk4#"> 4th Spawn (45- 66km)</a></h4>
+
+1x Battleship (EoM Death Lord)<br />
+<br />
+<img src="https://eve-survival.org/screenshots/goneberserk4-2.jpg" alt="Left, Center and Right Groups" title="Gone Berserk Lvl 4 (Initial Position)" /><br />
+<br />
+<br />
+<h5 id="hn_Tip"><a class="heading" href="https://eve-survival.org/?wakka=GoneBerserk4#">Tip</a></h5>
+
+To manage aggro, work on a single wave, then kill the next <em>Crusader</em> Cruiser.<br />
+Flag the Cruisers at the beginning to make it easier to keep an eye on the triggers.<br />
+The mission is flagged completed once you have killed the last <em>EoM Death Lord</em>.<br />
+<br />
+<h5 id="hn_Mining"><a class="heading" href="https://eve-survival.org/?wakka=GoneBerserk4#">Mining</a></h5>
+
+44 Veldspar asteroids (33- 118km).<br />
+<br />
+<h5 id="hn_Loot_and_Bounty"><a class="heading" href="https://eve-survival.org/?wakka=GoneBerserk4#">Loot and Bounty</a></h5>
+
+Loot + Salvage: <a class="ext" href="http://evepraisal.com/e/15903740">~10.7 to 12.8 mil</a><br />
+Bounty: ~10.7 mil<br />
+<br />
+<br />
+<h4 id="hn_Ship_Detail"><a class="heading" href="https://eve-survival.org/?wakka=GoneBerserk4#">Ship Detail</a></h4>
+
+<table class="data" style="text-align:center">
+<thead>
+<tr><th rowspan="2">Qty</th><th rowspan="2">Name </th><th rowspan="2" style="border-left-width:3px">Orbit<br />(km)</th><th rowspan="2">Velocity<br />Max (m/s)</th><th rowspan="2" style="border-left-width:3px">Shield<br />(hp)</th><th rowspan="2">Armor<br />(hp)<br />
+</th><th colspan="4" style="border-left-width:3px">Shield Resistances (%)</th><th colspan="4" style="border-left-width:3px">Armor Resistances (%)</th><th colspan="4" style="border-left-width:3px;text-align:center">DPS (HP/s)</th></tr>
+<tr><td>EM</td><td>Exp</td><td>Kin</td><td>Th</td><td style="border-left-width:3px">EM</td><td>Exp</td><td>Kin</td><td>Th</td><td style="border-left-width:3px">EM</td><td>Exp</td><td>Kin</td><td>Th</td></tr>
+</thead>
+<tbody>
+<tr><td>3x</td><td style="text-align:left"><a class="ext" href="http://games.chruker.dk/eve_online/item.php?type_id=16096">EoM Crusader</a></td><td style="border-left-width:3px">15</td><td>350</td><td style="border-left-width:3px">1,650</td><td>1,100<br />
+</td><td style="border-left-width:3px">32</td><td>65</td><td>40</td><td>55</td><td style="border-left-width:3px">60</td><td>10</td><td>25</td><td>25</td><td style="border-left-width:3px">-</td><td>-</td><td>25</td><td>-</td></tr>
+<tr><td>9x</td><td style="text-align:left"><a class="ext" href="http://games.chruker.dk/eve_online/item.php?type_id=16098">EoM Hydra</a></td><td style="border-left-width:3px">32</td><td>290</td><td style="border-left-width:3px">4,250</td><td>3,500<br />
+</td><td style="border-left-width:3px">45</td><td>67</td><td>43</td><td>65</td><td style="border-left-width:3px">60</td><td>10</td><td>25</td><td>25</td><td style="border-left-width:3px">-</td><td>-</td><td>67</td><td>36</td></tr>
+<tr><td>6x</td><td style="text-align:left"><a class="ext" href="http://games.chruker.dk/eve_online/item.php?type_id=16097">EoM Death Knight</a></td><td style="border-left-width:3px">17</td><td>350</td><td style="border-left-width:3px">1,800</td><td>1,150<br />
+</td><td style="border-left-width:3px">32</td><td>65</td><td>40</td><td>55</td><td style="border-left-width:3px">60</td><td>10</td><td>25</td><td>25</td><td style="border-left-width:3px">-</td><td>-</td><td>31</td><td>21</td></tr>
+<tr><td>2x</td><td style="text-align:left"><a class="ext" href="http://games.chruker.dk/eve_online/item.php?type_id=16092">EoM Saboteur</a></td><td style="border-left-width:3px">7.5</td><td>900</td><td style="border-left-width:3px">725</td><td>450<br />
+</td><td style="border-left-width:3px">13</td><td>62</td><td>32</td><td>32</td><td style="border-left-width:3px">60</td><td>10</td><td>25</td><td>25</td><td style="border-left-width:3px">-</td><td>-</td><td>15</td><td>11</td></tr>
+<tr><td>3x</td><td style="text-align:left"><a class="ext" href="http://games.chruker.dk/eve_online/item.php?type_id=16100">EoM Ogre</a></td><td style="border-left-width:3px">20</td><td>290</td><td style="border-left-width:3px">4,800</td><td>3,975<br />
+</td><td style="border-left-width:3px">50</td><td>68</td><td>45</td><td>70</td><td style="border-left-width:3px">60</td><td>10</td><td>25</td><td>25</td><td style="border-left-width:3px">-</td><td>-</td><td>70</td><td>-</td></tr>
+<tr><td>3x</td><td style="text-align:left"><a class="ext" href="http://games.chruker.dk/eve_online/item.php?type_id=16099">EoM Death Lord</a></td><td style="border-left-width:3px">45</td><td>290</td><td style="border-left-width:3px">5,500</td><td>4,250<br />
+</td><td style="border-left-width:3px">55</td><td>69</td><td>48</td><td>75</td><td style="border-left-width:3px">60</td><td>10</td><td>25</td><td>25</td><td style="border-left-width:3px">-</td><td>-</td><td>83</td><td>26</td></tr>
+</tbody>
+<tfoot>
+<tr><th colspan="2"> 26 Ships Total</th><th colspan="2" style="border-left-width:3px"> Average/ Total</th><td style="border-left-width:3px">86,400</td><td>67,900<br />
+</td><td style="border-left-width:3px">40</td><td>66</td><th>42</th><td>61</td><td style="border-left-width:3px">60</td><th>10</th><td>25</td><td>25</td><td style="border-left-width:3px">-</td><td>-</td><th>1,363</th><td>550</td></tr>
+</tfoot>
+</table>
+<br />
+<br />
+<hr />
+
+<a class="" href="https://eve-survival.org/?wakka=CategoryMissions">CategoryMissions</a><br />
+<a class="" href="https://eve-survival.org/?wakka=CategoryLevel4">CategoryLevel4</a>
+<div style="clear: both"></div>
+
+</div><!--closing page content-->
+
+<!-- starting comments block-->
+<div id="comments">
+<!--starting comments header (hide)-->
+<div id="commentheader">
+There are 88 comments on this page. [<a href="https://eve-survival.org/?wakka=GoneBerserk4&amp;show_comments=3#comments">Show comments</a>]
+</div><!--closing commentheader (hide)-->
+</div><!--closing comments block-->
+
+<!-- BEGIN PAGE FOOTER -->
+<div id="footer">
+	<ul class="menu" id="options_menu">
+<li><a href="https://eve-survival.org/?wakka=GoneBerserk4/showcode" title="Display the markup for this page">[Source]</a></li>
+<li><a href="https://eve-survival.org/?wakka=GoneBerserk4/history" title="Click to view recent edits to this page">[History]</a></li>
+<li><a class="datetime" href="https://eve-survival.org/?wakka=GoneBerserk4/revisions" title="Click to view recent revisions list for this page">2017-10-16 08:49:40</a> <a href="https://eve-survival.org/?wakka=GoneBerserk4/revisions.xml" title="Click to display a feed with the latest revisions to this page"><img src="images/feed.png" class="icon" width="14" height="14" alt="feed icon" /></a></li>
+<li>Owner: <a class="" href="https://eve-survival.org/?wakka=ChepeNolon">ChepeNolon</a></li>
+<li>Your hostname is <tt>208.118.193.141</tt></li>
+</ul>
+</div>
+<!-- END PAGE FOOTER -->
+<!-- BEGIN SYSTEM INFO -->
+<div id="smallprint">
+	<a class="ext" href="http://validator.w3.org/check/referer">Valid XHTML 1.0 Transitional</a> ::
+	<a class="ext" href="http://jigsaw.w3.org/css-validator/check/referer">Valid CSS</a> ::
+	Powered by <a class="ext" href="http://wikkawiki.org/">WikkaWiki </a>
+
+</div>
+<!-- END SYSTEM INFO -->
+<!--Page was generated in 0.0750 seconds-->
+</div>
+<!-- END PAGE WRAPPER -->
+
+</body>
+</html>

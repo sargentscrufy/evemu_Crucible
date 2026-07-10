@@ -495,6 +495,27 @@ void Client::ProcessClient() {
                     } break;
                 case Player::State::LoginWarp: {
                     _log(CLIENT__TIMER, "ProcessClient()::CheckState():  case: LoginWarp");
+                    // DESTINY-2: the login warp lands at the exact logout
+                    // position; if that intersects a station's hull the
+                    // client's local collision physics ejects the ship at
+                    // extreme velocity. push the landing point radially
+                    // out to a safe perimeter.
+                    if (SystemMgr() != nullptr and pShipSE != nullptr) {
+                        for (auto cur : SystemMgr()->GetOperationalStatics()) {
+                            SystemEntity* pSSE = cur.second;
+                            if ((pSSE == nullptr) or (!pSSE->IsStationSE()))
+                                continue;
+                            GVector offset(pSSE->GetPosition(), m_loginWarpPoint);
+                            double safeDist = pSSE->GetRadius() + pShipSE->GetRadius() + 2500;
+                            if (offset.length() < safeDist) {
+                                if (offset.length() < 1)
+                                    offset = GVector(1, 0, 0);
+                                offset.normalize();
+                                m_loginWarpPoint = pSSE->GetPosition() + (offset * safeDist);
+                                _log(CLIENT__WARNING, "LoginWarp: landing point inside station %u hull; pushed to safe perimeter (%.0fm).", pSSE->GetID(), safeDist);
+                            }
+                        }
+                    }
                     pShipSE->DestinyMgr()->UnCloak();
                     pShipSE->DestinyMgr()->WarpTo(m_loginWarpPoint);
                     } break;

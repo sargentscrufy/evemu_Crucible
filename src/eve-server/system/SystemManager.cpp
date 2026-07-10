@@ -250,6 +250,10 @@ bool SystemManager::ProcessTic() {
         ++itr;
     }
 
+    // run deferred drone-bay scoops queued by DroneAIMgr during the tic
+    // loop (scooping deletes the drone SE, so it cannot run in-loop)
+    ProcessDroneScoops();
+
     // tic for sov structures (as they aren't in ticEntities)
     for (auto cur : m_opStaticEntities)
         if (cur.second->IsOperSE())
@@ -1103,6 +1107,40 @@ void SystemManager::RemoveEntity(SystemEntity* pSE) {
     m_anomMgr->RemoveSignal(itemID);
 }
 
+void SystemManager::ProcessDroneScoops() {
+    if (m_droneScoops.empty())
+        return;
+    std::vector<uint32> scoops;
+    scoops.swap(m_droneScoops);
+    for (uint32 droneID : scoops) {
+        SystemEntity* pSE = GetSE(droneID);
+        if ((pSE == nullptr) or (pSE->GetDroneSE() == nullptr))
+            continue;
+        DroneSE* pDrone = pSE->GetDroneSE();
+        pDrone->SetBayRecall(false);
+        Client* pClient = pDrone->GetOwner();
+        if ((pClient == nullptr) or (pClient->GetShipSE() == nullptr))
+            continue;
+        InventoryItemRef iRef = pDrone->GetSelf();
+        if (iRef.get() == nullptr)
+            continue;
+        try {
+            if (!pClient->GetShip()->GetMyInventory()->ValidateAddItem(flagDroneBay, iRef))
+                continue;
+        } catch (...) {
+            // bay full (or other inventory refusal) -- drone stays in
+            // space, idle-orbiting its ship, and can be scooped manually
+            pClient->SendNotifyMsg("Your drone bay cannot hold the returning %s.  It remains in space.", pDrone->GetName());
+            continue;
+        }
+        iRef->ChangeOwner(pClient->GetCharacterID(), true);
+        pClient->MoveItem(iRef->itemID(), pClient->GetShipID(), flagDroneBay);
+        pClient->GetShipSE()->ScoopDrone(pDrone);
+        RemoveEntity(pDrone);
+        SafeDelete(pDrone);
+    }
+}
+
 void SystemManager::AddMarker(SystemEntity* pSE, bool sendBall/*false*/, bool addSignal/*false*/) {
     if (pSE == nullptr)
         return;
@@ -1257,6 +1295,15 @@ void SystemManager::DoSpawnForBubble(SystemBubble* pBubble)
     if (!m_spawnMgr->IsInitialized())
         return;
 
+    // GUARD-1: gates in high-security empire space get police patrols
+    // instead of pirate rats.  routed before the belt checks -- guards
+    // have no belt requirement.
+    if (pBubble->IsGate() and (m_data.securityRating > 0.90)) {
+        if (m_spawnMgr->DoGuardSpawn(pBubble))
+            m_ratBubbles.emplace(pBubble->GetID(), pBubble);
+        return;
+    }
+
     if (m_beltCount < 1)
         return;
 
@@ -1302,7 +1349,11 @@ void SystemManager::RemoveSpawnBubble(SystemBubble* pBubble)
 
 uint32 SystemManager::GetRandBeltID()
 {
-    return m_beltVector.at(MakeRandomInt(0, m_beltCount));
+    if (m_beltVector.empty())
+        return 0;
+    // MakeRandomInt's upper bound is inclusive; indexing with m_beltCount
+    // was a rare std::out_of_range crash
+    return m_beltVector.at(MakeRandomInt(0, m_beltVector.size() - 1));
 }
 
 void SystemManager::MakeSetState(const SystemBubble* pBubble,  SetState& into) const {

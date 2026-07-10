@@ -121,11 +121,34 @@ void SystemBubble::Process()
         return;
     }
 
+    // SPAWN-9: self-heal the spawn timer.  it is disabled whenever it
+    // expires while the bubble reads empty (which bubble-reassignment
+    // churn can cause even with a player sitting in the belt), and
+    // nothing re-armed it until the next fresh bubble entry -- so belts
+    // could silently never spawn.  players are here and there are no
+    // rats: arm it.
+    // SPAWN-10: 'no rats' must be checked for real -- the spawned flag
+    // is cleared by ResetBubbleRatSpawn even while the wave is alive
+    // (and spawn bookkeeping can lose track across bubble recreation),
+    // which turned this self-heal into a wave printer: a new rat wave
+    // every timer cycle while a player camped the belt, until the roam
+    // system choked relocating the army.  CountNPCs() is ground truth.
+    if (!m_spawnTimer.Enabled() and !m_players.empty() and (CountNPCs() == 0)) {
+        if (m_belt and sConfig.npc.RoamingSpawns) {
+            SetSpawnTimer(true);
+        } else if (m_gate and (sConfig.npc.StaticSpawns
+        or (m_system->GetSystemSecurityRating() > 0.90))) {     // GUARD-1
+            SetSpawnTimer(false);
+        }
+    }
+
     // this must run a second time for spawn to actually hit.  first time only sets main system spawn timer.
     // may be nuts, but will remain enabled as long as player in bubble and bubble has no rats.
     if (m_spawnTimer.Enabled()) {
         if (m_spawnTimer.Check()) {
             if (!m_players.empty()) {
+                _log(SPAWN__MESSAGE, "SystemBubble::Process() - spawn timer hit for bubble %u (belt %u); requesting spawn.", \
+                        m_bubbleID, sBubbleMgr.GetBeltID(m_bubbleID));
                 m_system->DoSpawnForBubble(this);
             } else {
                 m_spawnTimer.Disable();
@@ -207,7 +230,10 @@ void SystemBubble::ProcessWander(std::vector<SystemEntity *> &wanderers) {
         }
 
         _log(DESTINY__TRACE, "SystemBubble::ProcessWander() checking if DSE in bubble");
-        if (!InBubble(pDSE->GetPosition())) {
+        // PHYS-2: pilots get the grace band so their grid isn't wiped
+        // the moment combat drifts across the bubble edge
+        if (pDSE->HasPilot() ? !InBubbleGrace(pDSE->GetPosition())
+                             : !InBubble(pDSE->GetPosition())) {
             wanderers.push_back(pDSE);
 
             _log(
@@ -321,7 +347,10 @@ void SystemBubble::Add(SystemEntity* pSE) {
             }
         }
 
-        if (m_gate and sConfig.npc.StaticSpawns) {
+        // GUARD-1: high-security gates arm regardless of StaticSpawns --
+        // that flag governs lowsec pirate gate camps, not police patrols
+        if (m_gate and (sConfig.npc.StaticSpawns
+        or (m_system->GetSystemSecurityRating() > 0.90))) {
             if (!m_spawnTimer.Enabled()) {
                 SetSpawnTimer(false);
             }
@@ -464,6 +493,18 @@ void SystemBubble::RemoveExclusive(SystemEntity *pSE) {
 
 void SystemBubble::ResetBubbleRatSpawn()
 {
+    // GUARD-1: police patrols are spawned once per gate.  this reset is
+    // belt chain-ratting logic; letting it clear m_spawned for highsec
+    // gates re-armed the guard timer forever (a new police wave every
+    // ~65s while a pilot loitered at the gate).
+    if (m_gate and (m_system->GetSystemSecurityRating() > 0.90))
+        return;
+    // SPAWN-10: 'the current spawn was killed off' is this method's
+    // contract (see comment below) -- enforce it.  resetting while the
+    // wave is alive let fresh waves stack on top of living ones.
+    if (CountNPCs() > 0)
+        return;
+
     /* the current spawn in this bubble was killed off, so reset timers accordingly
      *   once the timer hits, it will do all needed checks for players and respawn as needed.
      *  this enables creating a new spawn after previous group was killed off
@@ -479,7 +520,9 @@ void SystemBubble::ResetBubbleRatSpawn()
 
 void SystemBubble::SetSpawnTimer(bool isBelt/*false*/)
 {
-    if (m_system->GetSystemSecurityRating() > 0.90)
+    // the high-security block applies to BELT rats only: gates in
+    // high-security systems spawn police patrols instead (GUARD-1)
+    if (isBelt and (m_system->GetSystemSecurityRating() > 0.90))
         return;
     if (sConfig.debug.SpawnTest) {
         m_spawnTimer.Start(5000); /* 5s for testing */
@@ -487,6 +530,9 @@ void SystemBubble::SetSpawnTimer(bool isBelt/*false*/)
         // these randoms should be changed to reflect this npc's faction presence in system
         if (isBelt) {
             m_spawnTimer.Start(MakeRandomInt(30, sConfig.npc.RoamingTimer) *1000);
+        } else if (m_system->GetSystemSecurityRating() > 0.90) {
+            // GUARD-1: police patrols muster quickly at highsec gates
+            m_spawnTimer.Start(MakeRandomInt(10, 30) *1000);
         } else {
             m_spawnTimer.Start(MakeRandomInt(60, sConfig.npc.StaticTimer) *1000);
         }
@@ -607,6 +653,16 @@ bool SystemBubble::InBubble(const GPoint& pt, bool inWarp/*false*/) const
     }
 
     return (m_center.distance(pt) < m_radius);
+}
+
+// PHYS-2: hysteresis membership test for piloted ships.  reassigning a
+// player at the hard bubble edge wipes their client grid (RemoveBalls
+// for everything they are looking at -- belts vanish mid-fight when
+// combat drifts across the border) and rapid A->B->A churn does the
+// same.  players keep their bubble until they are well past the edge.
+bool SystemBubble::InBubbleGrace(const GPoint& pt) const
+{
+    return (m_center.distance(pt) < (m_radius + 75000.0));
 }
 
 bool SystemBubble::IsOverlap( const GPoint& pt ) const
@@ -1018,7 +1074,7 @@ void SystemBubble::MarkCenter() {
 
     // create jetcan to mark bubble x
     GPoint center = m_center;
-    center.x += BUBBLE_RADIUS_METERS - 5;
+    center.x += m_radius - 5;    // GRID-2: markers track the actual partition radius
     str.clear();
     str = "Bubble #";
     str += std::to_string(m_bubbleID);
@@ -1028,7 +1084,7 @@ void SystemBubble::MarkCenter() {
 
     // create jetcan to mark bubble -x
     center = m_center;
-    center.x -= BUBBLE_RADIUS_METERS - 5;
+    center.x -= m_radius - 5;    // GRID-2: markers track the actual partition radius
     str.clear();
     str = "Bubble #";
     str += std::to_string(m_bubbleID);
@@ -1038,7 +1094,7 @@ void SystemBubble::MarkCenter() {
 
     // create jetcan to mark bubble y
     center = m_center;
-    center.y += BUBBLE_RADIUS_METERS - 5;
+    center.y += m_radius - 5;    // GRID-2: markers track the actual partition radius
     str.clear();
     str = "Bubble #";
     str += std::to_string(m_bubbleID);
@@ -1048,7 +1104,7 @@ void SystemBubble::MarkCenter() {
 
     // create jetcan to mark bubble -y
     center = m_center;
-    center.y -= BUBBLE_RADIUS_METERS - 5;
+    center.y -= m_radius - 5;    // GRID-2: markers track the actual partition radius
     str.clear();
     str = "Bubble #";
     str += std::to_string(m_bubbleID);
@@ -1058,7 +1114,7 @@ void SystemBubble::MarkCenter() {
 
     // create jetcan to mark bubble z
     center = m_center;
-    center.z += BUBBLE_RADIUS_METERS - 5;
+    center.z += m_radius - 5;    // GRID-2: markers track the actual partition radius
     str.clear();
     str = "Bubble #";
     str += std::to_string(m_bubbleID);
@@ -1068,7 +1124,7 @@ void SystemBubble::MarkCenter() {
 
     // create jetcan to mark bubble -z
     center = m_center;
-    center.z -= BUBBLE_RADIUS_METERS - 5;
+    center.z -= m_radius - 5;    // GRID-2: markers track the actual partition radius
     str.clear();
     str = "Bubble #";
     str += std::to_string(m_bubbleID);

@@ -70,6 +70,12 @@ bool SpawnMgr::Init()
 
     m_groupTimerSetTime = 150;  // (in seconds) 2.5m default check time. this will allow a max wait time of 7.5m for respawn
 
+    // roaming: idle belt spawns periodically warp to another belt
+    // (checked in Process(); previously this timer was never started
+    // nor checked anywhere, so spawns never roamed)
+    if (sConfig.npc.RoamingSpawns and (m_system->BeltCount() > 1))
+        StartRatTimer();
+
     _log(COSMIC_MGR__INIT, "SpawnMgr Initialized for %s(%u)", m_system->GetName(), m_system->GetID());
     _log(COSMIC_MGR__INIT, "Roaming Belt Spawns are %s", sConfig.npc.RoamingSpawns ? "enabled" : "disabled");
     _log(COSMIC_MGR__INIT, "Static Gate Spawns are %s", sConfig.npc.StaticSpawns ? "enabled" : "disabled");
@@ -108,7 +114,12 @@ void SpawnMgr::Process() {
             while (itr != end) {
                 if (itr->second.enabled) {
                     killTimer = false;
-                    if (itr->second.stamp < sEntityList.GetStamp()) {
+                    // stamp is the earliest respawn time (kill time +
+                    // RespawnTimer). the old '<' skipped entries whose
+                    // time HAD come: rats respawned too early when the
+                    // group timer beat the stamp, and never at all when
+                    // it didn't
+                    if (itr->second.stamp > sEntityList.GetStamp()) {
                         ++itr;
                         continue;
                     }
@@ -127,6 +138,12 @@ void SpawnMgr::Process() {
                             m_system->GetName(), m_system->GetID());
             }
         }
+
+    // roaming: on each interval an idle spawn group packs up and warps
+    // to another belt (Timer::Check() restarts the interval)
+    if (m_ratTimer.Enabled())
+        if (m_ratTimer.Check())
+            RoamSpawns();
 
     if (sConfig.debug.UseProfiling)
         sProfiler.AddTime(Profile::spawn, GetTimeUSeconds() - profileStartTime);
@@ -160,35 +177,93 @@ void SpawnMgr::MoveSpawn(NPC* pNPC, SystemBubble* pBubble)
     //pBubble->SetSpawned(true);
 }
 
-void SpawnMgr::WarpOutSpawn(NPC* pNPC, SystemBubble* pBubble)
+void SpawnMgr::WarpOutSpawn(SystemBubble* pFrom, SystemBubble* pTo)
 {
-    if (pNPC == nullptr)
+    if (pFrom == nullptr or pTo == nullptr or pFrom == pTo)
         return;
-    if (pBubble == nullptr)
-        return;
-    _log(SPAWN__TRACE, "WarpOutSpawn() called by %s(%u) from bubbleID %u to bubbleID %u", pNPC->GetName(), pNPC->GetID(), pNPC->SysBubble()->GetID(), pBubble->GetID() );
+    _log(SPAWN__TRACE, "WarpOutSpawn() moving spawn group from bubbleID %u to bubbleID %u", pFrom->GetID(), pTo->GetID());
+
     NPC* rNPC(nullptr);
-    auto range = m_spawns.equal_range(pNPC->SysBubble()->GetID());
+    uint8 moved = 0;
+    auto range = m_spawns.equal_range(pFrom->GetID());
     auto itr = range.first;
     while (itr != range.second) {
-        if (itr->second.enabled) {
+        if (itr->second.enabled) {  // pending respawn; leave it be
             ++itr;
             continue;
         }
         rNPC = m_system->GetNPCSE(itr->second.itemID);
         if (rNPC == nullptr) {
-            ++itr;
+            // SPAWN-10: the npc is gone (despawned, or its bookkeeping
+            // went stale across bubble recreation).  drop the orphan
+            // entry instead of carrying it forever -- accumulated
+            // orphans made this loop grind the whole server.
+            itr = m_spawns.erase(itr);
             continue;
         }
-        rNPC->DestinyMgr()->WarpTo(pBubble->GetCenter(), MakeRandomFloat(10, 30) *100);
+        // SPAWN-10: sanity cap.  a healthy spawn group is <= ~8 npcs;
+        // never try to relocate an army in one tic.
+        if (++moved > 12) {
+            _log(SPAWN__ERROR, "WarpOutSpawn: bubble %u holds more than 12 live spawn entries; aborting roam (wave stacking?)", pFrom->GetID());
+            break;
+        }
+        rNPC->DestinyMgr()->WarpTo(pTo->GetCenter(), MakeRandomFloat(10, 30) *100);
         rNPC->GetAIMgr()->DisableWarpOutTimer();
-        m_spawns.emplace(pBubble->GetID(), itr->second);
-        m_spawns.erase(itr);
-        ++itr;
+        // re-key the entry under the destination bubble. erase returns
+        // the next valid iterator — the old erase-then-increment was UB
+        SpawnEntry entry = itr->second;
+        itr = m_spawns.erase(itr);
+        m_spawns.emplace(pTo->GetID(), entry);
     }
 
-    pNPC->SysBubble()->SetSpawned(false);
-    pBubble->SetSpawned(true);
+    pFrom->SetSpawned(false);
+    pTo->SetSpawned(true);
+}
+
+void SpawnMgr::RoamSpawns()
+{
+    if (m_spawns.empty() or (m_system->BeltCount() < 2))
+        return;
+
+    // candidate sources: bubbles with a fully-alive spawn group and no
+    // players watching (never yank rats out of someone's fight)
+    std::vector<uint16> sources;
+    uint16 lastID(0);
+    for (auto& cur : m_spawns) {
+        if (cur.first == lastID)
+            continue;
+        lastID = cur.first;
+        if (IsChaining(cur.first))  // has entries pending respawn
+            continue;
+        SystemBubble* pSB = sBubbleMgr.FindBubbleByID(cur.first);
+        if ((pSB == nullptr) or pSB->HasPlayers() or !pSB->IsBelt())
+            continue;
+        sources.push_back(cur.first);
+    }
+    if (sources.empty())
+        return;
+
+    SystemBubble* pFrom = sBubbleMgr.FindBubbleByID(
+            sources[MakeRandomInt(0, sources.size() - 1)]);
+    if (pFrom == nullptr)
+        return;
+
+    // destination: the bubble of a random belt in this system that has
+    // no spawn of its own yet (rats arriving where a player is mining
+    // is the intended encounter)
+    uint32 beltID = m_system->GetRandBeltID();
+    if (beltID == 0)
+        return;
+    SystemEntity* pSE = m_system->GetSE(beltID);
+    if ((pSE == nullptr) or (pSE->SysBubble() == nullptr))
+        return;
+    SystemBubble* pTo = pSE->SysBubble();
+    if ((pTo == pFrom) or pTo->IsSpawned())
+        return;
+
+    _log(SPAWN__MESSAGE, "SpawnMgr::RoamSpawns() - spawn group roaming from bubble %u to belt bubble %u in %s(%u).", \
+            pFrom->GetID(), pTo->GetID(), m_system->GetName(), m_system->GetID());
+    WarpOutSpawn(pFrom, pTo);
 }
 
 
@@ -196,7 +271,8 @@ void SpawnMgr::StartRatTimer()
 {
     if (m_ratTimer.Enabled())
         return;
-    uint16 time = sConfig.npc.RoamingTimer *1000;  //  s to ms
+    // uint16 truncated anything over 65s to garbage (e.g. 600s -> ~10s)
+    uint32 time = sConfig.npc.RoamingTimer *1000;  //  s to ms
     if (sConfig.debug.SpawnTest)
         time = 5000; /* 5s for npc spawn testing */
     m_ratTimer.Start(time);
@@ -244,7 +320,10 @@ void SpawnMgr::SpawnKilled(SystemBubble* pBubble, uint32 itemID)
             _log(SPAWN__DEPOP, "SpawnMgr::SpawnKilled - Belt Spawn has been destoyed.  Resetting spawn checks for bubble %u.", pBubble->GetID());
             // spawn destroyed.  delete from list and reset bubble checks.
             m_spawns.erase(pBubble->GetID()); // just in case....may/may not be in here.
-            m_bubbles.erase(std::find(m_bubbles.begin(), m_bubbles.end(), pBubble));
+            // erasing find()==end() was UB when the bubble wasn't tracked
+            auto bItr = std::find(m_bubbles.begin(), m_bubbles.end(), pBubble);
+            if (bItr != m_bubbles.end())
+                m_bubbles.erase(bItr);
             pBubble->ResetBubbleRatSpawn();
             m_system->RemoveSpawnBubble(pBubble);
             return;
@@ -481,6 +560,73 @@ bool SpawnMgr::DoSpawnForBubble(SystemBubble* pBubble)
     if (pBubble->IsGate())
         m_system->IncGateSpawnCount();
 
+    return true;
+}
+
+bool SpawnMgr::DoGuardSpawn(SystemBubble* pBubble)
+{
+    // GUARD-1: empire police patrol stargates in high-security systems.
+    // the rat class/faction tables only hold pirate factions, so guard
+    // ship types are selected directly by the system's owning empire.
+    if ((pBubble == nullptr) or !pBubble->IsGate())
+        return false;
+
+    uint32 gateID = sBubbleMgr.GetBeltID(pBubble->GetID());     // gate bubbles register their gateID in the spawnID map
+    SystemEntity* pGate = m_system->GetSE(gateID);
+    if (pGate == nullptr) {
+        _log(SPAWN__ERROR, "DoGuardSpawn: gateID %u not found in %s(%u).", gateID, m_system->GetName(), m_system->GetID());
+        return false;
+    }
+
+    uint32 factionID = m_system->GetSystemFactionID();
+    // police frigates per empire; CONCORD frigate where an empire has no
+    // police types in the crucible data (e.g. Minmatar)
+    std::vector<uint32> types = { 1896, 1896 };                 // Concord Police Frigate
+    switch (factionID) {
+        case factionCaldari:  types = { 9970, 10660, 9971 };  break;  // Caldari Police Lieutenants
+        case factionGallente: types = { 9991, 9983, 9984 };   break;  // Gallente Police Sgt/MSgt/Capt
+        case factionAmarr:    types = { 3768, 3768, 3768 };   break;  // Amarr Police Frigate
+    }
+
+    uint32 corpID = sDataMgr.GetFactionCorp(factionID);
+    FactionData data = FactionData();
+        data.allianceID = factionID;
+        data.corporationID = corpID;
+        data.factionID = factionID;
+        data.ownerID = corpID;
+
+    NPC* pNPC(nullptr);
+    InventoryItemRef iRef(nullptr);
+    uint8 spawned = 0;
+    for (uint32 typeID : types) {
+        GPoint pos(pGate->GetPosition());
+        pos.MakeRandomPointOnSphere(MakeRandomInt(15, 25) *1000);   // patrol posts 15-25km off the gate
+        ItemData idata(typeID, corpID, m_system->GetID(), flagNone, "", pos, "GateGuard");
+        iRef = sItemFactory.SpawnItem(idata);
+        if (iRef.get() == nullptr) {
+            _log(SPAWN__ERROR, "DoGuardSpawn: failed to spawn item type %u.", typeID);
+            continue;
+        }
+        pNPC = new NPC(iRef, m_services, m_system, data, this);
+        if (!pNPC->Load()) {
+            _log(SPAWN__ERROR, "DoGuardSpawn: failed to load NPC %u type %u.", pNPC->GetID(), typeID);
+            pNPC->Delete();
+            continue;
+        }
+        m_system->AddNPC(pNPC);
+        pNPC->DestinyMgr()->SetPosition(pos);
+        // patrol the gate; never hunt (retaliation only)
+        pNPC->GetAIMgr()->SetGuardPost(pGate);
+        ++spawned;
+        _log(SPAWN__POP, "DoGuardSpawn: %s(%u) now guarding %s(%u) in %s.", \
+                iRef->name(), iRef->itemID(), pGate->GetName(), gateID, m_system->GetName());
+    }
+
+    if (spawned == 0)
+        return false;
+
+    pBubble->SetSpawned(true);      // avoid re-spawning guards for this gate
+    m_system->IncGateSpawnCount();
     return true;
 }
 

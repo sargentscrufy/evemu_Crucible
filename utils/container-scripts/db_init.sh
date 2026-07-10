@@ -53,14 +53,20 @@ echo "Running EVEDBTool..."
 
 if [ "$SEED_MARKET" == "TRUE" ]
 then
+    # Market Seed v2: hub-weighted sell orders + NPC buy walls + price
+    # history (sql/seed_and_clean/seed_market_v2.sql). SEED_SATURATION is
+    # the % of non-hub stations that get stocked.
     IFS=',' read -r -a array <<< "$SEED_REGIONS"
-    echo "seed-saturation: $SEED_SATURATION" >> /src/sql/evedb.yaml
-    echo "seed-regions: " >> /src/sql/evedb.yaml
-    for i in "${array[@]}"
-    do
-        echo "- $i" >> /src/sql/evedb.yaml
-    done
-    /src/sql/evedbtool seed
+    {
+        echo "USE $MARIADB_DATABASE;"
+        echo "SET @saturation = ${SEED_SATURATION:-50} / 100;"
+        echo "CREATE TEMPORARY TABLE tSeedRegions (regionName VARCHAR(100));"
+        for i in "${array[@]}"
+        do
+            echo "INSERT INTO tSeedRegions VALUES ('$i');"
+        done
+        cat /src/sql/seed_and_clean/seed_market_v2.sql
+    } | mysql -h $MARIADB_HOST -P $MARIADB_PORT -u $MARIADB_USER -p$MARIADB_PASSWORD
 fi
 
 echo "Loading all dungeons using EVEDBTool..."

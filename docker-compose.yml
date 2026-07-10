@@ -8,19 +8,42 @@ services:
       - server_cache:/app/server_cache
       - image_cache:/app/image_cache
     ports:
-      - "26000:26000"
+      # Game port published on 26010: the Crucible client hardwires port
+      # 26000, so the debug proxy (tools/debug-listener) listens on host
+      # 26000 and forwards here. To bypass the proxy, point a client at
+      # 26010 directly.
+      - "26010:26000"
       - "26001:26001"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     links:
       - "db"
+    restart: unless-stopped
+    healthcheck:
+      # Game port listening = server loop is up. Replaced by a real /health
+      # endpoint when the admin API lands (Phase 2).
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/26000"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 300s # first boot seeds the DB and can take several minutes
     environment:
       - SEED_MARKET=${SEED_MARKET:-FALSE} # Set to TRUE to seed the market when the server starts for the first time
-      - SEED_SATURATION=${SEED_SATURATION:-80} # Set saturation level of seed
-      - SEED_REGIONS=${SEED_REGIONS:-Derelik,The Citadel,The Forge,Essence} # Define regions to be seeded
+      - SEED_SATURATION=${SEED_SATURATION:-50} # % of non-hub stations stocked by seed v2
+      - SEED_REGIONS=${SEED_REGIONS:-Derelik,The Citadel,The Forge,Essence,Lonetrek} # Define regions to be seeded
       - RUN_WITH_GDB=${RUN_GDB:-FALSE} #Set to TRUE to run evemu with gdb automatically
     stdin_open: true # Enables stdin for the container. Attach to it with 'docker attach'
-    tty: true
+    # HANG-1: tty:true routed stdout through a pty; when the pty reader
+    # stalled, the single-threaded server blocked forever inside a log
+    # write (main loop frozen, healthcheck still green). json-file
+    # logging is drained by the daemon and size-capped below.
+    tty: false
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
     # cap_add: #This is required for gdb to work
     #   - SYS_PTRACE
 
@@ -37,6 +60,13 @@ services:
       - MARIADB_USER=evemu
       - MARIADB_PASSWORD=evemu
       - MARIADB_DATABASE=evemu
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
 
 volumes:
   db:

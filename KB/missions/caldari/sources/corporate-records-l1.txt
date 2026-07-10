@@ -1,0 +1,25 @@
+RAW TRANSCRIPT from https://eve-survival.org/?wakka=CorporateRecords (fetched 2026-07-08)
+Corporate Records, Level 1
+Faction: Guristas
+Mission type: Encounter
+Space type: Deadspace
+Damage dealt: Kinetic/Thermal
+Recommended: Kinetic
+Ship: Frigate (T1 Cruiser/Destroyer/Frigate/Rookie/Shuttle restrictions noted)
+Video available.
+
+Warp In: 38km from first gate. No spawns, asteroids, or structures at warp in.
+
+Pocket 1:
+Gate leaves you 28km from Cargo Container with objective.
+
+Group 1 (20km) (Auto Aggro):
+7x Frigate (Pithi Invader, Pithi Infiltrator, Pithi Arrogator)
+
+Blitz (Pocket 2): Once through gate, fly to and loot cargo container and leave. There are 5x frigates and 2x destroyers, but you need NOT engage them if you are fast enough (AB helps).
+
+Mineable Asteroids: 9x Veldspar, 9x Scordite, 9x Pyroxeres.
+
+Hint: An afterburner really helps on this mission.
+
+END RAW

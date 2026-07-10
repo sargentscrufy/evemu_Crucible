@@ -145,6 +145,16 @@ void DestinyManager::Process() {
 
     ProcessState();
 
+    // NPC-3: our npc/drone movement math is not tick-identical to the
+    // client's destiny simulation, so client-side positions drift over a
+    // fight (rats drawn at 2km while actually far off grid: untargetable
+    // and offered warp-to).  periodically snap moving npcs to the
+    // authoritative position; staggered by entityID to spread traffic.
+    if ((mySE->IsNPCSE() or mySE->IsDroneSE())
+    and IsMoving()
+    and ((sEntityList.GetStamp() % 10) == (mySE->GetID() % 10)))
+        SetPosition(m_position, true);
+
     if (sConfig.debug.UseProfiling)
         sProfiler.AddTime(Profile::destiny, GetTimeUSeconds() - profileStartTime);
 }
@@ -157,7 +167,14 @@ void DestinyManager::ProcessState() {
                 MoveObject();
                 return;
             }
-            Stop();
+            // broadcast the stop exactly once on transition: calling
+            // Stop() every tick spammed a CmdStop destiny update for
+            // every stationary entity in the bubble (23 asteroids, the
+            // ship, ...) each second -- the Crucible client eventually
+            // drops rigid balls fed movement commands, making belt
+            // asteroids vanish client-side (PHYS-1 in doc/bug-log.md)
+            if (!m_stop)
+                Stop();
         } break;
         case Ball::Mode::GOTO: {
             MoveObject();
@@ -361,8 +378,13 @@ void DestinyManager::SetSpeedFraction(float fraction/*1.0*/, bool startMovement/
         UpdateVelocity(false);
     }
 
-    if (m_ballMode == Destiny::Ball::Mode::WARP) {
+    if ((m_ballMode == Destiny::Ball::Mode::WARP) and (m_warpState != nullptr)) {
         // set state to Ball::Mode::GOTO after setting warp decel variables, so warp completion will decel properly
+        // DESTINY-6: only when actually IN warp (m_warpState set).  this
+        // also fired during the pre-warp ALIGN phase, silently demoting
+        // the pending warp to a sublight GOTO -- ships crawled for AU
+        // (the 07:52 wedge) and the demoted mode re-opened the undock
+        // stomp (ships flung to the 1e16 sentinel under load).
         m_ballMode = Destiny::Ball::Mode::GOTO;
         return;
     }
@@ -375,7 +397,12 @@ void DestinyManager::SetSpeedFraction(float fraction/*1.0*/, bool startMovement/
             du.fraction = fraction;
         updates.push_back(du.Encode());
     }
-    if (((mySE->IsNPCSE() or mySE->IsDroneSE()) and !m_hasSentShipUpdates)
+    // NPC-1b: BeginMovement consumes m_hasSentShipUpdates before this
+    // method runs, so the npc/drone SetBallSpeed was never actually sent
+    // and clients simulated them at 0 m/s (motionless rats that teleport
+    // on position snaps).  always include speed for pilotless movers --
+    // one small update per speed change.
+    if (mySE->IsNPCSE() or mySE->IsDroneSE()
     or mySE->IsMissileSE() or mySE->IsContainerSE() or mySE->IsWreckSE()) {
         SetBallSpeed ms;   //NPCs and Missiles only.
             ms.entityID = mySE->GetID();
@@ -1163,8 +1190,8 @@ Prediction service for in-space flight
 """
 */
 void DestinyManager::Orbit() {
-    // data consistency checks...
-    if ((m_targetDistance > BUBBLE_RADIUS_METERS) or (m_followDistance > BUBBLE_RADIUS_METERS)) {
+    // data consistency checks...  (GRID-2: sanity bound is the partition radius)
+    if ((m_targetDistance > GRID_RADIUS_METERS) or (m_followDistance > GRID_RADIUS_METERS)) {
         // well, something fucked up.  stop object and throw error.   player can reset if they want to.
         if (mySE->HasPilot())
             mySE->GetPilot()->SendErrorMsg("Internal Server Error.  Ref: ServerError 35412");
@@ -1503,39 +1530,48 @@ void DestinyManager::InitWarp() {
      * the client seems to agree with this reasoning, and follows the same idea.
      */
 
-    bool cruise(true);
+    /* DESTINY-3 rework (doc/bug-log.md): scale the curve by ship warp
+     * speed instead of the old fixed exp(21) phase distances.
+     *
+     * Continuity at the phase boundaries fixes the distances as
+     * functions of the peak (cruise) speed:
+     *   accelDist = v_peak / 3     (accel speed 3*e^(3t) reaches v_peak)
+     *   decelDist = v_peak         (k=1: speed equals remaining distance)
+     * Warps too short to reach full speed cap the peak instead of
+     * warping the curve:  total = v/3 + v  =>  v_peak = total * 3/4.
+     * The ship leaves warp when speed decays to m_speedToLeaveWarp,
+     * i.e. ~that many meters short of the target point.
+     */
     float cruiseTime(0.0f);
-    double accelDistance(0.0), decelDistance(0.0), cruiseDistance(0.0);
-    // fudge this a bit for accel/decel distances
-    if (abs(static_cast<double>(m_targetDistance)) < warpSpeedInMeters) {
-        _log(
-            DESTINY__WARP_TRACE,
-            "short warp distance dictates that warp cruise time is unnecessary"
-        );
+    double vPeak = warpSpeedInMeters;
+    double accelDistance = vPeak / 3;
+    double decelDistance = vPeak;
+    double cruiseDistance = 0.0;
 
-        // short warp....no cruise
-        // this isnt very accurate....times and distances are a bit off....
-        cruise = false;
-        // accel = 1/3 decel
-        accelDistance = (static_cast<double>(m_targetDistance) / static_cast<double>(3));
-        decelDistance = (static_cast<double>(m_targetDistance) - accelDistance);
-        warpSpeedInMeters = accelDistance;
-        m_warpDecelTime = log(decelDistance / static_cast<double>(3));
-        m_warpAccelTime = log(accelDistance / static_cast<double>(3)) / static_cast<double>(3);
+    if (accelDistance + decelDistance >= m_targetDistance) {
+        _log(DESTINY__WARP_TRACE, "short warp: peak speed capped, no cruise phase");
+        vPeak = m_targetDistance * 0.75;
+        accelDistance = vPeak / 3;
+        decelDistance = vPeak;
     } else {
-        _log(
-            DESTINY__WARP_TRACE,
-            "longer warp distance dictates that warp cruise time is is warranted"
-        );
-
-        // all ships base time is 29s for distances > ship warp speed
-        m_warpAccelTime = 7;
-        m_warpDecelTime = 21; // accel *3
-        decelDistance = exp(static_cast<double>(m_warpDecelTime));   // ship warp speed in meters * 1.7
-        accelDistance = exp(static_cast<double>(3) * static_cast<double>(m_warpAccelTime));       // ship warp speed in meters
-        cruiseDistance = (static_cast<double>(m_targetDistance) - accelDistance - decelDistance);
+        cruiseDistance = m_targetDistance - accelDistance - decelDistance;
         cruiseTime = static_cast<float>(cruiseDistance / warpSpeedInMeters);
     }
+    // effective cruise/peak speed for THIS warp (== full warp speed
+    // unless the warp was too short to reach it); stored in WarpState
+    warpSpeedInMeters = vPeak;
+
+    double speedToLeaveWarp = m_speedToLeaveWarp;
+    if (speedToLeaveWarp < 50.0)
+        speedToLeaveWarp = 50.0;            // guard log() below
+    if (speedToLeaveWarp > vPeak / 2)
+        speedToLeaveWarp = vPeak / 2;
+
+    m_warpAccelTime = static_cast<uint16>(std::ceil(log(vPeak / 3) / 3));
+    // decel duration estimate; overwritten with the actual decel start
+    // tick at phase handoff in WarpAccel()/WarpCruise()
+    m_warpDecelTime = static_cast<uint16>(
+        std::ceil(log(vPeak / speedToLeaveWarp)));
 
     //  set total warp time based on above math.
     float warpTime(static_cast<float>(m_warpAccelTime) + static_cast<float>(m_warpDecelTime) + std::floor(cruiseTime));
@@ -1604,7 +1640,8 @@ void DestinyManager::InitWarp() {
         );
     }
 
-    // reset deceltime (from duration to time) for time check in WarpDecel()
+    // estimated decel start tick; the accel/cruise handoff overwrites
+    // this with the actual tick so decel decay always starts at e^0
     m_warpDecelTime = m_warpAccelTime + floor(cruiseTime);
     m_stateStamp = sEntityList.GetStamp();
 
@@ -1645,7 +1682,7 @@ void DestinyManager::WarpAccel(uint16 sec_into_warp) {
      */
     double currentDistance = exp(3 * sec_into_warp);
 
-    if (mySE->SysBubble() != nullptr && currentDistance > BUBBLE_RADIUS_METERS && mySE->SysBubble() != m_targBubble) {
+    if (mySE->SysBubble() != nullptr && currentDistance > GRID_RADIUS_METERS && mySE->SysBubble() != m_targBubble) {
         if (is_log_enabled(DESTINY__WARP_TRACE)) {
             _log(
                 DESTINY__WARP_TRACE,
@@ -1659,17 +1696,24 @@ void DestinyManager::WarpAccel(uint16 sec_into_warp) {
         mySE->SysBubble()->Remove(mySE);
     }
 
-    if (currentDistance > m_warpState->accelDist) {
+    if (currentDistance >= m_warpState->accelDist) {
         currentDistance = m_warpState->accelDist;
         m_warpState->accel = false;
         if (m_warpState->cruiseDist > 0) {
             m_warpState->cruise = true;
         } else {
+            // short warp: decel decay starts on this tick
             m_warpState->decel = true;
+            m_warpDecelTime = sec_into_warp;
         }
     }
 
-    m_targetDistance -= currentDistance;
+    // remaining distance computed absolutely each tick (the old
+    // `m_targetDistance -= currentDistance` subtracted the CUMULATIVE
+    // distance every tick, compounding the error)
+    m_targetDistance = m_warpState->total_distance - currentDistance;
+    // speed = 3 * covered distance; equals v_peak exactly at handoff,
+    // so the speed curve is continuous into cruise/decel
     double currentShipSpeed = (3 * currentDistance);
 
     if (is_log_enabled(DESTINY__WARP_TRACE) && m_warpState->accel) {
@@ -1690,12 +1734,21 @@ void DestinyManager::WarpAccel(uint16 sec_into_warp) {
 
 void DestinyManager::WarpCruise(uint16 sec_into_warp) {
     /* in cruise....calculate distance only to update internal position data. */
-    m_targetDistance -= m_warpState->warpSpeed;
-
-    if ((m_targetDistance - m_warpState->warpSpeed) < m_warpState->decelDist) {
+    // absolute distance covered this tick; clamp the final cruise step
+    // to the decel boundary so the handoff cannot snap past it (the old
+    // code subtracted a full warpSpeed step, then decel teleported the
+    // ship up to one cruise-tick — potentially AU — in a single tick)
+    uint16 cruiseSec = sec_into_warp - m_warpAccelTime;
+    double covered = m_warpState->accelDist
+                   + m_warpState->warpSpeed * cruiseSec;
+    double cruiseEnd = m_warpState->accelDist + m_warpState->cruiseDist;
+    if (covered >= cruiseEnd) {
+        covered = cruiseEnd;   // remaining == decelDist exactly
         m_warpState->cruise = false;
         m_warpState->decel = true;
+        m_warpDecelTime = sec_into_warp;   // decel decay starts now
     }
+    m_targetDistance = m_warpState->total_distance - covered;
 
     if (is_log_enabled(DESTINY__WARP_TRACE)) {
         _log(
@@ -1713,21 +1766,23 @@ void DestinyManager::WarpCruise(uint16 sec_into_warp) {
 }
 
 void DestinyManager::WarpDecel(uint16 sec_into_warp) {
-    /* For deceleration, k = -1.
-     * distance = e^(k*s)
-     * speed = -k*e^(k*s)
+    /* For deceleration, k = 1:
+     *   remaining(t) = decelDist * e^(-t)
+     *   speed(t)     = remaining(t)        (since decelDist == v_peak)
+     * m_warpDecelTime holds the tick decel actually began (set at the
+     * phase handoff), so the decay always starts from e^0.
      */
-    uint8 decelTime = (sec_into_warp - m_warpDecelTime);
-    double currentDistance = (m_warpState->total_distance - (exp(-decelTime) * m_warpState->decelDist));
-    m_targetDistance = static_cast<double>(m_warpState->total_distance - currentDistance);
-    double currentShipSpeed = (m_warpState->warpSpeed * exp(-decelTime));
+    uint16 decelTime = (sec_into_warp - m_warpDecelTime);
+    m_targetDistance = m_warpState->decelDist
+                     * exp(-static_cast<double>(decelTime));
+    double currentShipSpeed = m_targetDistance;
 
     if (is_log_enabled(DESTINY__WARP_TRACE))
         _log(DESTINY__WARP_TRACE, "Destiny::WarpDecel(): %s(%u) - Warp Decelerating(%us/%us): velocity %.4f m/s with %.2f m left to go.", \
                 mySE->GetName(), mySE->GetID(), decelTime, sec_into_warp, currentShipSpeed, m_targetDistance);
 
     WarpUpdate(currentShipSpeed);
-    if (currentShipSpeed <= m_speedToLeaveWarp)
+    if (currentShipSpeed <= m_speedToLeaveWarp or m_targetDistance <= 100)
         WarpStop(currentShipSpeed);
 }
 
@@ -1736,6 +1791,13 @@ void DestinyManager::WarpUpdate(double currentShipSpeed) {
     //  this method is ~1000m off actual.  could be due to rounding.   -allan 9Jan15
     m_velocity = (m_warpState->warp_vector * currentShipSpeed);
     SetPosition(m_targetPoint - (m_warpState->warp_vector * m_targetDistance));
+
+    // GRID-3: m_targBubble is a raw pointer held for the whole align+warp
+    // while BubbleManager::RemoveEmpty() reaps empty bubbles every 60s.
+    // warping toward a grid nobody occupies dereferenced freed memory
+    // here (use-after-free segfault).  re-resolve it every warp tick;
+    // GetBubble recreates the bubble if it was reaped.
+    m_targBubble = sBubbleMgr.GetBubble(mySE->SystemMgr(), m_targetPoint);
 
     if (is_log_enabled(DESTINY__WARP_TRACE)) {
         _log(
@@ -1788,7 +1850,10 @@ void DestinyManager::WarpStop(double currentShipSpeed) {
         _log(AUTOPILOT__MESSAGE, "Destiny::WarpStop(): %s(%u) - Warp complete.", mySE->GetName(), mySE->GetID());
         mySE->GetPilot()->SetLoginWarpComplete();
     }
-    m_targetPoint += (m_warpState->warp_vector *10000);
+    // DESTINY-3: the old code shoved m_targetPoint 10km forward along the
+    // warp vector here, moving the post-warp coast/approach point past the
+    // intended landing spot (and into station models on dock warps).
+    // Land where the warp math says we land.
     // SetSpeedFraction() checks for m_state = Warp and warpstate != null to set decel variables correctly with warp decel.
     //   have to call this BEFORE deleting or reseting m_state or WarpState.
     SetSpeedFraction(0.0f);
@@ -1798,6 +1863,15 @@ void DestinyManager::WarpStop(double currentShipSpeed) {
     if ((mySE->IsNPCSE()) and (mySE->GetNPCSE()->GetAIMgr() != nullptr)) {
         mySE->GetNPCSE()->GetAIMgr()->WarpOutComplete();
     }
+
+    // broadcast the authoritative stopped state exactly once at warp
+    // exit: PHYS-1 removed the per-tick Stop spam whose side effect was
+    // correcting residual client-side velocity (e.g. a pre-warp bounce),
+    // which left ships visually drifting backwards after landing
+    CmdStop stopDu;
+        stopDu.entityID = mySE->GetID();
+    PyTuple* stopUp = stopDu.Encode();
+    SendSingleDestinyUpdate(&stopUp);
 
     // TODO: when exiting warp, and attempting to warp again shortly after, the
     // ball mode reaches a weird state where it goes from Warp to a regular
@@ -2325,6 +2399,20 @@ bool DestinyManager::IsAligned(GPoint& targetPoint)
 }
 
 void DestinyManager::Undock(GPoint dir) {
+    // DESTINY-5: the undock push is applied by a deferred state timer.
+    // if the pilot has already issued a movement order (warp especially),
+    // stomping m_targetPoint here re-aims the warp at the undock vector
+    // *1e16 -- ships warped 65,000 AU into deep space.  keep the new
+    // order; just clear the undocking flag.
+    // DESTINY-6: WARP-mode alone was not enough -- the align phase can
+    // be demoted to GOTO, and under multi-client load the push fires
+    // late.  yield to ANY movement the pilot has commanded.
+    if ((m_ballMode == Destiny::Ball::Mode::WARP)
+    or  (m_userSpeedFraction > 0.01f)) {
+        if (mySE->IsShipSE())
+            mySE->GetShipSE()->GetShipItemRef()->SetUndocking(false);
+        return;
+    }
     //set movement direction
     m_targetPoint = dir *1.0e16;
     m_shipHeading = GVector(dir);
@@ -2638,10 +2726,15 @@ Battleships 0.155
     m_alignTime = (-log(0.25) * m_shipAgility);
     m_timeToEnterWarp = m_alignTime;
 
-    m_hasSentShipUpdates = true;
-
-    if (!mySE->HasPilot())
+    if (!mySE->HasPilot()) {
+        // NPC-1: leave m_hasSentShipUpdates false for pilotless entities.
+        // setting it here suppressed the one-time SetBallSpeed/agility
+        // bubblecast for NPCs, so clients simulated their movement at
+        // 0 m/s -- rats sat motionless in combat while dealing damage.
+        m_hasSentShipUpdates = false;
         return;
+    }
+    m_hasSentShipUpdates = true;
     if (mySE->GetPilot()->IsInSpace() and (mySE->SysBubble() != nullptr)) {
         std::vector<PyTuple*> updates;
         SetBallAgility sbagility;

@@ -1,3 +1,32 @@
+*** Private Server Fork — phase-0-foundation (2026-07-08) ***
+- [FEAT] Drone control (DRONE-1/2/3): engage/return-home/return-to-bay wired to DroneAIMgr with ownership checks; return-to-bay auto-scoops on arrival (deferred outside the entity tic loop); off-grid drone state changes now reach the owner (no more "Drones in Distant Space" ghosts). Live-verified: launch, engage, recall, scoop
+- [FEAT] In-game dev feedback log (FEEDBACK-1): local chat is appended to server_cache/feedback.log with char/system/ship context lines on login and jumps; event-driven with 5MB rotation. Players narrate bugs in Local; admin pulls the file for analysis. Validated live via bot chat
+- [FEAT] Empire police gate patrols (GUARD-1): gates in >0.90 sec systems spawn faction police 10-30s after a pilot arrives; guards idle-orbit the gate at 15km, retaliate but never initiate, resume patrol after fights. First step toward simulated CONCORD response. Bot-validated live (3 Caldari Police Lieutenants patrolling the Amsen->Ekura gate)
+- [FIX] Deferred undock push stomped active warps (DESTINY-5): warping right after undock re-aimed the warp at the undock vector x1e16 and flung ships tens of thousands of AU into deep space; found and verified fixed by bot validation flights
+- [FEAT] 8000km grids (GRID-2): spatial partitions grown 26x (CCP's own 2016 TQ solution, server-side only) -- grid-wipe seams (PHYS-2) become practically unencounterable; belt hysteresis kept as backstop
+- [FIX] Warp use-after-free (GRID-3): the warp target-bubble pointer was held across align+warp while the bubble reaper deleted empty grids every 60s -- server segfault mid-warp (likely the historical DESTINY-1 crash); target grid now re-resolved every warp tick
+- [FIX] Rats rendered motionless in combat (NPC-1): the one-time SetBallSpeed broadcast for NPCs was suppressed by a spawn-time flag, so clients simulated them at 0 m/s while taking real damage
+- [FIX] NPCs sent a bare 3-key slim (NPC-2): clients now get category/group/owner/security so rats classify as combat NPCs (turret fx, overview, combat cues)
+- [FIX] NPC client-position drift (NPC-3): server npc movement is not tick-identical to the client sim; moving npcs/drones now broadcast an authoritative position snap every ~10s
+- [FIX] Gate police multiplied forever (GUARD-1 runaway): belt chain-respawn logic cleared the gate bubble's spawned flag every minute; highsec gates now spawn one patrol, verified by bot flight
+- [FIX] Weapon/mining beams never rendered (EFFECT-1): ship slim sent the fitted-module list in reversed pair order, silently breaking client turret mounting; both slim builders now use the packet-capture-verified order
+- [FIX] Mined ore was invisible (CHAR-4): ore routed to the ore hold (flag 134) which the Crucible client predates; ore now goes to cargo
+- [FIX] Module onlining never checked skills (SKILL-1); docked onlining skipped every check
+- [FIX] Belt spawn timers could permanently disable themselves (SPAWN-9); bubbles re-arm while players are present
+- [FIX] Gate bubbles registered gate itemID 1 (GATE-1: SetGate called with a bool)
+- [FIX] NPC rat spawn rework (SPAWN-1..8): roaming spawns actually roam (timer wired, warp between belts, never yanked from watched grids), stamp comparisons and overflow fixes, spawn-kill iterator guards
+- [FEAT] Warp physics rework (DESTINY-3): CCP warp curve scaled by ship warp speed; continuous velocity through accel/cruise/decel; no more landing overshoot or 10km target shove. Verified live by bot regression (undock -> 2.75AU warp -> return warp -> dock; ~40m landing error)
+- [FEAT] Market Seed v2: hub-weighted market bootstrap — one trade hub per region with full catalog and NPC buy walls (minerals/ore/salvage/PI), thinner fringe stock with hub/fringe price gradients that make hauling profitable; staggered order lifetimes; 14-day price history backfill; re-seedable without touching player orders
+- [FEAT] simchars framework: provision NPC "player characters" end-to-end — archetype fit templates validated against hull slot layouts and the local market, skill grants with prerequisite closure, protocol market purchases, ship assembly/fitting/activation, dock/undock automation, stranded-ship recovery, live warp regression test
+- [FEAT] Headless protocol tooling: login smoke bot (nightly CI gate), verified Python marshal codec, transparent debug proxy on the client port with decoded traffic logs and raw byte capture
+- [FEAT] Aura Vasanen PoC: ollama-driven NPC player character — protocol character creation, station presence, converses in Local via a local LLM
+- [FEAT] Sim-character portraits served from the image cache
+- [FIX] XMLParser::ElementParser missing virtual destructor (undefined behavior, caught by the new ASan CI job on its first run)
+- CI: AddressSanitizer/UBSan build job, phase-* branch triggers, nightly dockerized login smoke test
+- Docker: container healthchecks and restart policies (crash auto-recovery), game port remapped behind the capture proxy, Seed v2 wired into first-boot init (Lonetrek added to default regions)
+- Docs: private-server redirection plan, Crucible feature matrix (pinned client 360229), admin API seam design, market economy design, live-testing bug log (open: DESTINY-4 align wedge, CHAR-1 doll validation segfault, SHIP-1 AssembleShip int overload)
+- KB: Crucible-era mission research (Caldari security arcs, career missions) toward future mission fidelity
+
 *** 0.8.6 ***
 - [FEAT] MarketBot
 - Market system fixes

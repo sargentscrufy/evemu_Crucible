@@ -1,0 +1,47 @@
+RAW TRANSCRIPT from https://eve-survival.org/?wakka=GuristaSpies4 (fetched 2026)
+
+# The Guristas Spies, level 4
+
+Faction: Guristas
+Mission type: Encounter
+Space type: Deadspace
+Damage dealt: Kin, Therm
+Extras: Jamming
+Recommended damage dealing: Kin, therm.
+Recommended ships: Rattlesnake, CNR, Dominix, Drake, Raven, Sentry Ishtar
+
+### Single Pocket
+
+The groups will spawn in intervals after you arrive, but it's just a few seconds between each spawn.
+The spawns may vary, this is just an example.
+Sometimes you may get agro when you warp in, sometimes you don't.
+Drones are not attacked by non attacked groups.
+
+#### Group 1 (23 - 30km)
+
+1x Destroyer (Pithior Supremacist/Terrorist)
+3x Battleships (Pith Extinguisher/Destroyer/Exterminator)
+
+#### Group 2 (30km)
+
+3x Battlecruisers (Pithatis Assaulter/Enforcer)
+4x Battleships (Pith Eradicator/Obliterater/Exterminator/Extinguisher)
+
+#### Group 3 (57 - 80km)
+
+2x Destroyers (Pithior Supremacist/Terrorist)
+3x Battlecruisers (Guristas Spy)
+1x Battleship (Pith Massacrer/Conquistador)
+
+##### Blitz
+
+Mission is completed after killing the group with the Spies; attacking them will sometimes draw aggro, but not always.
+
+This is an easy mission to do afk in a drone boat if you want bounties instead of blitzing it.
+
+Easiest to blitz with long range BS. Just microjump past the groups and fire at the group with the spies, leave when done.
+
+Loot example: 2,520,000 ISK
+Bounty example: 6,816,375 ISK
+
+Sources: EVE-Survival era data.

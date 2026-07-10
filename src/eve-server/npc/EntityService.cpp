@@ -14,6 +14,8 @@
 
 #include "EVEServerConfig.h"
 #include "npc/EntityService.h"
+#include "npc/Drone.h"
+#include "npc/DroneAI.h"
 #include "system/SystemManager.h"
 #include "services/ServiceManager.h"
 
@@ -179,8 +181,31 @@ PyResult EntityBound::CmdEngage(PyCallArgs &call, PyList* droneIDs, PyInt* targe
     _log(DRONE__TRACE, "EntityBound::Handle_CmdEngage()");
     call.Dump(DRONE__DUMP);
 
-    call.client->SendNotifyMsg("Drone Control is not implemented yet.");
-    return new PyDict();
+    // response dict carries per-drone errors; empty dict means accepted
+    PyDict* res = new PyDict();
+    Client* pClient = call.client;
+    SystemManager* pSystem = pClient->SystemMgr();
+    if (pSystem == nullptr)
+        return res;
+    SystemEntity* pTSE = pSystem->GetSE(targetID->value());
+    if (pTSE == nullptr) {
+        pClient->SendNotifyMsg("The target is no longer present.");
+        return res;
+    }
+    PyList::const_iterator itr = droneIDs->begin(), end = droneIDs->end();
+    for (; itr != end; ++itr) {
+        SystemEntity* pSE = pSystem->GetSE(PyRep::IntegerValueU32(*itr));
+        if ((pSE == nullptr) or (pSE->GetDroneSE() == nullptr))
+            continue;
+        DroneSE* pDrone = pSE->GetDroneSE();
+        if (pDrone->GetOwner() != pClient)  // control only your own drones
+            continue;
+        pDrone->SetBayRecall(false);    // engage cancels a pending bay recall
+        // Target() locks (range/scan checked), then engages and attacks
+        // via CheckDistance(); idles the drone on lock failure
+        pDrone->GetAI()->Target(pTSE);
+    }
+    return res;
 }
 
 PyResult EntityBound::CmdRelinquishControl(PyCallArgs &call, PyList* IDs) {
@@ -287,11 +312,23 @@ PyResult EntityBound::CmdReturnHome(PyCallArgs &call, PyList* droneIDs) {
 */
     call.Dump(DRONE__DUMP);
 
-    //Drone* pDrone = m_sysMgr->GetSE()->GetDroneSE();
-    //pDrone->DestinyMgr()->Orbit(pShipSE, 800);
-
-
-    call.client->SendNotifyMsg("Drone Control is not implemented yet.");
+    // drones drop targets and follow their home ship
+    Client* pClient = call.client;
+    SystemManager* pSystem = pClient->SystemMgr();
+    if (pSystem == nullptr)
+        return new PyDict();
+    PyList::const_iterator itr = droneIDs->begin(), end = droneIDs->end();
+    for (; itr != end; ++itr) {
+        SystemEntity* pSE = pSystem->GetSE(PyRep::IntegerValueU32(*itr));
+        if ((pSE == nullptr) or (pSE->GetDroneSE() == nullptr))
+            continue;
+        DroneSE* pDrone = pSE->GetDroneSE();
+        if (pDrone->GetOwner() != pClient)
+            continue;
+        pDrone->SetBayRecall(false);
+        pDrone->GetAI()->ClearAllTargets();
+        pDrone->GetAI()->Return();
+    }
     return new PyDict();
 }
 
@@ -328,7 +365,24 @@ PyResult EntityBound::CmdReturnBay(PyCallArgs &call, PyList* droneIDs) {
     _log(DRONE__TRACE, "EntityBound::Handle_CmdReturnBay()");
     call.Dump(DRONE__DUMP);
 
-    call.client->SendNotifyMsg("Drone Control is not implemented yet.");
+    // like ReturnHome, but flagged so SystemManager scoops the drone to
+    // the bay when it reaches its home ship
+    Client* pClient = call.client;
+    SystemManager* pSystem = pClient->SystemMgr();
+    if (pSystem != nullptr) {
+        PyList::const_iterator itr = droneIDs->begin(), end = droneIDs->end();
+        for (; itr != end; ++itr) {
+            SystemEntity* pSE = pSystem->GetSE(PyRep::IntegerValueU32(*itr));
+            if ((pSE == nullptr) or (pSE->GetDroneSE() == nullptr))
+                continue;
+            DroneSE* pDrone = pSE->GetDroneSE();
+            if (pDrone->GetOwner() != pClient)
+                continue;
+            pDrone->SetBayRecall(true);
+            pDrone->GetAI()->ClearAllTargets();
+            pDrone->GetAI()->Return();
+        }
+    }
 
     // returns nodeID and timestamp and dict of error msg
     /*

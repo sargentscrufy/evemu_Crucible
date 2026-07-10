@@ -1,0 +1,30 @@
+{
+  "comment": "sim-player fleet roster. mission types: hauler_shuttle (undock, clear station, warp to another station, dock, return home), parked (dock and idle; placeholder until the role's loop is written). All pilots home at Jita 4-4.",
+  "home_system": 30000142,
+  "home_station": 60003760,
+  "password": "fleet",
+  "pilots": [
+    {"account": "fleet01", "name": "Keva Tanari",  "role": "frigate",       "ship": "Merlin",         "mission": {"type": "parked"}},
+    {"account": "fleet02", "name": "Jorn Vasik",   "role": "frigate",       "ship": "Rifter",         "mission": {"type": "parked"}},
+    {"account": "fleet03", "name": "Mira Okonen",  "role": "destroyer",     "ship": "Cormorant",      "mission": {"type": "parked"}},
+    {"account": "fleet04", "name": "Tal Rethis",   "role": "battlecruiser", "ship": "Drake",          "mission": {"type": "parked"}},
+    {"account": "fleet05", "name": "Suvi Aalto",   "role": "battleship",    "ship": "Raven",          "mission": {"type": "parked"}},
+    {"account": "fleet06", "name": "Dax Herron",   "role": "miner",         "ship": "Retriever",      "mission": {"type": "parked"}},
+    {"account": "fleet07", "name": "Ilsa Vayne",   "role": "hauler",        "ship": "Badger",         "mission": {"type": "hauler_shuttle", "clear_m": 3000, "dwell_s": 30}},
+    {"account": "fleet08", "name": "Rho Kastane",  "role": "hauler",        "ship": "Badger Mark II", "mission": {"type": "hauler_shuttle", "clear_m": 3000, "dwell_s": 45}},
+    {"account": "fleet09", "name": "Piret Ots",    "role": "hauler",        "ship": "Iteron Mark III","mission": {"type": "hauler_shuttle", "clear_m": 3000, "dwell_s": 60}},
+    {"account": "fleet10", "name": "Enna Solis",   "role": "hauler",        "ship": "Wreathe",        "mission": {"type": "hauler_shuttle", "clear_m": 3000, "dwell_s": 40}}
+  ],
+  "fits": {
+    "Merlin":          {"hi": ["Light Electron Blaster I", "Light Electron Blaster I"], "med": ["Small Shield Booster I"], "low": ["Damage Control I"]},
+    "Rifter":          {"hi": ["125mm Gatling AutoCannon I", "125mm Gatling AutoCannon I", "125mm Gatling AutoCannon I"], "med": [], "low": ["Damage Control I"]},
+    "Cormorant":       {"hi": ["Light Electron Blaster I", "Light Electron Blaster I", "Light Electron Blaster I", "Light Electron Blaster I"], "med": [], "low": []},
+    "Drake":           {"hi": ["Heavy Missile Launcher I", "Heavy Missile Launcher I", "Heavy Missile Launcher I", "Heavy Missile Launcher I"], "med": ["Large Shield Extender I"], "low": ["Damage Control I"]},
+    "Raven":           {"hi": ["Cruise Missile Launcher I", "Cruise Missile Launcher I", "Cruise Missile Launcher I", "Cruise Missile Launcher I"], "med": ["Large Shield Booster I"], "low": ["Damage Control I"]},
+    "Retriever":       {"hi": ["Strip Miner I", "Strip Miner I"], "med": [], "low": [], "drones": ["Mining Drone I", "Mining Drone I", "Mining Drone I", "Mining Drone I", "Mining Drone I"]},
+    "Badger":          {"hi": [], "med": [], "low": ["Expanded Cargohold I"]},
+    "Badger Mark II":  {"hi": [], "med": [], "low": ["Expanded Cargohold I", "Expanded Cargohold I"]},
+    "Iteron Mark III": {"hi": [], "med": [], "low": ["Expanded Cargohold I"]},
+    "Wreathe":         {"hi": [], "med": [], "low": ["Expanded Cargohold I"]}
+  }
+}

@@ -30,7 +30,18 @@
 #include "system/SystemEntity.h"
 
 static const float BUBBLE_RADIUS_METERS = 300000.0f;       // EVE retail uses 250km and allows grid manipulation  NOTE:  this is based on testing for best results.  -allan
+                                                            // GRID-2: now only used for legacy gameplay distances (targeting cap default,
+                                                            // probe result buckets, tower warp-in) -- NOT for spatial partitioning.
 static const float BUBBLE_HYSTERESIS_METERS = 5000.0f;     // How far out of the existing bubble a ship needs to fly before being placed into a new or different bubble
+
+/* GRID-2: spatial partition ("grid") radius.  hard bubble edges wiped the
+ * client's grid whenever combat drifted across a border (PHYS-2); CCP fixed
+ * the same class of problem on TQ in 2016 by growing grids to ~8000km,
+ * server-side only.  our target population (~100 players + a few thousand
+ * sim pilots) and hardware make big grids cheap: closest same-planet belts
+ * are 3.2M km apart, so nothing coalesces at this size and partition seams
+ * become practically unencounterable in normal play. */
+static const float GRID_RADIUS_METERS = 8000000.0f;
 
 class SystemBubble;
 class GPoint;

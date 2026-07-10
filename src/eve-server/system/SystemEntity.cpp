@@ -361,7 +361,9 @@ bool StargateSE::LoadExtras() {
     if (m_bubble == nullptr)
         sBubbleMgr.Add(this);
 
-    m_bubble->SetGate(true);
+    // register the actual gateID (was 'true', which registered gate
+    // itemID 1 and broke gate lookups from the bubble)
+    m_bubble->SetGate(m_self->itemID());
     _log(DESTINY__BUBBLE_DEBUG, "StargateSE::LoadExtras() - IsGate set to true for bubble %u.", m_bubble->GetID() );
     m_jumps = SystemDB::ListJumps(m_self->itemID());
     if (m_jumps != nullptr)
@@ -703,8 +705,40 @@ DynamicSystemEntity::~DynamicSystemEntity()
 }
 
 PyDict *DynamicSystemEntity::MakeSlimItem() {
-    if (IsNPCSE())
-        return SystemEntity::MakeSlimItem();
+    if (IsNPCSE()) {
+        // NPC-2: npcs previously sent a bare {typeID, ownerID, itemID}
+        // slim.  the client needs category/group and owner data to
+        // classify the ball as a combat npc -- turret fire fx, overview
+        // treatment, and combat cues key off this classification.
+        _log(SE__SLIMITEM, "MakeSlimItem for NPC %s(%u)", GetName(), m_self->itemID());
+        PyDict *slim = new PyDict();
+            slim->SetItemString("itemID",           new PyLong(m_self->itemID()));
+            slim->SetItemString("typeID",           new PyInt(m_self->typeID()));
+            slim->SetItemString("categoryID",       new PyInt(m_self->categoryID()));
+            slim->SetItemString("groupID",          new PyInt(m_self->groupID()));
+            slim->SetItemString("ownerID",          new PyInt(m_ownerID));
+            slim->SetItemString("corpID",           IsCorp(m_corpID) ? new PyInt(m_corpID) : PyStatic.NewNone());
+            slim->SetItemString("allianceID",       IsAlliance(m_allyID) ? new PyInt(m_allyID) : PyStatic.NewNone());
+            slim->SetItemString("warFactionID",     IsFaction(m_warID) ? new PyInt(m_warID) : PyStatic.NewNone());
+            slim->SetItemString("securityStatus",   new PyFloat(0.0f));
+        // GUN-1: the client mounts turret models for non-player ships
+        // from slim 'modules' (flat list of module typeIDs -- see the
+        // SlimItem listInt in Destiny.xmlp); without a mounted turret
+        // the fxSequencer has nothing to animate, so npc weapon fire
+        // never rendered.  pick a small turret by damage profile.
+        {
+            uint32 turret = 564;                    // hybrid: Light Neutron Blaster I
+            if (m_self->GetAttribute(AttrEmDamage).get_float() > 0) {
+                turret = 450;                       // laser: Gatling Pulse Laser I
+            } else if (m_self->GetAttribute(AttrExplosiveDamage).get_float() > 0) {
+                turret = 484;                       // projectile: 125mm Gatling AutoCannon I
+            }
+            PyList* mods = new PyList();
+                mods->AddItemInt(turret);
+            slim->SetItemString("modules", mods);
+        }
+        return slim;
+    }
 
     _log(SE__SLIMITEM, "MakeSlimItem for DSE %s(%u)", GetName(), m_self->itemID());
     PyDict *slim = new PyDict();

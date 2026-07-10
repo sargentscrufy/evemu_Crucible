@@ -1,0 +1,4 @@
+# Optional but recommended
+pyyaml>=6.0
+
+# No hard dependencies — pure Python stdlib + optional yaml for config.

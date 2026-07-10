@@ -1,0 +1,125 @@
+{
+  "character": "SARGENTSCRUFY",
+  "source": "zkillboard.com/character/1781735478 via ESI, fetched 2026-07-08",
+  "killmails": [
+    {
+      "killmail_id": 2649647, "time": "2008-06-21", "ship_type_id": 603,
+      "note": "first loss, 3 days after character creation; slot flags absent (era)",
+      "items": [
+        {"type": 222, "flag": 0, "qty": 42}, {"type": 3887, "flag": 0, "qty": 1},
+        {"type": 1977, "flag": 0, "qty": 1}, {"type": 221, "flag": 0, "qty": 69},
+        {"type": 211, "flag": 5, "qty": 309}, {"type": 211, "flag": 0, "qty": 29},
+        {"type": 212, "flag": 5, "qty": 531}, {"type": 377, "flag": 0, "qty": 3},
+        {"type": 222, "flag": 5, "qty": 4240}, {"type": 499, "flag": 0, "qty": 2},
+        {"type": 212, "flag": 0, "qty": 30}, {"type": 10678, "flag": 0, "qty": 2}
+      ]
+    },
+    {
+      "killmail_id": 15747497, "time": "2010-12-01", "ship_type_id": 24688,
+      "note": "Nighthawk; slot flags absent (era)",
+      "items": [
+        {"type": 2046, "flag": 0, "qty": 1}, {"type": 238, "flag": 5, "qty": 81},
+        {"type": 235, "flag": 5, "qty": 132}, {"type": 7453, "flag": 0, "qty": 2},
+        {"type": 203, "flag": 0, "qty": 19}, {"type": 10246, "flag": 87, "qty": 2},
+        {"type": 234, "flag": 0, "qty": 88}, {"type": 16513, "flag": 0, "qty": 4},
+        {"type": 4013, "flag": 0, "qty": 1}, {"type": 6491, "flag": 0, "qty": 1},
+        {"type": 204, "flag": 0, "qty": 702}, {"type": 235, "flag": 0, "qty": 74},
+        {"type": 578, "flag": 0, "qty": 1}, {"type": 394, "flag": 0, "qty": 1},
+        {"type": 234, "flag": 5, "qty": 48}, {"type": 7409, "flag": 0, "qty": 2},
+        {"type": 3841, "flag": 0, "qty": 3}, {"type": 200, "flag": 5, "qty": 164},
+        {"type": 1353, "flag": 0, "qty": 1}, {"type": 203, "flag": 5, "qty": 668},
+        {"type": 8291, "flag": 0, "qty": 1}, {"type": 238, "flag": 0, "qty": 88}
+      ]
+    },
+    {
+      "killmail_id": 18649506, "time": "2011-06-04", "ship_type_id": 24688,
+      "note": "Nighthawk; slot flags absent (era)",
+      "items": [
+        {"type": 29009, "flag": 5, "qty": 1}, {"type": 2281, "flag": 0, "qty": 1},
+        {"type": 17765, "flag": 5, "qty": 6}, {"type": 238, "flag": 5, "qty": 2001},
+        {"type": 17791, "flag": 5, "qty": 5}, {"type": 7453, "flag": 0, "qty": 8},
+        {"type": 1201, "flag": 87, "qty": 2}, {"type": 3717, "flag": 5, "qty": 10},
+        {"type": 13267, "flag": 5, "qty": 2}, {"type": 2032, "flag": 0, "qty": 3},
+        {"type": 1541, "flag": 0, "qty": 4}, {"type": 25948, "flag": 0, "qty": 3},
+        {"type": 12207, "flag": 5, "qty": 1}, {"type": 234, "flag": 5, "qty": 944},
+        {"type": 43, "flag": 5, "qty": 1}, {"type": 10886, "flag": 0, "qty": 1},
+        {"type": 9846, "flag": 5, "qty": 1}, {"type": 17897, "flag": 5, "qty": 2},
+        {"type": 3841, "flag": 0, "qty": 1}, {"type": 519, "flag": 0, "qty": 1},
+        {"type": 3725, "flag": 5, "qty": 1}, {"type": 21740, "flag": 5, "qty": 250},
+        {"type": 3810, "flag": 5, "qty": 10}
+      ]
+    },
+    {
+      "killmail_id": 50485521, "time": "2015-12-03", "ship_type_id": 603,
+      "items": [
+        {"type": 31788, "flag": 93, "qty": 1}, {"type": 3719, "flag": 5, "qty": 2},
+        {"type": 2454, "flag": 5, "qty": 1}, {"type": 3178, "flag": 29, "qty": 1},
+        {"type": 23729, "flag": 5, "qty": 1}, {"type": 11563, "flag": 12, "qty": 1},
+        {"type": 2048, "flag": 11, "qty": 1}, {"type": 12612, "flag": 28, "qty": 74},
+        {"type": 12614, "flag": 5, "qty": 1500}, {"type": 12612, "flag": 27, "qty": 74},
+        {"type": 222, "flag": 5, "qty": 9525}, {"type": 23009, "flag": 5, "qty": 1200},
+        {"type": 11563, "flag": 5, "qty": 1}, {"type": 25373, "flag": 5, "qty": 2},
+        {"type": 5439, "flag": 20, "qty": 1}, {"type": 10190, "flag": 13, "qty": 1},
+        {"type": 31788, "flag": 94, "qty": 1}, {"type": 31716, "flag": 92, "qty": 1},
+        {"type": 8433, "flag": 22, "qty": 1}, {"type": 17765, "flag": 5, "qty": 2},
+        {"type": 12612, "flag": 29, "qty": 74}, {"type": 2173, "flag": 5, "qty": 1},
+        {"type": 1236, "flag": 5, "qty": 1}, {"type": 3178, "flag": 27, "qty": 1},
+        {"type": 6003, "flag": 19, "qty": 1}, {"type": 12618, "flag": 5, "qty": 750},
+        {"type": 3178, "flag": 28, "qty": 1}, {"type": 15508, "flag": 5, "qty": 1},
+        {"type": 2476, "flag": 5, "qty": 1}, {"type": 2203, "flag": 5, "qty": 1},
+        {"type": 4029, "flag": 21, "qty": 1}, {"type": 12612, "flag": 5, "qty": 960},
+        {"type": 1317, "flag": 5, "qty": 3}
+      ]
+    },
+    {
+      "killmail_id": 50560631, "time": "2015-12-07", "ship_type_id": 24698,
+      "items": [
+        {"type": 25713, "flag": 31, "qty": 1}, {"type": 2048, "flag": 11, "qty": 1},
+        {"type": 27413, "flag": 28, "qty": 25}, {"type": 27413, "flag": 31, "qty": 25},
+        {"type": 25713, "flag": 29, "qty": 1}, {"type": 400, "flag": 20, "qty": 1},
+        {"type": 2281, "flag": 23, "qty": 1}, {"type": 25713, "flag": 32, "qty": 1},
+        {"type": 25713, "flag": 27, "qty": 1}, {"type": 12052, "flag": 19, "qty": 1},
+        {"type": 27413, "flag": 27, "qty": 25}, {"type": 3841, "flag": 24, "qty": 1},
+        {"type": 22291, "flag": 14, "qty": 1}, {"type": 27413, "flag": 30, "qty": 25},
+        {"type": 25713, "flag": 28, "qty": 1}, {"type": 22291, "flag": 13, "qty": 1},
+        {"type": 20307, "flag": 5, "qty": 20849}, {"type": 5139, "flag": 33, "qty": 1},
+        {"type": 2281, "flag": 22, "qty": 1}, {"type": 27413, "flag": 32, "qty": 25},
+        {"type": 3841, "flag": 21, "qty": 1}, {"type": 27413, "flag": 29, "qty": 25},
+        {"type": 22291, "flag": 12, "qty": 1}, {"type": 25713, "flag": 30, "qty": 1}
+      ]
+    },
+    {
+      "killmail_id": 73839383, "time": "2018-12-04", "ship_type_id": 603,
+      "items": [
+        {"type": 3178, "flag": 28, "qty": 2}, {"type": 5439, "flag": 20, "qty": 1},
+        {"type": 10190, "flag": 13, "qty": 1}, {"type": 8433, "flag": 22, "qty": 1},
+        {"type": 16002, "flag": 5, "qty": 3}, {"type": 31788, "flag": 94, "qty": 1},
+        {"type": 23009, "flag": 27, "qty": 29}, {"type": 31788, "flag": 93, "qty": 1},
+        {"type": 11563, "flag": 12, "qty": 1}, {"type": 222, "flag": 28, "qty": 50},
+        {"type": 2048, "flag": 11, "qty": 1}, {"type": 222, "flag": 29, "qty": 48},
+        {"type": 31716, "flag": 92, "qty": 1}, {"type": 230, "flag": 5, "qty": 100},
+        {"type": 4025, "flag": 21, "qty": 1}, {"type": 5975, "flag": 5, "qty": 1},
+        {"type": 6003, "flag": 19, "qty": 1}, {"type": 222, "flag": 5, "qty": 4712},
+        {"type": 23009, "flag": 5, "qty": 842}
+      ]
+    },
+    {
+      "killmail_id": 74088016, "time": "2018-12-18", "ship_type_id": 621,
+      "items": [
+        {"type": 3841, "flag": 19, "qty": 1}, {"type": 2410, "flag": 29, "qty": 1},
+        {"type": 2301, "flag": 22, "qty": 1}, {"type": 2410, "flag": 30, "qty": 1},
+        {"type": 206, "flag": 29, "qty": 29}, {"type": 27361, "flag": 5, "qty": 119},
+        {"type": 206, "flag": 30, "qty": 29}, {"type": 3888, "flag": 11, "qty": 1},
+        {"type": 206, "flag": 27, "qty": 29}, {"type": 12052, "flag": 20, "qty": 1},
+        {"type": 2301, "flag": 21, "qty": 1}, {"type": 2281, "flag": 23, "qty": 1},
+        {"type": 20306, "flag": 5, "qty": 1000}, {"type": 2410, "flag": 31, "qty": 1},
+        {"type": 37885, "flag": 5, "qty": 1}, {"type": 22291, "flag": 14, "qty": 1},
+        {"type": 206, "flag": 31, "qty": 30}, {"type": 22291, "flag": 13, "qty": 1},
+        {"type": 2410, "flag": 27, "qty": 1}, {"type": 31588, "flag": 93, "qty": 1},
+        {"type": 2410, "flag": 28, "qty": 1}, {"type": 206, "flag": 5, "qty": 4336},
+        {"type": 206, "flag": 28, "qty": 29}, {"type": 22291, "flag": 12, "qty": 1},
+        {"type": 2488, "flag": 87, "qty": 2}, {"type": 31790, "flag": 94, "qty": 1}
+      ]
+    }
+  ]
+}

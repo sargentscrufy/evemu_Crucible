@@ -30,6 +30,60 @@
 #include "ConsoleCommands.h"
 #include "chat/LSCChannel.h"
 #include "chat/LSCService.h"
+#include "system/SystemManager.h"
+
+#include <sys/stat.h>
+#include <cstdarg>
+
+/* FEEDBACK-1: lightweight in-game dev feedback log.
+ *
+ * Local chat doubles as the feedback channel on the production server:
+ * players describe bugs/feature requests in Local while playing, and the
+ * admin later pulls this file for offline analysis
+ * (docker cp server:<logDir>/feedback.log .).
+ *
+ * Strictly event-driven -- writes only on local chat and local channel
+ * join/leave, so it costs nothing while nobody is connected.  Rotates at
+ * 5MB (single .old generation) so it can never balloon.  Lives in
+ * cacheDir (the server_cache docker volume) so it survives container
+ * recreation on updates.
+ */
+static void WriteFeedbackLog(const char* fmt, ...)
+{
+    std::string path(sConfig.files.cacheDir);
+    if (!path.empty() and (path.back() != '/') and (path.back() != '\\'))
+        path += '/';
+    path += "feedback.log";
+
+    struct stat st;
+    if ((::stat(path.c_str(), &st) == 0) and (st.st_size > (5 * 1024 * 1024))) {
+        std::string old(path + ".old");
+        ::remove(old.c_str());
+        ::rename(path.c_str(), old.c_str());
+    }
+
+    FILE* f = fopen(path.c_str(), "a");
+    if (f == nullptr)
+        return;
+
+    time_t now = time(nullptr);
+    tm utc;
+#ifdef _WIN32
+    gmtime_s(&utc, &now);
+#else
+    gmtime_r(&now, &utc);
+#endif
+    char ts[32];
+    strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", &utc);
+    fprintf(f, "%s | ", ts);
+
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(f, fmt, args);
+    va_end(args);
+    fputc('\n', f);
+    fclose(f);
+}
 
 
 PyRep *LSCChannelChar::Encode() const {
@@ -134,6 +188,15 @@ bool LSCChannel::JoinChannel(Client* pClient) {
     sEntityList.Multicast( "OnLSC", GetTypeString(), &answer, mct );
 
     _log(LSC__CHANNELS, "%s Joined Channel %u - %s", pClient->GetName(), m_channelID, m_displayName.c_str());
+
+    // FEEDBACK-1: session context -- fires on login and on every system
+    // change, so the feedback log shows where each report happened
+    if (m_type == LSC::Type::solarsystem2)
+        WriteFeedbackLog("=== %s entered local of %s (ship: %s)",
+                pClient->GetName(),
+                (pClient->SystemMgr() != nullptr ? pClient->SystemMgr()->GetName() : "?"),
+                (pClient->GetShip().get() != nullptr ? pClient->GetShip()->type().name().c_str() : "?"));
+
     return true;
 }
 
@@ -166,6 +229,10 @@ void LSCChannel::LeaveChannel(Client *pClient)
     sEntityList.Multicast("OnLSC", GetTypeString(), &answer, mct);
 
     _log(LSC__CHANNELS, "%s Left Channel %u - %s", pClient->GetName(), m_channelID, m_displayName.c_str());
+
+    // FEEDBACK-1: session context (logout / jump away)
+    if (m_type == LSC::Type::solarsystem2)
+        WriteFeedbackLog("=== %s left local (system %u)", pClient->GetName(), m_channelID);
 
     pClient->ChannelLeft(this);
 
@@ -210,6 +277,12 @@ void LSCChannel::SendMessage(Client * c, const char * message, bool self/*false*
 
     PyTuple *answer = sm.Encode();
     sEntityList.Multicast("OnLSC", GetTypeString(), &answer, mct);
+
+    // FEEDBACK-1: capture local chat for the dev feedback log
+    if ((m_type == LSC::Type::solarsystem2) and (c != nullptr) and !self)
+        WriteFeedbackLog("%s @ %s: %s", c->GetName(),
+                (c->SystemMgr() != nullptr ? c->SystemMgr()->GetName() : "?"),
+                message);
 }
 
 void LSCChannel::SendServerMOTD(Client* pClient) {
