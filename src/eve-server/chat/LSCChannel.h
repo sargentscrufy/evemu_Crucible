@@ -156,6 +156,7 @@ protected:
     uint16              m_cspa;
     uint32              m_ownerID;
     int32               m_channelID;            // ids < 0 are automatic conversationalist mode (or creator) and invite only (per client)
+    time_t              m_lastFeedbackAck;      // FEEDBACK-2: local-report ack throttle
     std::string         m_displayName;
     std::string         m_motd;
     std::string         m_comparisonKey;

@@ -139,7 +139,8 @@ LSCChannel::LSCChannel(LSCService* svc, int32 channelID, LSC::Type type, uint32 
   m_temporary(temporary),
   m_languageRestriction(languageRestriction),
   m_groupMessageID(groupMessageID),
-  m_channelMessageID(channelMessageID)
+  m_channelMessageID(channelMessageID),
+  m_lastFeedbackAck(0)
 {
     m_mode = LSC::Mode::chConversationalist;    // default mode '3' for enabling all speakers (till i figure out how to correctly set/change later)
     _log(LSC__CHANNELS, "Creating channel %u - \"%s\"", m_channelID, (m_displayName == "") ? ((m_comparisonKey == "") ? "null" : m_comparisonKey.c_str()) : m_displayName.c_str());
@@ -279,10 +280,26 @@ void LSCChannel::SendMessage(Client * c, const char * message, bool self/*false*
     sEntityList.Multicast("OnLSC", GetTypeString(), &answer, mct);
 
     // FEEDBACK-1: capture local chat for the dev feedback log
-    if ((m_type == LSC::Type::solarsystem2) and (c != nullptr) and !self)
+    if ((m_type == LSC::Type::solarsystem2) and (c != nullptr) and !self) {
         WriteFeedbackLog("%s @ %s: %s", c->GetName(),
                 (c->SystemMgr() != nullptr ? c->SystemMgr()->GetName() : "?"),
                 message);
+
+        // FEEDBACK-2: acknowledge the report in local so players know the
+        // dev feedback pipeline heard them.  throttled per channel so a
+        // conversation gets one ack, not one per line.
+        time_t now = time(nullptr);
+        if ((now - m_lastFeedbackAck) > 90) {
+            m_lastFeedbackAck = now;
+            OnLSC_SendMessage ack;
+            ack.sender = _FakeSenderInfo();
+            ack.channelID = EncodeID();
+            ack.message = "Deep space monitoring team: We have received your report and it will be analyzed.";
+            ack.member_count = m_chars.size();
+            PyTuple* rsp = ack.Encode();
+            sEntityList.Multicast("OnLSC", GetTypeString(), &rsp, mct);
+        }
+    }
 }
 
 void LSCChannel::SendServerMOTD(Client* pClient) {
