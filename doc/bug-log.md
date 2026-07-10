@@ -49,20 +49,18 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 - **Fix:** iterate the whole module list; first gun consumes the passed
   charge, the rest pull matching charges from cargo (DogmaIMService.cpp).
 
-### COMP-G: ammo turrets can't load charges — OPEN (real gameplay bug)
-- **Observed:** loading charges into any turret (150mm Railgun I, blasters,
-  etc.) silently no-ops; the gun then errors "doesn't seem to be loaded"
-  on activation. Civilian ammoless guns are unaffected; launchers load fine.
-- **Cause:** `ModuleManager::LoadCharge` gates on
-  `pMod->GetAttribute(AttrCapacity)` (attr 38 = *cargohold* capacity) —
-  `if (modCapacity < chargeVolume) return;`. Turret types carry no attr 38
-  (a turret holds a fixed "clip", not a cargo volume), so modCapacity reads
-  0 and the load is skipped. Launchers have a capacity attr, so they work.
-- **Impact:** real players cannot use any ammo-based turret — only
-  ammoless (civilian) turrets and launchers function. Significant.
-- **Fix direction:** derive turret clip capacity from the charge-size /
-  rate-of-fire model instead of AttrCapacity, or seed turret charge
-  capacity into static data. Needs proper design, not a one-liner.
+### COMP-G: ammo turrets "can't load" — NOT A BUG (reload timer), RESOLVED 2026-07-10
+- **Initial (wrong) hypothesis:** turrets lack AttrCapacity so LoadCharge
+  no-ops. FALSE — the 150mm Railgun I has capacity 0.1 (from the invTypes
+  column via ItemType attr map); a docked ammo-load diagnostic with injected
+  traces showed `LOADING loadQty=40` — the load succeeds server-side.
+- **Actual cause:** loading a charge *in space* starts a ~10s reload timer;
+  `m_chargeLoaded` only flips true when it completes (ActiveModule::Process
+  line 272-282) — correct EVE behavior. The bot fired 3-4s after loading,
+  before the reload finished, so activation reported "not loaded".
+- **Fix (bot-side):** wait the reload time (~13s) after loading before
+  firing, or load ammo while docked (instant — the docked path skips the
+  reload timer). No server change needed.
 
 ### SPAWN-11b: belts stuck "spawned" forever after a stale-wave despawn — FIXED 2026-07-10
 - **Observed:** after SPAWN-11 despawned a stale unwatched wave, the belt
