@@ -932,8 +932,11 @@ void SpawnMgr::MakeSpawn(SystemBubble* pBubble, uint32 factionID, uint8 sClass, 
         name = GetSpawnClassName(sClass);
     } else {
         /** @todo  make method to get/use template positioning data for spawns here */
-        // ratspawn will warp in, others will not.
-        startPos.MakeRandomPointOnSphere(MakeRandomInt(10, 15) *100000); //1-1m5 km from current bubble center
+        // SPAWN-12: belt rats spawned 1000-1500km from the belt (the *100000
+        // multiplier -- the comment intends "10-15 km"), far outside targeting
+        // range and only sometimes reachable via a flaky warp-in.  spawn them
+        // 10-15 km off the belt so they are immediately lockable, like live.
+        startPos.MakeRandomPointOnSphere(MakeRandomInt(10, 15) *1000); // 10-15 km from bubble center
     }
 
     uint32 corpID = sDataMgr.GetFactionCorp(factionID);
@@ -973,14 +976,11 @@ void SpawnMgr::MakeSpawn(SystemBubble* pBubble, uint32 factionID, uint8 sClass, 
             m_system->AddNPC(pNPC);
 
             pNPC->DestinyMgr()->SetPosition(startPos);
-            //  begin warp.  this may have to be looked into later for timing of large spawns (>6)
-            //  actually looks kinda cool when larger ships come in later...
-            if (sClass <= Spawn::Class::Officer) {   // ratspawn will warp in, others will not.
-                // adjust warpIn point so show some variation instead of a straight line.
-                GPoint warpTo(warpToPoint);
-                warpTo.MakeRandomPointOnSphere(sClass *1000);  // random point <class (1-12)> x 1k from center
-                pNPC->DestinyMgr()->WarpTo(warpTo, (MakeRandomInt(-5, 10) *1000));
-            }
+            // SPAWN-12: rats now spawn 10-15km off the belt (immediately
+            // lockable), so the old "warp in from 1000km" step is gone -- a
+            // sub-minimum-distance NPC warp never completed cleanly and left
+            // the rat perpetually "warping" and unlockable.  the NPC AI takes
+            // over from the spawn position when a pilot is near.
 
             SpawnEntry se = SpawnEntry();
             se.enabled = false;
