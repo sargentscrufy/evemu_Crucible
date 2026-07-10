@@ -256,8 +256,12 @@ def main():
         try:
             mch.call_bound(dogma, "LoadAmmoToModules", ship, all_guns,
                            ctype, cid, ship)
-            mch.pump(3.0)
-            log(f"loaded charge type {ctype} into {len(all_guns)} guns")
+            # loading a charge in space starts a ~10s reload timer;
+            # m_chargeLoaded only flips true when it completes, so a gun
+            # fired too soon reports "not loaded".  wait it out.
+            log(f"loading charge type {ctype} into {len(all_guns)} guns "
+                "(waiting reload timer)")
+            mch.pump(13.0)
         except CallError as e:
             log(f"ammo load: {e}")
 
