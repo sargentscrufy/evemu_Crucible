@@ -59,34 +59,45 @@ def main():
         return 1
 
     ref = mch.bind("agentMgr", args.agent)
-    act(mch, ref, None, "open")
+    opened = act(mch, ref, None, "open")
+    # clear any stale active mission (Quit=11) so we get a fresh offer;
+    # a lingering mission makes GetMissionBriefingInfo return None
+    if opened is not None and "(11," in repr(opened):
+        act(mch, ref, 11, "quit-stale")
+        mch.pump(2)
+        ref = mch.bind("agentMgr", args.agent)
+        act(mch, ref, None, "reopen")
     act(mch, ref, 2, "request-mission")
 
-    try:
-        brief = mch.call_bound(ref, "GetMissionBriefingInfo")
-        show("GetMissionBriefingInfo", brief, 1400)
-    except CallError as e:
-        log(f"MISSION-FINDING: briefing failed: {str(e)[:250]}")
+    dropoff = None
+    brief = None
+    for attempt in range(3):
+        try:
+            brief = mch.call_bound(ref, "GetMissionBriefingInfo")
+            if not repr(brief).strip().startswith("(SubStream(None"):
+                break
+            mch.pump(2)
+        except CallError as e:
+            log(f"MISSION-FINDING: briefing failed: {str(e)[:250]}")
+            break
+    show("GetMissionBriefingInfo", brief, 1400)
+    m = re.search(r"'objectiveDestinationID': (\d+)", repr(brief))
+    if m:
+        dropoff = int(m.group(1))
+    elif repr(brief).strip().startswith("(SubStream(None"):
+        log("MISSION-FINDING: GetMissionBriefingInfo returned None after "
+            "request (stale mission state or offer not materialized)")
 
     act(mch, ref, 3, "accept")
 
     try:
         obj = mch.call_bound(ref, "GetMissionObjectiveInfo")
         show("GetMissionObjectiveInfo", obj, 1600)
+        if repr(obj).strip().startswith("(SubStream(None"):
+            log("MISSION-FINDING: GetMissionObjectiveInfo returns None "
+                "(dropoff resolved from briefing instead)")
     except CallError as e:
         log(f"MISSION-FINDING: objectives failed: {str(e)[:250]}")
-        obj = None
-
-    # find dropoff station + cargo from objectives / journal / hangar diff
-    dropoff = None
-    if obj is not None:
-        # objective dicts carry destinationID / stationID style keys
-        m = re.search(r"'(?:destination|station)ID', (\d{8})", repr(obj))
-        if m:
-            dropoff = int(m.group(1))
-        else:
-            cands = [i for i in ints_in(obj) if 60000000 <= i < 64000000]
-            dropoff = cands[0] if cands else None
     log(f"dropoff station: {dropoff}")
 
     # mission cargo: newest items in home hangar (courier package)
