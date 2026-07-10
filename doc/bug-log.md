@@ -42,6 +42,37 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
   at FleetService.cpp:1199 that only works because Booster::Fleet ==
   Role::FleetLeader == 1); or escort's target/follow state at dock.
 
+### COMP-A: salvager/analyzer with no target crashes the server — FIXED 2026-07-10
+- **Observed:** activating a Salvager I (or Data Analyzer) with no locked
+  target segfaulted the node — `Prospector::CanActivate()` dereferenced a
+  null `m_targetSE` (Prospector.cpp:77). One packet from any client.
+- **Fix:** null-target check throws `DeniedActivateNoTarget` first.
+
+### COMP-B: missile launcher with no target crashes the server — FIXED 2026-07-10
+- **Observed:** firing an online, loaded launcher with no locked target
+  spawned a missile with a null target that crashed on impact
+  (`Missile::HitTarget` deref, Missile.cpp:252). One packet from any client.
+- **Fix:** `ActiveModule::Activate` rejects targetless activation of any
+  offensive module; `Missile::HitTarget` null-target guard as backstop.
+
+### COMP-C: bot gun activations were silent no-ops — FIXED 2026-07-10
+- **Observed:** `dogmaIM.Activate` only matches a WString effect name; a
+  plain Python str matched no overload, the server logged an error, and the
+  call still returned SUCCESS. Every bot gun activation fired blanks — the
+  real reason rats never died in the fleet trial (SPAWN-11 investigation
+  was chasing a symptom).
+- **Fix:** `MachoClient.activate_module()` wraps the effect name in WStr;
+  combat_loop_test / fleet_trio_test / escort_trader routed through it.
+
+### COMP-D: activating an offline module returns SUCCESS (OPEN, low)
+- Only an OnRemoteMessage "ServerError 25164" reveals the failure; the
+  Activate call itself succeeds. Confuses bots that trust the return.
+
+### COMP-E: phantom post-undock "warping" state blocks module ops (OPEN, low)
+- For ~15-40s after undock a ship reads as warping
+  (`DeniedActivateInWarp`) and rejects all module activation. Bots work
+  around it with a settle wait.
+
 ### MKT-1: PlaceCharOrder sell with no itemID aborts the server — FIXED 2026-07-10
 - **Observed:** bot trader sold with `itemID=None`; server terminated with
   `std::bad_optional_access` (SIGABRT) inside `marketProxy::PlaceCharOrder()`.
