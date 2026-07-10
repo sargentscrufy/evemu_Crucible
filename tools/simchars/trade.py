@@ -159,33 +159,77 @@ JOIN invTypes t ON t.typeID = am.typeID
 WHERE bo.stationID != ao.stationID AND t.volume > 0
 GROUP BY am.typeID
 ORDER BY (bm.mx - am.mn) / am.mn DESC LIMIT 120""")
+    def reachable_asks(tid, global_row):
+        """Best ask candidates for a type, nearest-viable first: the
+        global min plus a few alternates (the global min is often in an
+        unroutable region while a slightly pricier local ask works)."""
+        rows = [dict(stationID=global_row["srcStation"],
+                     solarSystemID=global_row["srcSys"],
+                     price=global_row["ask"],
+                     volRemaining=global_row["askVol"])]
+        rows += db.query(
+            f"SELECT stationID, solarSystemID, price, volRemaining"
+            f" FROM mktOrders WHERE bid = 0 AND typeID = {tid}"
+            f" AND volRemaining > 0 ORDER BY price LIMIT 8")[1:]
+        out = []
+        for r in rows:
+            pickup = jumps_from(here_system, int(r["solarSystemID"]))
+            if pickup is not None and pickup <= max_jumps:
+                out.append((float(r["price"]), int(r["volRemaining"]),
+                            int(r["stationID"]), int(r["solarSystemID"]),
+                            pickup))
+        return out
+
+    def reachable_bids(tid, src_sys, pickup):
+        rows = db.query(
+            f"SELECT stationID, solarSystemID, price, volRemaining,"
+            f" minVolume FROM mktOrders WHERE bid = 1 AND typeID = {tid}"
+            f" AND volRemaining > 0 ORDER BY price DESC LIMIT 8")
+        out = []
+        for r in rows:
+            haul = jumps_from(src_sys, int(r["solarSystemID"]))
+            if haul is not None and (pickup + haul) <= max_jumps:
+                out.append((float(r["price"]), int(r["volRemaining"]),
+                            int(r["minVolume"] or 1), int(r["stationID"]),
+                            haul))
+        return out
+
     best, best_score = None, 0.0
+    examined = viable = 0
     for c in candidates:
+        # each candidate costs alternate-order queries through docker exec;
+        # margin-sorted input means diminishing returns fast
+        examined += 1
+        if examined > 30 or viable >= 8:
+            break
         tid = int(c["typeID"])
         if tid in exclude_types:
             continue
-        ask_price = float(c["ask"])
-        bid_price = float(c["bid"])
         vol = float(c["vol"])
-        pickup = jumps_from(here_system, int(c["srcSys"]))
-        if pickup is None or pickup > max_jumps:
-            continue
-        haul = jumps_from(int(c["srcSys"]), int(c["dstSys"]))
-        if haul is None or (pickup + haul) > max_jumps:
-            continue
-        qty = int(min(cargo_m3 // vol, int(c["bidVol"]), int(c["askVol"]),
-                      budget // ask_price))
-        if qty < max(1, int(c["minVolume"] or 1)):
-            continue
-        profit = (bid_price - ask_price) * qty
-        # absolute profit per jump: per-m3 density misleads when the
-        # matched order volume caps qty far below the hold size
-        score = profit / (pickup + haul + 1)
-        if score > best_score:
-            best_score = score
-            best = TradePlan(tid, qty, ask_price, bid_price,
-                             int(c["srcStation"]), int(c["dstStation"]),
-                             pickup + haul, vol)
+        for ask_price, ask_vol, src_st, src_sys, pickup in reachable_asks(tid, c):
+            for bid_price, bid_vol, min_vol, dst_st, haul in \
+                    reachable_bids(tid, src_sys, pickup):
+                if dst_st == src_st:
+                    continue
+                if bid_price < ask_price * (1.0 + min_margin):
+                    break   # bids sorted desc
+                qty = int(min(cargo_m3 // vol, bid_vol, ask_vol,
+                              budget // ask_price))
+                if qty < max(1, min_vol):
+                    continue
+                profit = (bid_price - ask_price) * qty
+                # absolute profit per jump: per-m3 density misleads when
+                # the matched order volume caps qty below the hold size
+                score = profit / (pickup + haul + 1)
+                viable += 1
+                if score > best_score:
+                    best_score = score
+                    best = TradePlan(tid, qty, ask_price, bid_price,
+                                     src_st, dst_st, pickup + haul, vol)
+                break   # best reachable bid for this ask found
+            else:
+                continue
+            break   # found a viable pairing for this type
     return best
 
 
