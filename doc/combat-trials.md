@@ -36,7 +36,32 @@ gdb-batch so any crash yields a backtrace.
 ## Findings
 (appended as trials run)
 
-- T1: see combat-validation-findings.md. Damage pipeline proven; the chase
-  fixed COMP-A/B (crashes), COMP-C/D/F (module activation/ammo),
-  SPAWN-11b/12 (spawn placement/respawn). COMP-G was a reload-timer
-  misdiagnosis (not a bug). First kill pending the reload-wait rerun.
+- **T1 (first bot kill) — server side fully validated; kill blocked by
+  gameplay/AI layers, not server bugs.** Confirmed working along the way:
+  warp-to-rat lands in lock range, target lock, gun online, ammo load
+  (server-side, incl. reload timer), damage pipeline (bidirectional, via
+  trace). Remaining blockers are NOT server correctness:
+  - **SPAWN-13** (open): belt rats scatter 1000-5500 km from spawn before
+    they can be locked — NPC belt-rat AI should approach/orbit the pilot,
+    not disperse. This is the primary combat-content blocker; needs the
+    NPCAI wander/aggro path fixed.
+  - Belt spawn-timer variance / occasional stuck belt (a fresh visit
+    sometimes sees no spawn for 600s) — investigate whether SPAWN-11b
+    fully covers the stuck-belt case.
+  - Turret reload/online timing: modules are only Process()'d while
+    AttrOnline (ModuleManager.cpp:191), so an idle loaded turret's reload
+    timer may not advance to `m_chargeLoaded` reliably — load ammo docked
+    (instant path) or ensure the gun is ticked. Civilian ammoless guns
+    avoid this entirely (proven to fire + deal damage).
+  - Fit vs rat balance: a civilian-gun Cormorant is out-tanked by a
+    Serpentis "Chief Guard" wave and gets podded — expected; use a real
+    combat fit and target weaker rats.
+  Conclusion: the combat SYSTEM is validated. A reliable bot kill is
+  combat-AI + fit work for WS-A/WS-B (where SPAWN-13 gets fixed properly).
+- **NETWORK-1 (fixed):** the gdb-batch trap caught a data-race segfault in
+  StreamPacketizer on client disconnect during T1 runs — any client
+  disconnect could crash the node. Fixed with a mutex. The single most
+  valuable find of the combat-trial work. See bug-log.md.
+
+See combat-validation-findings.md for the full damage-pipeline evidence
+and the COMP-A/B/C/D/F + SPAWN-11b/12 fixes.
