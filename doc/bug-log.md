@@ -5,6 +5,42 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 
 ## Open
 
+### MKT-1: PlaceCharOrder sell with no itemID aborts the server — FIXED 2026-07-10
+- **Observed:** bot trader sold with `itemID=None`; server terminated with
+  `std::bad_optional_access` (SIGABRT) inside `marketProxy::PlaceCharOrder()`.
+  Any client sending a malformed sell could kill the whole server.
+- **Fix:** guard the optional in MarketProxyService.cpp sell path; reject
+  with "You must specify which item to sell."  Bots pass the hangar stack
+  itemID (market.py).
+- **Verified:** malformed call now errors cleanly; valid sell executes.
+
+### MKT-2: sells to the seeded market could never execute — FIXED 2026-07-10
+- **Observed:** every seed-v2 order is owned by an NPC corporation
+  (1000xxx), but `MarketMgr::ExecuteBuyOrder` classified owners only as
+  player/corp/station/TraderJoe/Trader — NPC corps fell through, the match
+  loop spun 1000 times, and every sell to the seeded economy failed
+  ("failed to find a matching market order").
+- **Fix:** `IsNPCCorp(ownerID)` routes through the NPC-trader path: sold
+  item sinks into the NPC economy, seller paid directly, journal recorded.
+- **Verified:** live bot sale filled an NPC-corp buy order; wallet delta
+  exactly sale price minus sales tax; item removed (conservation holds).
+
+### FLEET-2: fleet invites to characters mid-login are dropped silently — FIXED 2026-07-10
+- **Observed:** `FleetBound::Invite` returns None when the invited char
+  isn't in world yet, and `AcceptInvite`'s "no outstanding invite" is a
+  notify, not an error — so fleet formation raced and members silently
+  ended up outside the fleet (this masqueraded as a FLEET-1 failure in the
+  first trio run).
+- **Fix:** inviter now gets "That pilot is not online." + FLEET__WARNING
+  log.  Bot harnesses gate invites behind an all-in-world barrier.
+
+### OPS-2: deploy traffic gate misses bot sessions (process discipline)
+- **Observed:** the "no client traffic for 120s" gate greps GetTime/
+  SelectCharacter keepalives which bot pilots don't emit; two deploys
+  killed in-flight bot sorties.
+- **Rule:** also require `SELECT COUNT(*) FROM chrCharacters WHERE
+  online=1` == 0 before any dev deploy.
+
 ### DESTINY-1: Client crash during warp (Tier 1)
 - **Observed:** 2026-07-07, Crucible client 360229, char warping back to
   station in Amsen (30001392). Client hard-crashed; server unaffected.
