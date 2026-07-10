@@ -42,6 +42,18 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
   at FleetService.cpp:1199 that only works because Booster::Fleet ==
   Role::FleetLeader == 1); or escort's target/follow state at dock.
 
+### SPAWN-11b: belts stuck "spawned" forever after a stale-wave despawn — FIXED 2026-07-10
+- **Observed:** after SPAWN-11 despawned a stale unwatched wave, the belt
+  never spawned again — a visiting pilot could loiter 10+ minutes with zero
+  rats and no spawn-timer activity.
+- **Cause:** the despawn removed the rats but left `m_spawned = true`, so
+  `SystemBubble::Process()`'s `if (m_spawned) return;` fired before the
+  SPAWN-9 self-heal that would re-arm the timer. Belt permanently
+  "spawned" with CountNPCs()==0.
+- **Fix:** clear `m_spawned` when despawning the stale wave so the belt
+  re-arms for the next visitor. (Regression introduced by SPAWN-11; found
+  while validating COMP-C combat.)
+
 ### COMP-A: salvager/analyzer with no target crashes the server — FIXED 2026-07-10
 - **Observed:** activating a Salvager I (or Data Analyzer) with no locked
   target segfaulted the node — `Prospector::CanActivate()` dereferenced a
