@@ -74,6 +74,22 @@ themselves immediately.
 - Verify item conservation (no dupes / no vanishing stacks) after every
   leg — economy integrity is a hard requirement before scaling up.
 
+### M4a — Escort wings (user requirement)
+- Large / high-value haulers travel with destroyer escorts: hauler +
+  escort form a fleet, **fleet-warp together** (this makes FLEET-1 a hard
+  M0 requirement, not polish), jump gates together, and the escort
+  engages any hostiles on the hauler's grid (belt rats aggressing at
+  warp-in, lowsec gates later).
+- Escort loop: follow fleet leader (the hauler); on grid arrival scan for
+  hostiles targeting the fleet, lock and engage (reuse combat_loop_test
+  lock/engage machinery on the Cormorant's civilian rails).
+- Roster: Mira's Cormorant is escort #1; provision 1-2 more destroyer
+  pilots when scaling so each large hauler (Iteron Mark III, Badger Mark
+  II runs with expensive cargo) can have one. Cheap Wreathe/Badger runs
+  fly solo.
+- Escort adds cycle cost (two pilots per route) — the trader brain
+  reserves escorts for routes above a cargo-value threshold.
+
 ### M4 — Trader brain
 - Greedy arbitrage v1: from current station, scan seeded gradient
   commodities (the seed v2 hauling set), score candidate routes by
