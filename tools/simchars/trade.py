@@ -178,7 +178,9 @@ ORDER BY (bm.mx - am.mn) / am.mn DESC LIMIT 120""")
         if qty < max(1, int(c["minVolume"] or 1)):
             continue
         profit = (bid_price - ask_price) * qty
-        score = profit / (vol * qty) / (pickup + haul + 1)
+        # absolute profit per jump: per-m3 density misleads when the
+        # matched order volume caps qty far below the hold size
+        score = profit / (pickup + haul + 1)
         if score > best_score:
             best_score = score
             best = TradePlan(tid, qty, ask_price, bid_price,
