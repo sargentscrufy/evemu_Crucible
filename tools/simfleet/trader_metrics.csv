@@ -1,3 +1,0 @@
-ts,pilot,leg,typeID,qty,jumps,expected,realized,seconds,result
-1783683207,ilsa,1,18048,1,8,6860,5512,1564,ok
-1783683240,ilsa,2,,,,,,0,no-route
