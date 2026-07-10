@@ -218,15 +218,31 @@ def main():
         bug(f"could not lock any of {len(npcs)} rats within 120s "
             "(warp-in never completed?)")
 
+    # modules de-online when the ship enters space; an offline module's
+    # Activate returns SUCCESS but does nothing (COMP-D).  online every gun
+    # and let it settle before firing.
+    all_guns = [int(r["itemID"]) for r in db.query(
+        f"SELECT itemID FROM entity WHERE locationID = {ship} "
+        f"AND flag BETWEEN 27 AND 34")] or [gun]
+    for g in all_guns:
+        try:
+            mch.call_bound(dogma, "SetModuleOnline", ship, g)
+        except CallError as e:
+            log(f"online gun {g}: {e}")
+    mch.pump(4.0)
+
     kills_before = dead_npcs()
     fight_end = time.time() + 300
     current = engaged[0] if engaged else None
     if current:
-        try:
-            mch.activate_module(dogma, gun, "targetAttack", current, 1000)
-            log(f"gun {gun} firing on {current}")
-        except CallError as e:
-            bug(f"gun activation rejected: {e}")
+        fired = 0
+        for g in all_guns:
+            try:
+                mch.activate_module(dogma, g, "targetAttack", current, 1000)
+                fired += 1
+            except CallError as e:
+                bug(f"gun {g} activation rejected: {e}")
+        log(f"{fired}/{len(all_guns)} guns firing on {current}")
 
     while time.time() < fight_end:
         mch.pump(3.0)
@@ -241,7 +257,11 @@ def main():
             try:
                 mch.call_bound(bey, "CmdFollowBall", current, 1000)
                 mch.call_bound(dogma, "AddTarget", current)
-                mch.activate_module(dogma, gun, "targetAttack", current, 1000)
+                for g in all_guns:
+                    try:
+                        mch.activate_module(dogma, g, "targetAttack", current, 1000)
+                    except CallError:
+                        pass
                 log(f"next target: {current}")
             except CallError as e:
                 bug(f"re-engage {current} failed: {e}")
