@@ -42,6 +42,28 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
   at FleetService.cpp:1199 that only works because Booster::Fleet ==
   Role::FleetLeader == 1); or escort's target/follow state at dock.
 
+### COMP-F: LoadAmmoToModules only loaded the first module — FIXED 2026-07-10
+- **Observed:** loading ammo into a multi-gun weapon group left every gun
+  but the first empty (activation errored "not loaded"); the handler used
+  only `moduleIDs[0]`.
+- **Fix:** iterate the whole module list; first gun consumes the passed
+  charge, the rest pull matching charges from cargo (DogmaIMService.cpp).
+
+### COMP-G: ammo turrets can't load charges — OPEN (real gameplay bug)
+- **Observed:** loading charges into any turret (150mm Railgun I, blasters,
+  etc.) silently no-ops; the gun then errors "doesn't seem to be loaded"
+  on activation. Civilian ammoless guns are unaffected; launchers load fine.
+- **Cause:** `ModuleManager::LoadCharge` gates on
+  `pMod->GetAttribute(AttrCapacity)` (attr 38 = *cargohold* capacity) —
+  `if (modCapacity < chargeVolume) return;`. Turret types carry no attr 38
+  (a turret holds a fixed "clip", not a cargo volume), so modCapacity reads
+  0 and the load is skipped. Launchers have a capacity attr, so they work.
+- **Impact:** real players cannot use any ammo-based turret — only
+  ammoless (civilian) turrets and launchers function. Significant.
+- **Fix direction:** derive turret clip capacity from the charge-size /
+  rate-of-fire model instead of AttrCapacity, or seed turret charge
+  capacity into static data. Needs proper design, not a one-liner.
+
 ### SPAWN-11b: belts stuck "spawned" forever after a stale-wave despawn — FIXED 2026-07-10
 - **Observed:** after SPAWN-11 despawned a stale unwatched wave, the belt
   never spawned again — a visiting pilot could loiter 10+ minutes with zero
