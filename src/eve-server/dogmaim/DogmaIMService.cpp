@@ -223,19 +223,33 @@ PyResult DogmaIMBound::LoadAmmoToModules(PyCallArgs& call, PyInt* shipID, PyList
 
     if (moduleIDs.empty())
         return nullptr;
-    if (moduleIDs.size() > 1) {
-        sLog.Error("DogmaIMBound::Handle_LoadAmmoToModules()", "args.moduleIDs.size = %lu.", moduleIDs.size() );
-        call.Dump(MODULE__WARNING);
-    }
 
-    // Get Reference to Ship and Charge
+    // COMP-F: this used to load only moduleIDs[0] and ignore the rest, so
+    // loading a multi-gun weapon group left every gun but the first empty
+    // (they reported "not loaded" on activation).  load each module in the
+    // list.  The first consumes the passed charge item; the rest pull from
+    // the same charge type in the ship's cargo.
     ShipItemRef sRef = call.client->GetShip();
-    GenericModule* pMod = sRef->GetModule(sItemFactory.GetItemRef(moduleIDs[0])->flag());
-    if (pMod == nullptr)
-        throw UserError ("ModuleNoLongerPresentForCharges");
-
-    InventoryItemRef cRef = sItemFactory.GetItemRef(itemID->value());
-    sRef->LoadCharge(cRef, pMod->flag());
+    InventoryItemRef firstCharge = sItemFactory.GetItemRef(itemID->value());
+    bool first(true);
+    for (int32 modID : moduleIDs) {
+        InventoryItemRef mRef = sItemFactory.GetItemRef(modID);
+        if (mRef.get() == nullptr)
+            continue;
+        GenericModule* pMod = sRef->GetModule(mRef->flag());
+        if (pMod == nullptr)
+            continue;
+        if (first) {
+            sRef->LoadCharge(firstCharge, pMod->flag());
+            first = false;
+        } else {
+            // find another charge stack of the same type in cargo
+            InventoryItemRef cRef = sRef->GetMyInventory()->GetByTypeFlag(
+                    chargeTypeID->value(), flagCargoHold);
+            if (cRef.get() != nullptr)
+                sRef->LoadCharge(cRef, pMod->flag());
+        }
+    }
 
     // returns nodeID and timestamp
     return this->GetOID();
