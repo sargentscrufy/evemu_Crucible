@@ -87,6 +87,12 @@ def defender_thread(fit_name, ship_id, ready, stop):
         # sit and take it
         while not stop.is_set():
             mch.pump(2.0)
+        # DESTINY-7 mitigation: settle before disconnecting
+        try:
+            mch.call_bound(bey, "CmdStop")
+        except CallError:
+            pass
+        mch.pump(5.0)
         mch.close()
     except Exception as e:
         log(f"{tag}: EXCEPTION {type(e).__name__}: {str(e)[:200]}")
@@ -201,6 +207,20 @@ def _attack(def_ship, atk_ship, window, t0, result):
             result["killed"] = True
             result["survival_s"] = round(time.time() - t0, 1)
             break
+
+    # DESTINY-7 mitigation: stop combat + movement and let destiny settle
+    # before disconnecting, so no destiny update is in flight when the
+    # entity is removed (a mid-combat disconnect can UAF-crash the node).
+    for g in guns:
+        try:
+            mch.call_bound(dogma, "Deactivate", g, "targetAttack")
+        except CallError:
+            pass
+    try:
+        mch.call_bound(bey, "CmdStop")
+    except CallError:
+        pass
+    mch.pump(5.0)
     mch.close()
 
 

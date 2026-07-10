@@ -27,6 +27,27 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
   commodity spreads) — tradeable via the MKT-2 NPC-corp execution path.
   Economy loop is closed: traders consume, Joe replenishes.
 
+### DESTINY-7: use-after-free crash when a client disconnects mid-combat (Tier 1, OPEN)
+- **Observed:** 2026-07-10, during bot-vs-bot tank battles. As the defender
+  bot disconnected while under fire (destiny updates in flight), the server
+  segfaulted. gdb backtrace: SIGSEGV in `SystemEntity::SystemMgr`
+  (SystemEntity.h:221) dereferencing a dangling `mySE` inside
+  `DestinyManager::SendDestinyUpdate` (DestinyManager.cpp:3405) <-
+  SendSingleDestinyUpdate. The entity was freed but a destiny update for it
+  still fired.
+- **Impact:** any player logging off / disconnecting during combat (or an
+  entity removed while its destiny is active) can crash the node. Recurs
+  ~once per battle under combat + disconnect load. Production-critical.
+- **Cause (suspected):** entity removal on logout/death races with / precedes
+  destiny-update processing; SendDestinyUpdate is invoked on a DestinyManager
+  whose owning SystemEntity has been freed. Ties to the thread-per-connection
+  model (disconnect on the connection thread vs destiny on the main loop).
+- **Fix direction:** stop/clear the entity's DestinyManager and dequeue its
+  pending destiny updates before freeing the SystemEntity on removal; ensure
+  no BubblecastDestiny / SendDestinyUpdate can reference a removed entity.
+  Needs careful lifetime work. Harness mitigation: graceful combat teardown
+  (stop firing + CmdStop + settle) before disconnecting.
+
 ### NETWORK-1: data race in StreamPacketizer segfaults on client disconnect — FIXED 2026-07-10
 - **Observed:** gdb-batch caught a SIGSEGV in `StreamPacketizer::PopPacket`
   (StreamPacketizer.cpp:65) — `mPackets.front()` on a queue the code had
