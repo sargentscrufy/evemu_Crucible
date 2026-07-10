@@ -47,6 +47,33 @@ services:
     # cap_add: #This is required for gdb to work
     #   - SYS_PTRACE
 
+  # Connection server: the single publicly exposed contact point.  Clients
+  # connect here; it relays to the internal game server.  Configured
+  # entirely by env so it can be pulled out of this compose and run on a
+  # separate host later (point UPSTREAM_HOST at the game server address).
+  # Dev publishes it on 26005/26006 because the debug capture proxy owns
+  # host 26000; the production compose publishes it on 26000/26001 and
+  # unpublishes the game server entirely.
+  connserver:
+    image: "evemu_connserver"
+    build: ./tools/connserver
+    container_name: connserver
+    ports:
+      - "26005:26000"   # game (public contact in production: 26000)
+      - "26006:26001"   # image server
+    environment:
+      - UPSTREAM_HOST=server
+      - MAX_CONNS=${CONN_MAX:-1500}
+      - MAX_CONNS_PER_IP=${CONN_MAX_PER_IP:-60}
+    depends_on:
+      - server
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "2"
+
   db:
     image: "mariadb:11.8"
     container_name: db

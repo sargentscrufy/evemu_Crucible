@@ -1,0 +1,86 @@
+# EVEmu Crucible private server -- PRODUCTION stack (rev 5+)
+# Deploy: docker load -i evemu_server-image.tar && docker load -i evemu_connserver-image.tar && docker compose up -d
+#
+# Architecture: the CONNECTION SERVER is the only publicly exposed
+# service; clients connect to it on 26000/26001 and it relays to the
+# internal game server, which publishes no ports at all.  To split the
+# stack later, run the connserver container on any front host with
+# UPSTREAM_HOST pointed at the game server's address -- no other change.
+services:
+  connserver:
+    image: "evemu_connserver:release"
+    container_name: connserver
+    ports:
+      - "26000:26000"   # game port -- clients connect here (client hardwires 26000)
+      - "26001:26001"   # image server (portraits)
+    environment:
+      - UPSTREAM_HOST=server
+      - MAX_CONNS=${CONN_MAX:-500}
+      - MAX_CONNS_PER_IP=${CONN_MAX_PER_IP:-30}
+    depends_on:
+      - server
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "2"
+
+  server:
+    image: "evemu_server:release"
+    container_name: server
+    volumes:
+      - ./config:/app/etc
+      - server_cache:/app/server_cache
+      - image_cache:/app/image_cache
+    # no ports: the game server is internal-only; connserver fronts it
+    depends_on:
+      db:
+        condition: service_healthy
+    links:
+      - "db"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/26000"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 300s # first boot seeds the DB and can take several minutes
+    environment:
+      - SEED_MARKET=${SEED_MARKET:-TRUE}   # market seed v2 runs during first-boot DB init only
+      - SEED_SATURATION=${SEED_SATURATION:-50}
+      - SEED_REGIONS=${SEED_REGIONS:-Derelik,The Citadel,The Forge,Essence,Lonetrek}
+      - RUN_WITH_GDB=FALSE
+    stdin_open: true
+    # tty must stay OFF: a stalled pty reader once froze the whole game
+    # loop mid-log-write (HANG-1). json-file logging is daemon-drained
+    # and size-capped.
+    tty: false
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  db:
+    image: "mariadb:11.8"
+    container_name: db
+    volumes:
+      - db:/var/lib/mysql
+    environment:
+      - MARIADB_RANDOM_ROOT_PASSWORD=true
+      - MARIADB_USER=evemu
+      - MARIADB_PASSWORD=evemu
+      - MARIADB_DATABASE=evemu
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+volumes:
+  db:            # ALL persistent world state lives here -- back it up
+  server_cache:
+  image_cache:
