@@ -203,9 +203,22 @@ def main():
     log(f"rats up: {npcs}")
 
     # --- engage ---
-    # rats warp in after spawning; locks are correctly denied while the
-    # target is warping (DeniedTargetOtherWarping), so retry for a while
+    # SPAWN-13: belt rats can scatter thousands of km from the belt warp-in;
+    # warp straight to a rat so we land in targeting range (what a player
+    # does).  try a few until one lands us in lock range.
     dogma = mch.bind("dogmaIM", (SYSTEM, SOLARSYSTEM_GROUP))
+    for npc in npcs[:3]:
+        try:
+            mch.call_bound(bey, "CmdWarpToStuff", "item", npc,
+                           byname={"minRange": 0})
+            log(f"warping to rat {npc} to close range")
+            end = time.time() + 45
+            while time.time() < end:
+                mch.pump(2.0)
+            break
+        except CallError as e:
+            log(f"warp-to-rat {npc}: {str(e)[:100]}")
+
     engaged = []
     lock_deadline = time.time() + 120
     while not engaged and time.time() < lock_deadline:
