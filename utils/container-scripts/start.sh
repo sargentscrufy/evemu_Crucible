@@ -27,8 +27,8 @@ fi
 echo "Starting eve-server..."
 cd /app/bin/
 if [ "$RUN_WITH_GDB" == "TRUE" ]; then
-    echo "=== Running EVEmu with gdb ==="
-    gdb -ex run ./eve-server
+    echo "=== Running EVEmu with gdb (batch backtrace on crash) ==="
+    gdb -batch -ex run -ex "bt full" -ex "thread apply all bt" ./eve-server
 else
     echo "=== Running EVEmu normally ==="
     ./eve-server
