@@ -80,11 +80,28 @@ def main():
         plan = trade.find_best_route_db(char, here, cargo_m3=cap,
                                         budget=budget, **knobs)
         if plan is None:
-            log(f"{args.pilot}: leg {leg_n}: no route from {here}; "
-                "cooling down 120s")
             write_metric([int(time.time()), args.pilot, leg_n, "", "", "",
                           "", "", 0, "no-route"])
-            mch.pump(120)
+            if here != home_st:
+                # dead market pocket: reposition to the home hub and rescan
+                log(f"{args.pilot}: leg {leg_n}: no route from {here}; "
+                    "returning home")
+                import travel
+                from provision import STATION_GROUP
+                sref = mch.bind("ship", (here, STATION_GROUP))
+                mch.call_bound(sref, "Undock", ship, False)
+                mch.pump(12)
+                bey = travel.bind_beyonce(mch)
+                try:
+                    mch.call_bound(bey, "CmdStop")
+                except CallError:
+                    pass
+                mch.pump(8)
+                travel.goto_station(mch, ship, home_st)
+            else:
+                log(f"{args.pilot}: leg {leg_n}: no route from home; "
+                    "cooling down 120s")
+                mch.pump(120)
             continue
         log(f"{args.pilot}: leg {leg_n}: {plan!r}")
         try:

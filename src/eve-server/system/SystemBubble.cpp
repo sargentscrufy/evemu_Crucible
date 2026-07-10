@@ -129,6 +129,8 @@ void SystemBubble::Process()
         if (m_players.empty() and (CountNPCs() > 0)) {
             if (!m_unwatchedTimer.Enabled()) {
                 m_unwatchedTimer.Start(300000);    // 5 min grace
+                _log(SPAWN__MESSAGE, "SystemBubble::Process() - belt bubble %u unwatched timer armed (%u rats).", \
+                        m_bubbleID, CountNPCs());
             } else if (m_unwatchedTimer.Check()) {
                 m_unwatchedTimer.Disable();
                 _log(SPAWN__MESSAGE, "SystemBubble::Process() - belt bubble %u unwatched with %u rats; despawning stale wave.", \
@@ -138,6 +140,8 @@ void SystemBubble::Process()
                         m_system->QueueNpcDespawn(cur.first);
             }
         } else if (m_unwatchedTimer.Enabled()) {
+            _log(SPAWN__MESSAGE, "SystemBubble::Process() - belt bubble %u unwatched timer disarmed (players: %u, rats: %u).", \
+                    m_bubbleID, (uint32)m_players.size(), CountNPCs());
             m_unwatchedTimer.Disable();
         }
     }
