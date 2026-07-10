@@ -133,3 +133,30 @@ python tools/simfleet/component_qa.py --crash-probe   # ALSO fires COMP-A/B (WIL
 
 Final safe-matrix run: 25 results — 23 PASS, 2 CRITICAL (the skipped known
 crashers, reproduced earlier the same day).
+
+---
+
+## Fix status (2026-07-10, commit 453d4437)
+
+All three actionable findings fixed and deployed:
+
+- **COMP-A FIXED** — `Prospector::CanActivate()` now rejects a null target
+  (`DeniedActivateNoTarget`) before dereferencing. Salvager/analyzer
+  activated with no target errors cleanly instead of crashing.
+- **COMP-B FIXED** — `ActiveModule::Activate()` rejects a targetless
+  activation of any offensive module, and `Missile::HitTarget()` has a
+  defensive null-target guard (missile expires). Belt-and-suspenders so a
+  launcher can never spawn a crash-on-impact missile.
+- **COMP-C FIXED** — `MachoClient.activate_module()` wraps the effect name
+  in `WStr`; `combat_loop_test.py`, `fleet_trio_test.py`, and
+  `escort_trader.py` now route gun activation through it. This resolves
+  the "rats never died in the fleet trial" mystery — the bots had been
+  firing blanks because the plain-str effect name silently matched no
+  server overload.
+- **COMP-D / COMP-E** (activating an offline module returns SUCCESS;
+  phantom post-undock "warping" state blocks module ops ~15-40s) remain
+  open as lower-severity behavioral issues; the harness works around
+  COMP-E with a 45s settle wait.
+
+Both crash fixes are one-packet client-triggered node crashes — important
+hardening for the public-facing production server regardless of the bots.
