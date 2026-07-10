@@ -27,6 +27,33 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
   commodity spreads) — tradeable via the MKT-2 NPC-corp execution path.
   Economy loop is closed: traders consume, Joe replenishes.
 
+### NETWORK-1: data race in StreamPacketizer segfaults on client disconnect — FIXED 2026-07-10
+- **Observed:** gdb-batch caught a SIGSEGV in `StreamPacketizer::PopPacket`
+  (StreamPacketizer.cpp:65) — `mPackets.front()` on a queue the code had
+  just checked non-empty — inside `TCPConnection::DoDisconnect ->
+  EVETCPConnection::ClearBuffers -> StreamPacketizer::ClearBuffers`.
+- **Cause:** `mPackets` is pushed on the connection thread (`Process`, driven
+  by socket recv) and popped on the main game-loop thread (`PopPacket` via
+  `ProcessNet`); `ClearBuffers` also runs on the connection thread at
+  disconnect. All unsynchronized — concurrent front()/pop()/push() corrupts
+  the queue. Any client disconnecting could crash the node.
+- **Fix:** a Mutex guards every mPackets access (push/pop/clear).
+- **Likely also explains:** the recurring bot "ConnectionClosed" flakiness
+  and quite possibly CRASH-1 below (that segfault fired as a fleet member
+  disconnected on dock). Watch whether CRASH-1 recurs now.
+
+### SPAWN-13: belt rats scatter 1000-5500km from spawn before they can be locked (OPEN)
+- **Observed:** with SPAWN-12, rats spawn 10km off the belt (good), but ~40s
+  later the bubble is recreated and the rats are spread 1,000-5,500km apart
+  (server BubbleTrace "Dist to center" 0..5.5M). A pilot warping to the belt
+  then can't lock them (out of ~30km targeting range). This is the current
+  blocker for combat trial T1 (first bot kill).
+- **Suspicion:** NPC AI movement / bubble reassignment after the player
+  arrives disperses the wave instead of having it approach/orbit the pilot.
+  Needs the NPC belt-rat AI (approach-and-orbit-target) investigated.
+- **Next:** trace NPCAIMgr movement after aggro; expect rats should close to
+  orbit range on the pilot, not scatter.
+
 ### CRASH-1: segfault when escort docked after multi-system fleet run (Tier 1, OPEN)
 - **Observed:** 2026-07-10 11:47.  Mira (escort, fleet member) docked at
   Jita 4-4 at the end of an escorted trade run; segfault immediately after
