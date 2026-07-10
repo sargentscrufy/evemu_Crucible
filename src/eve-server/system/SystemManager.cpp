@@ -254,6 +254,9 @@ bool SystemManager::ProcessTic() {
     // loop (scooping deletes the drone SE, so it cannot run in-loop)
     ProcessDroneScoops();
 
+    // run deferred stale-wave despawns queued by SystemBubble (SPAWN-11)
+    ProcessNpcDespawns();
+
     // tic for sov structures (as they aren't in ticEntities)
     for (auto cur : m_opStaticEntities)
         if (cur.second->IsOperSE())
@@ -1138,6 +1141,25 @@ void SystemManager::ProcessDroneScoops() {
         pClient->GetShipSE()->ScoopDrone(pDrone);
         RemoveEntity(pDrone);
         SafeDelete(pDrone);
+    }
+}
+
+void SystemManager::ProcessNpcDespawns() {
+    if (m_npcDespawns.empty())
+        return;
+    std::vector<uint32> despawns;
+    despawns.swap(m_npcDespawns);
+    for (uint32 npcID : despawns) {
+        NPC* pNPC = GetNPCSE(npcID);
+        if (pNPC == nullptr)
+            continue;
+        // drop spawn bookkeeping first so FindSpawnForBubble doesnt see
+        // ghosts of the despawned wave and suppress the next fresh spawn
+        if (pNPC->SysBubble() != nullptr)
+            m_spawnMgr->RemoveSpawn(pNPC->SysBubble()->GetID(), npcID);
+        _log(SPAWN__MESSAGE, "ProcessNpcDespawns() - despawning stale %s(%u)", pNPC->GetName(), npcID);
+        RemoveNPC(pNPC);
+        SafeDelete(pNPC);
     }
 }
 

@@ -35,6 +35,7 @@
 #include "pos/Structure.h"
 #include "ship/BeyonceService.h"
 #include "station/StationDataMgr.h"
+#include "fleet/FleetService.h"
 #include "system/BookmarkService.h"
 #include "system/Container.h"
 #include "system/DestinyManager.h"
@@ -455,8 +456,32 @@ PyResult BeyonceBound::CmdWarpToStuff(PyCallArgs &call, PyString* type, PyRep* i
     //  fleet warping
     // [warptomember] char, charid, minrange
     // [warpfleettomember] char, charid, minrange, fleet=1
-        call.client->SendErrorMsg("WarpToChar is not implemented at this time.");
-        return PyStatic.NewNone();
+        uint32 fleetID = call.client->GetFleetID();
+        if (fleetID == 0) {
+            call.client->SendErrorMsg("You are not in a fleet.");
+            return PyStatic.NewNone();
+        }
+        std::vector<Client*> members;
+        sFltSvc.GetMemeberVec(fleetID, members);
+        Client* pTarget(nullptr);
+        for (auto cur : members)
+            if (cur->GetCharacterID() == toID) {
+                pTarget = cur;
+                break;
+            }
+        if (pTarget == nullptr) {
+            call.client->SendErrorMsg("That pilot is not in your fleet.");
+            return PyStatic.NewNone();
+        }
+        if ((!pTarget->IsInSpace())
+        or  (pTarget->GetSystemID() != call.client->GetSystemID())
+        or  (pTarget->GetShipSE() == nullptr)) {
+            call.client->SendErrorMsg("Your fleet member is not in space in this system.");
+            return PyStatic.NewNone();
+        }
+        pSE = pTarget->GetShipSE();
+        _log(FLEET__MESSAGE, "WarpToMember: %s warping to %s%s", call.client->GetName(),
+             pTarget->GetName(), fleet ? " (fleet warp)" : "");
     } else {
         sLog.Error( "BeyonceService::Handle_WarpToStuff()", "Unexpected type value: '%s'.", type->content().c_str() );
         return PyStatic.NewNone();
@@ -574,8 +599,50 @@ PyResult BeyonceBound::CmdWarpToStuff(PyCallArgs &call, PyString* type, PyRep* i
     call.client->SetInvul(false);
     call.client->SetUndock(false);
 
+    int32 baseDistance(distance);  // pre-ship-radius distance, reused for fleet members
     distance += (call.client->GetShipSE()->GetRadius() * 2); // add ship diameter to distance
     pDestiny->WarpTo(warpToPoint, distance);
+
+    // FLEET-1: fleet warp.  the caller (fleet commander) warps every on-grid
+    // fleet member in this system to the same destination.
+    if (fleet) {
+        uint32 fleetID = call.client->GetFleetID();
+        if (fleetID == 0) {
+            _log(FLEET__WARNING, "CmdWarpToStuff: %s sent fleet=true but is not in a fleet.", call.client->GetName());
+        } else if (sFltSvc.GetFleetLeaderID(fleetID) != (uint32)call.client->GetCharacterID()) {
+            // squad/wing commander warp rights not implemented -- leader only
+            call.client->SendNotifyMsg("Only the fleet commander can warp the fleet.");
+        } else {
+            std::vector<Client*> members;
+            sFltSvc.GetMemeberVec(fleetID, members);
+            for (auto cur : members) {
+                if (cur == call.client)
+                    continue;
+                if ((!cur->IsInSpace()) or (cur->GetSystemID() != call.client->GetSystemID()))
+                    continue;
+                ShipSE* mShip = cur->GetShipSE();
+                if (mShip == nullptr)
+                    continue;
+                DestinyManager* mDestiny = mShip->DestinyMgr();
+                if (mDestiny == nullptr)
+                    continue;
+                if (mDestiny->IsWarping() or mDestiny->IsFrozen())
+                    continue;
+                if (mDestiny->AbortIfLoginWarping(true))
+                    continue;
+                if (cur->GetShip()->GetAttribute(AttrWarpScrambleStatus) > 0)
+                    continue;   // scrambled members are left behind
+                // small deterministic scatter so members dont land stacked on one point
+                GPoint memberPoint(warpToPoint);
+                memberPoint.x += ((cur->GetCharacterID() % 5) - 2) * 1250.0;
+                memberPoint.z += ((cur->GetCharacterID() % 7) - 3) * 1250.0;
+                cur->SetInvul(false);
+                cur->SetUndock(false);
+                mDestiny->WarpTo(memberPoint, baseDistance + (mShip->GetRadius() * 2));
+                _log(FLEET__MESSAGE, "FleetWarp: %s warped fleet %u member %s", call.client->GetName(), fleetID, cur->GetName());
+            }
+        }
+    }
 
     return PyStatic.NewNone();
 }

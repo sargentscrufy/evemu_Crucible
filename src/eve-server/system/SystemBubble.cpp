@@ -51,7 +51,8 @@ m_sbuSE(nullptr),
 m_ihubSE(nullptr),
 m_towerSE(nullptr),
 m_centerSE(nullptr),
-m_spawnTimer(0)
+m_spawnTimer(0),
+m_unwatchedTimer(0)
 {
     m_ice = false;
     m_belt = false;
@@ -116,6 +117,31 @@ void SystemBubble::Process()
      */
     if (m_belt and (m_system->GetSystemSecurityRating() > 0.90)) // make config option here to spawn rats in secure empire space?   nope.
         return;
+
+    // SPAWN-11: stale unwatched waves.  a wave left alive when its player
+    // leaves parks in the belt forever: CountNPCs()>0 suppresses both the
+    // SPAWN-9 self-heal and ResetBubbleRatSpawn, so the next visitor finds
+    // a stale scattered wave instead of a fresh spawn.  despawn the rats
+    // once the belt has been unwatched for a grace period; the next
+    // visitor then arms a clean spawn cycle.  belts only -- gate guards
+    // are static and cheap to keep.
+    if (m_belt) {
+        if (m_players.empty() and (CountNPCs() > 0)) {
+            if (!m_unwatchedTimer.Enabled()) {
+                m_unwatchedTimer.Start(300000);    // 5 min grace
+            } else if (m_unwatchedTimer.Check()) {
+                m_unwatchedTimer.Disable();
+                _log(SPAWN__MESSAGE, "SystemBubble::Process() - belt bubble %u unwatched with %u rats; despawning stale wave.", \
+                        m_bubbleID, CountNPCs());
+                for (auto cur : m_dynamicEntities)
+                    if (cur.second->IsNPCSE())
+                        m_system->QueueNpcDespawn(cur.first);
+            }
+        } else if (m_unwatchedTimer.Enabled()) {
+            m_unwatchedTimer.Disable();
+        }
+    }
+
     if (m_spawned) {
         m_spawnTimer.Disable();
         return;

@@ -208,6 +208,7 @@ private:
 
     // for spawn system     -allan 15July15
     Timer m_spawnTimer;
+    Timer m_unwatchedTimer;     // SPAWN-11: despawn stale waves in unwatched belts
     bool m_ice :1;
     bool m_belt :1;
     bool m_gate :1;

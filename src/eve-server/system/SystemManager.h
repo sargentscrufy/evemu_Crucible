@@ -126,6 +126,9 @@ public:
     // its home ship; Process() runs it after the tic loop, since scooping
     // deletes the drone SE and cannot happen inside its own Process()
     void QueueDroneScoop(uint32 droneID)                { m_droneScoops.push_back(droneID); }
+    // SPAWN-11: SystemBubble queues stale-wave rats for despawn; Process()
+    // runs it after the tic loop, since despawning deletes the NPC SE
+    void QueueNpcDespawn(uint32 npcID)                  { m_npcDespawns.push_back(npcID); }
     void AddClient(Client* pClient, bool count=false, bool jump=false);
     void AddMarker(SystemEntity* pSE, bool sendBall=false, bool addSignal=false);    // rather specific here.
     void RemoveClient(Client* pClient, bool count=false, bool jump=false);
@@ -228,6 +231,10 @@ private:
     // deferred drone-bay scoops; processed after the entity tic loop
     std::vector<uint32> m_droneScoops;
     void ProcessDroneScoops();
+
+    // deferred stale-wave despawns (SPAWN-11); processed after the tic loop
+    std::vector<uint32> m_npcDespawns;
+    void ProcessNpcDespawns();
 
     // system entity lists:
     bool m_entityChanged :1;

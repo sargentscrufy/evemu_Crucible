@@ -2170,17 +2170,22 @@ void DestinyManager::WarpTo(const GPoint& where, int32 distance/*0*/, bool autoP
          *  Energy to warp = warpCapacitorNeed * mass * au * (1 - warp_drive_operation_skill_level * 0.10)
          */
         float currentShipCap = pClient->GetShip()->GetAttribute(AttrCapacitorCharge).get_float();
-        float capNeeded = m_mass * m_warpCapacitorNeed * (static_cast<double>(m_targetDistance) / static_cast<double>(ONE_AU_IN_METERS));
-        capNeeded *= (1.0f - (0.1f *pClient->GetChar()->GetSkillLevel(EvESkill::WarpDriveOperation)));
+        float skillFactor = (1.0f - (0.1f *pClient->GetChar()->GetSkillLevel(EvESkill::WarpDriveOperation)));
+        float capPerAU = m_mass * m_warpCapacitorNeed * skillFactor;
+        float capNeeded = capPerAU * (static_cast<double>(m_targetDistance) / static_cast<double>(ONE_AU_IN_METERS));
 
         _log(DESTINY__WARNING, "Warp Cap need for %s(%u) is %.4f", mySE->GetName(), mySE->GetID(), capNeeded);
 
         //  check if ship has enough capacitor to warp full distance
         if (capNeeded > currentShipCap) {
-            // not enough cap.  reset everything based on available cap
-            capNeeded = (currentShipCap /m_warpCapacitorNeed) /m_mass;
-            if (capNeeded > 1) {
-                m_targetDistance = static_cast<double>(capNeeded) * static_cast<double>(ONE_AU_IN_METERS);
+            // not enough cap.  clip warp distance to what the available cap can push
+            // CAP-1: this branch used to compute the achievable distance in AU and
+            // then store that AU count as the ship's remaining capacitor charge,
+            // leaving every cap-clipped ship with ~0 GJ forever (and it ignored the
+            // Warp Drive Operation discount).
+            float achievableAU = currentShipCap / capPerAU;
+            if (achievableAU > 1) {
+                m_targetDistance = static_cast<double>(achievableAU) * static_cast<double>(ONE_AU_IN_METERS);
                 GVector warp_direction(m_position, where);
                 GPoint newTarget(m_position + (warp_direction * m_targetDistance));
 
@@ -2199,11 +2204,13 @@ void DestinyManager::WarpTo(const GPoint& where, int32 distance/*0*/, bool autoP
                 SafeDelete(m_warpState);
                 return;
             }
+            // clipped warp consumes everything we have
+            m_capNeeded = 0;
         } else {
-            capNeeded = currentShipCap - capNeeded;
+            // m_capNeeded holds the cap REMAINING after the drive fires (written
+            // to AttrCapacitorCharge at warp init)
+            m_capNeeded = currentShipCap - capNeeded;
         }
-
-        m_capNeeded = capNeeded;
     }
 
     /*  TODO PUT CHECK HERE FOR WARP BUBBLES
@@ -2476,7 +2483,19 @@ PyResult DestinyManager::AttemptDockOperation() {
 
     // Verify range to station is within docking perimeter of 2500 meters:
     _log(DESTINY__TRACE, "Destiny::AttemptDockOperation() rangeToStationPerimiter is %.2fm", rangeToStationPerimiter);
-    if (rangeToStationPerimiter > 2500.0) {
+    if (rangeToStationPerimiter > static_cast<double>(minWarpDistance)) {
+        // DESTINY-4: too far to slow-boat (a cap-clipped warp can leave a ship
+        // AU short of the station).  warp to the dock perimeter instead of
+        // aligning -- mimics autopilot; caller re-requests dock on arrival.
+        GPoint warpToPoint(stationPos);
+        warpToPoint.y = stDataMgr.GetDockPosY(stationID);
+        GVector toDock(m_position, warpToPoint);
+        toDock.normalize();
+        warpToPoint -= (toDock * station->GetRadius());
+        WarpTo(warpToPoint, mySE->GetRadius() * 2);
+        if (mySE->HasPilot() and mySE->GetPilot()->CanThrow())
+            throw UserError ("DockingApproach");
+    } else if (rangeToStationPerimiter > 2500.0) {
         AlignTo( station );   // Turn ship and move toward docking point - client will usually call Dock() automatically...sometimes
         if (mySE->HasPilot() and mySE->GetPilot()->CanThrow())
             throw UserError ("DockingApproach");
