@@ -236,8 +236,13 @@ PyResult FleetBound::Invite(PyCallArgs &call, PyInt* characterID, std::optional<
     call.Dump(FLEET__DUMP);
 
     Client* pClient = sEntityList.FindClientByCharID(characterID->value());
-    if (pClient == nullptr)
+    if (pClient == nullptr) {
+        // silently dropping the invite made fleet formation racy for anyone
+        // inviting a pilot mid-login -- tell the inviter and log it
+        _log(FLEET__WARNING, "Invite: char %i not in world; invite dropped.", characterID->value());
+        call.client->SendNotifyMsg("That pilot is not online.");
         return PyStatic.NewNone();
+    }
     if (pClient->GetChar()->fleetID()) {
         call.client->SendNotifyMsg("%s is already in a fleet.  Denying Fleet Invite issue.", pClient->GetChar()->name());
         return PyStatic.NewNone();

@@ -25,9 +25,10 @@ BELT = 40168291
 PILOTS = [
     ("fleet06", "fleet", 90000006, 140000891, "Mira(FC)"),
     ("fleet04", "fleet", 90000004, 140000843, "Keva"),
+    ("fleet05", "fleet", 90000005, 140000866, "Jorn"),
 ]
-fleet_q = queue.Queue()
-barrier = threading.Barrier(2, timeout=420)
+fleet_q = {p[2]: queue.Queue() for p in PILOTS[1:]}   # per-member release
+barrier = threading.Barrier(len(PILOTS), timeout=420)
 
 
 def pump_for(mch, s):
@@ -43,22 +44,28 @@ def pilot(user, pw, char, ship, tag, lead):
         if not ensure_docked(mch, STATION, SYSTEM, ship):
             log(f"{tag}: FAIL cannot dock")
             return
+        # everyone must be in world before ANY invite goes out: the server
+        # silently drops invites to chars that are not logged in yet
+        barrier.wait()
         if lead:
             rsp = mch.call("fleetObjectHandler", "CreateFleet")
             import re
             ids = [int(x) for x in re.findall(r"\b(\d{8,})\b", repr(rsp))]
             fleet_id = ids[0]
             fref = mch.bind("fleetObjectHandler", fleet_id)
-            fleet_q.put(fleet_id)
-            pump_for(mch, 4)
-            mch.call_bound(fref, "Invite", PILOTS[1][2], None, None, None)
-            log(f"{tag}: fleet {fleet_id}, invited Keva")
-            pump_for(mch, 8)
+            pump_for(mch, 3)
+            for _, _, mchar, _, mtag in PILOTS[1:]:
+                mch.call_bound(fref, "Invite", mchar, None, None, None)
+                log(f"{tag}: fleet {fleet_id}, invited {mtag}")
+                fleet_q[mchar].put(fleet_id)   # release member only after their invite exists
+                pump_for(mch, 3)
+            pump_for(mch, 12)   # let accepts land
         else:
-            fleet_id = fleet_q.get(timeout=90)
-            pump_for(mch, 8)
+            fleet_id = fleet_q[char].get(timeout=120)
+            pump_for(mch, 3)
             fref = mch.bind("fleetObjectHandler", fleet_id)
             mch.call_bound(fref, "AcceptInvite", None)
+            pump_for(mch, 5)
             log(f"{tag}: joined fleet {fleet_id}")
         log(f"{tag}: session fleetid={mch.session.get('fleetid')} "
             f"fleetrole={mch.session.get('fleetrole')}")

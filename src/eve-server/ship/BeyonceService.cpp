@@ -608,30 +608,42 @@ PyResult BeyonceBound::CmdWarpToStuff(PyCallArgs &call, PyString* type, PyRep* i
     if (fleet) {
         uint32 fleetID = call.client->GetFleetID();
         if (fleetID == 0) {
-            _log(FLEET__WARNING, "CmdWarpToStuff: %s sent fleet=true but is not in a fleet.", call.client->GetName());
+            _log(FLEET__WARNING, "FleetWarp: %s sent fleet=true but is not in a fleet.", call.client->GetName());
         } else if (sFltSvc.GetFleetLeaderID(fleetID) != (uint32)call.client->GetCharacterID()) {
             // squad/wing commander warp rights not implemented -- leader only
+            _log(FLEET__WARNING, "FleetWarp: %s(%u) is not leader (%u) of fleet %u; ignoring fleet flag.",
+                 call.client->GetName(), call.client->GetCharacterID(), sFltSvc.GetFleetLeaderID(fleetID), fleetID);
             call.client->SendNotifyMsg("Only the fleet commander can warp the fleet.");
         } else {
             std::vector<Client*> members;
             sFltSvc.GetMemeberVec(fleetID, members);
+            _log(FLEET__MESSAGE, "FleetWarp: %s warping fleet %u (%u members inc. leader)",
+                 call.client->GetName(), fleetID, (uint32)members.size());
             for (auto cur : members) {
                 if (cur == call.client)
                     continue;
-                if ((!cur->IsInSpace()) or (cur->GetSystemID() != call.client->GetSystemID()))
+                if ((!cur->IsInSpace()) or (cur->GetSystemID() != call.client->GetSystemID())) {
+                    _log(FLEET__MESSAGE, "FleetWarp: skip %s (not in space here)", cur->GetName());
                     continue;
+                }
                 ShipSE* mShip = cur->GetShipSE();
                 if (mShip == nullptr)
                     continue;
                 DestinyManager* mDestiny = mShip->DestinyMgr();
                 if (mDestiny == nullptr)
                     continue;
-                if (mDestiny->IsWarping() or mDestiny->IsFrozen())
+                if (mDestiny->IsWarping() or mDestiny->IsFrozen()) {
+                    _log(FLEET__MESSAGE, "FleetWarp: skip %s (warping/frozen)", cur->GetName());
                     continue;
-                if (mDestiny->AbortIfLoginWarping(true))
+                }
+                if (mDestiny->AbortIfLoginWarping(true)) {
+                    _log(FLEET__MESSAGE, "FleetWarp: skip %s (login warp)", cur->GetName());
                     continue;
-                if (cur->GetShip()->GetAttribute(AttrWarpScrambleStatus) > 0)
+                }
+                if (cur->GetShip()->GetAttribute(AttrWarpScrambleStatus) > 0) {
+                    _log(FLEET__MESSAGE, "FleetWarp: skip %s (scrambled)", cur->GetName());
                     continue;   // scrambled members are left behind
+                }
                 // small deterministic scatter so members dont land stacked on one point
                 GPoint memberPoint(warpToPoint);
                 memberPoint.x += ((cur->GetCharacterID() % 5) - 2) * 1250.0;
