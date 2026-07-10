@@ -163,7 +163,7 @@ def pilot_thread(user, pw, char, ship, tag, is_leader):
                 if locked:
                     for g in guns:
                         try:
-                            mch.call_bound(dogma, "Activate", g, "targetAttack", locked, 1000)
+                            mch.activate_module(dogma, g, "targetAttack", locked, 1000)
                         except CallError as e:
                             finding(f"{tag} gun {g} activate failed: {str(e)[:150]}")
                     log(f"{tag}: engaging {locked} with {len(guns)} guns")

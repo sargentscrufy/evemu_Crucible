@@ -382,6 +382,14 @@ void ActiveModule::Activate(uint16 effectID, uint32 targetID/*0*/, int16 repeat/
             m_targetSE->TargetMgr()->AddTargetModule(this);
     }
 
+    // COMP-B: an offensive module (missile launcher, turret) activated with
+    // no resolvable target must not proceed -- launchers otherwise spawn a
+    // targetless missile that crashes on impact.
+    if ((m_targetSE == nullptr) and sFxDataMgr.isOffensive(effectID)) {
+        Clear();
+        throw UserError ("DeniedActivateNoTarget");
+    }
+
     m_repeat = repeat;
     m_effectID = effectID;
 

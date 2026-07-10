@@ -73,6 +73,11 @@ void Prospector::Activate(uint16 effectID, uint32 targetID, int16 repeat)
 
 bool Prospector::CanActivate()
 {
+    // COMP-A: salvager/analyzer activated with no target null-derefs here
+    // and segfaults the node (one packet from any client).  a targetless
+    // activation is simply disallowed.
+    if (m_targetSE == nullptr)
+        throw UserError ("DeniedActivateNoTarget");
     if (m_salvager)
         if (m_targetSE->IsWreckSE())
             return ActiveModule::CanActivate();

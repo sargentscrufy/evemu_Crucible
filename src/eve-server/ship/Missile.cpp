@@ -233,6 +233,14 @@ void Missile::MakeDamageState(DoDestinyDamageState &into) {
 }
 
 void Missile::HitTarget() {
+    // COMP-B: a launcher fired with no locked target spawns a missile with
+    // a null target; without this guard HitTarget null-derefs and segfaults
+    // the node.  no target -> the missile simply expires.
+    if (m_targetSE == nullptr) {
+        m_alive = false;
+        return;
+    }
+
     // Create Damage object:
     Damage d(m_fromSE, m_modRef, m_self, EVEEffectID::missileLaunching);
 

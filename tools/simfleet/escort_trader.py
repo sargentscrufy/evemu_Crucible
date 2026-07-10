@@ -164,8 +164,8 @@ def escort_thread():
                     mch.call_bound(dogma, "AddTarget", npc)
                     for g in guns:
                         try:
-                            mch.call_bound(dogma, "Activate", g,
-                                           "targetAttack", npc, 1000)
+                            mch.activate_module(dogma, g, "targetAttack",
+                                                npc, 1000)
                         except CallError:
                             pass
                     engaged.add(npc)

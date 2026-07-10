@@ -223,7 +223,7 @@ def main():
     current = engaged[0] if engaged else None
     if current:
         try:
-            mch.call_bound(dogma, "Activate", gun, "targetAttack", current, 1000)
+            mch.activate_module(dogma, gun, "targetAttack", current, 1000)
             log(f"gun {gun} firing on {current}")
         except CallError as e:
             bug(f"gun activation rejected: {e}")
@@ -241,7 +241,7 @@ def main():
             try:
                 mch.call_bound(bey, "CmdFollowBall", current, 1000)
                 mch.call_bound(dogma, "AddTarget", current)
-                mch.call_bound(dogma, "Activate", gun, "targetAttack", current, 1000)
+                mch.activate_module(dogma, gun, "targetAttack", current, 1000)
                 log(f"next target: {current}")
             except CallError as e:
                 bug(f"re-engage {current} failed: {e}")

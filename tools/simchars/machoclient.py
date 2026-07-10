@@ -64,6 +64,19 @@ class MachoClient:
         return self._call(dest, (1,), method, args, byname, timeout,
                           f"{ref}.{method}", bound_ref=ref)
 
+    def activate_module(self, dogma_ref, module_id, effect_name,
+                        target_id=None, repeat=1000):
+        """dogmaIM.Activate with the effect NAME sent as a WStr.
+
+        COMP-C: the server's Activate dispatch only matches a WString for
+        the effect name; a plain Python str silently matches no overload,
+        the server logs an error, and the call still returns SUCCESS -- so
+        the module never fires (this made combat bots shoot blanks).  Always
+        route module activation through here.
+        """
+        return self.call_bound(dogma_ref, "Activate", int(module_id),
+                               WStr(effect_name), target_id, int(repeat))
+
     def _call(self, dest, kind, method, args, byname, timeout, label,
               bound_ref=None):
         self.call_id += 1
