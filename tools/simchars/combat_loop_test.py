@@ -245,10 +245,35 @@ def main():
             log(f"online gun {g}: {e}")
     mch.pump(4.0)
 
+    # load ammo if the guns take charges (real turrets); civilian guns are
+    # ammoless.  find a charge stack in cargo and load every gun.
+    charge = db.query(
+        f"SELECT itemID, typeID FROM entity WHERE locationID = {ship} "
+        f"AND flag = 5 AND typeID IN "
+        f"(SELECT typeID FROM invTypes WHERE groupID IN (83,85,86,87)) LIMIT 1")
+    if charge:
+        cid, ctype = int(charge[0]["itemID"]), int(charge[0]["typeID"])
+        try:
+            mch.call_bound(dogma, "LoadAmmoToModules", ship, all_guns,
+                           ctype, cid, ship)
+            mch.pump(3.0)
+            log(f"loaded charge type {ctype} into {len(all_guns)} guns")
+        except CallError as e:
+            log(f"ammo load: {e}")
+
     kills_before = dead_npcs()
-    fight_end = time.time() + 300
+    fight_end = time.time() + 420
     current = engaged[0] if engaged else None
     if current:
+        # close to weapon range: civilian rails optimal ~1.4km, so orbit
+        # tight (500m) and give it time to close before/while firing --
+        # shots from 6km+ mostly miss (range falloff), which is why long
+        # fights scored zero kills despite the damage pipeline working.
+        try:
+            mch.call_bound(bey, "CmdOrbit", current, 500)
+            log(f"orbiting {current} at 500m to close weapon range")
+        except CallError as e:
+            log(f"CmdOrbit {current}: {e}")
         fired = 0
         for g in all_guns:
             try:
