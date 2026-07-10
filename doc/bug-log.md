@@ -5,6 +5,17 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 
 ## Open
 
+### SPAWN-11: stale unwatched belt waves — FIXED 2026-07-10, verified live
+- **Fix:** belts arm a 5-minute unwatched timer when they hold rats and no
+  players; on expiry the wave is despawned (deferred via
+  SystemManager::QueueNpcDespawn, spawn bookkeeping dropped first) so the
+  next visitor gets a fresh spawn cycle.
+- **Verified:** live probe — wave of 4 spawned, pilot retreated, timer
+  armed 12:04:57, rats WANDERED to a neighboring bubble (timer correctly
+  re-armed there 12:09:27), all 4 despawned 12:14:29.  Note: roaming
+  between bubbles resets the grace period, so cleanup can be delayed by
+  wander frequency but not defeated.
+
 ### CRASH-1: segfault when escort docked after multi-system fleet run (Tier 1, OPEN)
 - **Observed:** 2026-07-10 11:47.  Mira (escort, fleet member) docked at
   Jita 4-4 at the end of an escorted trade run; segfault immediately after
