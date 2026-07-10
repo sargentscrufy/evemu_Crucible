@@ -16,6 +16,17 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
   between bubbles resets the grace period, so cleanup can be delayed by
   wander frequency but not defeated.
 
+### MKT-3: Trader Joe never placed an order — FIXED 2026-07-10, verified live
+- **Observed:** the replenishment bot's GetEligibleSystems() pulled raw
+  random systems (mostly wormholes / station-less), so every 15-min cycle
+  no-opped: zero orders ever placed while bot traders drained the seeded
+  spreads dry.
+- **Fix:** reroll random picks until 5 station systems are collected.
+- **Verified:** first post-fix cycle placed 13 buy + 13 sell orders across
+  5 systems, owned by NPC corp 1000125 (large volumes, fresh Tritanium and
+  commodity spreads) — tradeable via the MKT-2 NPC-corp execution path.
+  Economy loop is closed: traders consume, Joe replenishes.
+
 ### CRASH-1: segfault when escort docked after multi-system fleet run (Tier 1, OPEN)
 - **Observed:** 2026-07-10 11:47.  Mira (escort, fleet member) docked at
   Jita 4-4 at the end of an escorted trade run; segfault immediately after
