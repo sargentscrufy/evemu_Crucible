@@ -138,6 +138,11 @@ void SystemBubble::Process()
                 for (auto cur : m_dynamicEntities)
                     if (cur.second->IsNPCSE())
                         m_system->QueueNpcDespawn(cur.first);
+                // SPAWN-11b: clear the spawned flag so the belt re-arms for
+                // the next visitor.  without this the early-return below
+                // (if m_spawned) leaves the belt permanently "spawned" with
+                // zero rats and it never spawns again.
+                m_spawned = false;
             }
         } else if (m_unwatchedTimer.Enabled()) {
             _log(SPAWN__MESSAGE, "SystemBubble::Process() - belt bubble %u unwatched timer disarmed (players: %u, rats: %u).", \
