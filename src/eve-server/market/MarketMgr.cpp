@@ -321,6 +321,13 @@ bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef
         isTraderJoe = true;
     } else if (IsTrader(oInfo.ownerID)) {
         isTrader = true;
+    } else if (IsNPCCorp(oInfo.ownerID)) {
+        // MKT-2: seeded market buy orders are owned by NPC corporations.
+        // treat them as NPC traders -- the sold item sinks into the NPC
+        // economy and the seller is paid directly (npc-buyer path below).
+        // without this branch every sell to the seeded economy failed
+        // classification and the match loop spun 1000 times.
+        isTrader = true;
     } else {
         // none of above conditionals hit....
         _log(MARKET__WARNING, "ExecuteBuyOrder - ownerID %u not corp, not char, not system, not joe.", oInfo.ownerID);

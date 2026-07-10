@@ -356,6 +356,14 @@ PyResult MarketProxyService::PlaceCharOrder(PyCallArgs &call, PyInt* stationID, 
             PyTuple* located = args.located->AsTuple();
         }*/
 
+        // MKT-1: a sell order without an itemID used to dereference an empty
+        // optional and abort the whole server (std::bad_optional_access)
+        if ((!itemID.has_value()) or (itemID.value()->value() == 0)) {
+            _log(MARKET__ERROR, "PlaceCharOrder - sell order from %s with no itemID.", call.client->GetName());
+            call.client->SendErrorMsg("You must specify which item to sell.");
+            return nullptr;
+        }
+
         //verify that they actually have the item in the quantity specified...
         InventoryItemRef iRef = sItemFactory.GetItemRef(itemID.value ()->value());
         if (iRef.get() == nullptr) {

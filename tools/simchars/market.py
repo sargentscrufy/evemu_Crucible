@@ -351,17 +351,20 @@ def buy_immediate(mch, station_id, type_id, price, qty):
                     1, 0, None, 1, 0, False, None)
 
 
-def sell_immediate(mch, station_id, type_id, price, qty):
-    """Instant fill against standing buy orders at this station."""
+def sell_immediate(mch, station_id, type_id, price, qty, item_id):
+    """Instant fill against standing buy orders at this station.
+    item_id is the hangar stack being sold -- REQUIRED for sells
+    (MKT-1: served an abort() before the server guarded it)."""
     return mch.call("marketProxy", "PlaceCharOrder",
                     int(station_id), int(type_id), float(price), int(qty),
-                    0, 0, None, 1, 0, False, None)
+                    0, 0, int(item_id), 1, 0, False, None)
 
 
-def place_sell_order(mch, station_id, type_id, price, qty, duration=14):
+def place_sell_order(mch, station_id, type_id, price, qty, item_id,
+                     duration=14):
     return mch.call("marketProxy", "PlaceCharOrder",
                     int(station_id), int(type_id), float(price), int(qty),
-                    0, 0, None, 1, int(duration), False, None)
+                    0, 0, int(item_id), 1, int(duration), False, None)
 
 
 def place_buy_order(mch, station_id, type_id, price, qty,

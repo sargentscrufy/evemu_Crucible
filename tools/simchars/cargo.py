@@ -16,7 +16,7 @@ from machoclient import CallError, find_bound_refs, log
 
 FLAG_HANGAR = 4
 FLAG_CARGO = 5
-CONTAINER_HANGAR = 4
+CONTAINER_HANGAR = 10004    # Inv::Container::Hangar (InvBrokerService.cpp)
 
 
 def station_invbroker(mch, station_id):
