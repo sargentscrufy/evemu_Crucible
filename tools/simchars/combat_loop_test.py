@@ -44,19 +44,33 @@ def server_log_since(seconds):
         return ""
 
 
-def wait_for_spawn(deadline):
-    """Poll server logs for the belt spawn; return list of NPC itemIDs."""
-    seen = set()
+def live_npcs_in_system(system_id):
+    """NPC itemIDs currently alive in a system (DB ground truth).  NPC
+    entities live in the 750000000+ range; belt rats are dynamic entities
+    parented to the solar system."""
+    rows = db.query(
+        f"SELECT itemID FROM entity WHERE itemID >= 750000000"
+        f" AND locationID = {int(system_id)}")
+    return sorted(int(r["itemID"]) for r in rows)
+
+
+def wait_for_spawn(deadline, system_id=None):
+    """Return NPC itemIDs to engage.  Prefer any rats already alive in the
+    system (spawn timing/wander made fresh-spawn-log polling flaky); fall
+    back to watching the spawn log for a new wave."""
     spawn_re = re.compile(r"Spawning NPC type \d+ \((\d+)\)")
+    seen = set()
     while time.time() < deadline:
+        if system_id is not None:
+            live = live_npcs_in_system(system_id)
+            if live:
+                return live
         txt = server_log_since(90)
         for m in spawn_re.finditer(txt):
             seen.add(int(m.group(1)))
         if seen and "MakeSpawn" not in txt[-2000:]:
-            # give the spawn wave a moment to finish, then go
             time.sleep(5)
-            txt = server_log_since(30)
-            for m in spawn_re.finditer(txt):
+            for m in spawn_re.finditer(server_log_since(30)):
                 seen.add(int(m.group(1)))
             return sorted(seen)
         time.sleep(10)
@@ -172,10 +186,10 @@ def main():
     # (position in entity table is only updated on save; skip hard check)
 
     # --- wait out the spawn timer ---
-    log("loitering for rat spawn (up to 330s)")
-    npcs = wait_for_spawn(time.time() + 330)
+    log("loitering for rat spawn (up to 600s)")
+    npcs = wait_for_spawn(time.time() + 600, SYSTEM)
     if not npcs:
-        bug("no rat spawn within 330s of belt arrival")
+        bug("no rat spawn within 600s of belt arrival")
         mch.call_bound(bey, "CmdWarpToStuff", "item", STATION,
                        byname={"minRange": 0})
         end = time.time() + 100
