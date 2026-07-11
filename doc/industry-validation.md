@@ -15,6 +15,31 @@ the combat validation approach. Harnesses live in `tools/simfleet/`.
 | **TE research** | `research_test.py` | **PASS** | BPO pLevel 0 → 2 |
 | **Blueprint copy** | `research_test.py` | **PASS** | 1 BPC (copy=1) produced with N runs |
 | **Invention** | — | **NOT IMPLEMENTED** | `CompleteJob` activity 8 is a comment stub |
+| **PI: bind + command center** | `pi_colony_test.py` | **PASS** | planetMgr bind boots the planet system; CC deployed to a lava planet (piCCPin row), 90k ISK charged, no crash |
+| **PI: extractor + program** | — | **BLOCKED (PI-2 crash)** | upgrade-CC + add-ECU + install-program batch crashes the node |
+
+## PI (Planetary Interaction)
+
+Enabled and data-loaded (40 planet data groups, 69 schematics). Validated so
+far: the `planetMgr` bound service boots a planet's system and
+`UserUpdateNetwork([(CreatePin,(pinID,typeID,lat,long))])` deploys a command
+center (colony row in `piCCPin`, customs office created, 90k ISK charged).
+
+- **Protocol note:** each command element must be a **PyTuple**
+  `(command, command_data)` with a tuple `command_data`; a list-shaped command
+  is rejected (after PI-1) or, before the fix, crashed the node.
+- **PI-1 (FIXED):** `PlanetMgr::UpdateNetwork` called `AsTuple()` on each
+  command with no type check — a malformed command tripped an assert and
+  SIGABRT'd the whole node. Now guarded with `IsTuple()`.
+- **PI-2 (OPEN):** the extractor path — upgrade command center + add an
+  Extractor Control Unit (standard pin) + install an extractor program — still
+  crashes the node (likely a null `ccPin`/pins-map deref in
+  `Colony::CreatePin`/`UpgradeCommandCenter`). Needs gdb tracing; the full
+  extract → route → cycle → launch loop depends on it.
+
+Lava planet raw resources (for extractor programs): Base Metals (2267), Heavy
+Metals (2272), Non-CS Crystals (2306), Felsic Magma (2307), Suspended Plasma
+(2308). Station 60000988-style research aside, PI has no per-station gating.
 
 ## What works (server paths confirmed live)
 
