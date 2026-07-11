@@ -5,6 +5,43 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 
 ## Open
 
+### Session 2026-07-11 — combat campaign, weapons, industry, PI, hardening, sound
+
+Fixed + validated this session (details in the commits / linked docs):
+- **DESTINY-7** (mid-combat disconnect UAF, was Tier-1 OPEN below) — **FIXED**:
+  `~Client()` now `RemoveEntity(pShipSE)` before free; 9-round hard-disconnect
+  soak clean (restarts=0). See combat campaign commit.
+- **Tackle** (warp scrambler/disruptor) — **FIXED + VALIDATED**: sets/clears
+  target `AttrWarpScrambleStatus`, per-module idempotency guard; scrammed
+  target gets `WarpScrambled`, release restores warp.
+- **NPC-EWAR** (rats scram players) — **FIXED** (deployed).
+- **SPAWN-13** (belt-rat scatter, OPEN below) — **FIXED**: `RoamSpawns` skips
+  a belt as roam source if a pilot is within 200 km.
+- **SMARTBOMB-1** — smart bombs were a no-op (empty AoE case); now damage all
+  ships in EMP field range each cycle + exempt from the COMP-B target guard.
+  Live PASS (dropped a nearby ship's shield).
+- **PI-1** (Tier: node crash) — **FIXED**: `PlanetMgr::UpdateNetwork` asserted
+  and SIGABRT'd on a non-tuple command; now `IsTuple()`-guarded. Malformed-input
+  probe confirms InstallJob/CompleteJob/Reprocess/GetQuotes also reject cleanly.
+- **MUSIC-1** — **RECLASSIFIED (not a server bug)**: combat music is a
+  client-side heuristic keyed off weapon-FX/targeting/damage signals that are
+  all sent. See doc/sound-cues-investigation.md.
+
+Industry validated live (doc/industry-validation.md): reprocessing,
+manufacturing (+consumption), ME/TE research, blueprint copy, PI command-center
+deploy. Weapon audit (doc/weapon-implementation-audit.md): all turrets/missiles/
+tractor implemented.
+
+Still OPEN from this session:
+- **PI-2:** the PI extractor batch (upgrade CC + add ECU + install program)
+  SIGSEGVs the node — blocks the full colony extract→route→cycle→launch loop.
+- **HARDEN-2:** reproducible SIGSEGV in `ShipBound::Undock(PyInt*,PyBool*)`
+  surfaced by the malformed-input probe under repeated re-stage/reconnect.
+- **SPAWN-14:** belt spawn never arms when a pilot lands in a non-belt
+  sub-bubble — blocks the belt-ratting loop and live-validation of SPAWN-13 /
+  NPC-EWAR.
+- **Invention** (blueprint activity 8) unimplemented server-side.
+
 ### SPAWN-11: stale unwatched belt waves — FIXED 2026-07-10, verified live
 - **Fix:** belts arm a 5-minute unwatched timer when they hold rats and no
   players; on expiry the wave is despawned (deferred via
@@ -27,7 +64,7 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
   commodity spreads) — tradeable via the MKT-2 NPC-corp execution path.
   Economy loop is closed: traders consume, Joe replenishes.
 
-### DESTINY-7: use-after-free crash when a client disconnects mid-combat (Tier 1, OPEN)
+### DESTINY-7: use-after-free crash when a client disconnects mid-combat — FIXED 2026-07-11 (see session summary above)
 - **Observed:** 2026-07-10, during bot-vs-bot tank battles. As the defender
   bot disconnected while under fire (destiny updates in flight), the server
   segfaulted. gdb backtrace: SIGSEGV in `SystemEntity::SystemMgr`
@@ -63,7 +100,7 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
   and quite possibly CRASH-1 below (that segfault fired as a fleet member
   disconnected on dock). Watch whether CRASH-1 recurs now.
 
-### SPAWN-13: belt rats scatter 1000-5500km from spawn before they can be locked (OPEN)
+### SPAWN-13: belt rats scatter 1000-5500km from spawn before they can be locked — FIXED 2026-07-11 (RoamSpawns pilot keep-out; see session summary above)
 - **Observed:** with SPAWN-12, rats spawn 10km off the belt (good), but ~40s
   later the bubble is recreated and the rats are spread 1,000-5,500km apart
   (server BubbleTrace "Dist to center" 0..5.5M). A pilot warping to the belt
