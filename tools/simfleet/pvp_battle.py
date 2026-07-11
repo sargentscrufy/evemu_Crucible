@@ -79,10 +79,33 @@ def defender_thread(fit_name, ship_id, ready, stop):
         mch.call_bound(sref, "Undock", ship_id, False)
         mch.pump(12)
         bey = mch.bind("beyonce", (SYSTEM, SOLARSYSTEM_GROUP))
+        dogma = mch.bind("dogmaIM", (SYSTEM, SOLARSYSTEM_GROUP))
         try:
             mch.call_bound(bey, "CmdStop")
         except CallError:
             pass
+
+        # bring the tank online: passive tank bonuses (extender HP, resist,
+        # plate HP) only apply while the module is ONLINE, and modules
+        # de-online on undock -- so online every fitted mid/low module, then
+        # activate the active tanks (booster/repper/damage-control).
+        mods = db.query(
+            f"SELECT itemID, typeID FROM entity WHERE locationID={ship_id} "
+            f"AND flag BETWEEN 11 AND 26")
+        for m in mods:
+            try:
+                mch.call_bound(dogma, "SetModuleOnline", ship_id, int(m["itemID"]))
+            except CallError:
+                pass
+        mch.pump(4)
+        ACTIVE = {399: "shieldBoosting", 523: "armorRepair", 2046: "damageControl"}
+        for m in mods:
+            eff = ACTIVE.get(int(m["typeID"]))
+            if eff:
+                try:
+                    mch.activate_module(dogma, int(m["itemID"]), eff, None, 1000)
+                except CallError:
+                    pass
         ready.set()
         # sit and take it
         while not stop.is_set():
@@ -99,16 +122,20 @@ def defender_thread(fit_name, ship_id, ready, stop):
         ready.set()
 
 
-def run_battle(fit_name, window=90.0):
+def run_battle(fit_name, window=90.0, heavy=False):
     fit = fittings.DEFENDER_FITS[fit_name]
     hull = fit[0]
+    atk_fit = fittings.ATTACKER_FIT_HEAVY if heavy else fittings.ATTACKER_FIT
 
     # --- stage both ships (offline) ---
-    for char, f in ((DEFENDER[2], fit), (ATTACKER[2], fittings.ATTACKER_FIT)):
+    for char, f in ((DEFENDER[2], fit), (ATTACKER[2], atk_fit)):
         if db.query(f"SELECT online FROM chrCharacters WHERE characterID={char}")[0]["online"] not in ("0", ""):
             raise SystemExit(f"char {char} online; cannot stage")
     def_ship = stage(DEFENDER[2], DEFENDER[3], fit)
-    atk_ship = stage(ATTACKER[2], ATTACKER[3], fittings.ATTACKER_FIT)
+    atk_ship = stage(ATTACKER[2], ATTACKER[3], atk_fit)
+    if heavy:
+        # antimatter into cargo for the real guns
+        pf.insert_item("", fittings.ANTIMATTER_S, ATTACKER[2], atk_ship, 5, qty=7000)
     ehp = compute_ehp(hull)
     log(f"=== BATTLE {fit_name}: defender {DEFENDER[3]} ship {def_ship} "
         f"(hull {hull}), EHP~{ehp['ehp']:.0f} (raw {ehp['raw']:.0f})")
@@ -126,7 +153,7 @@ def run_battle(fit_name, window=90.0):
                   survival_s=window, final_s=1.0, final_a=1.0, final_h=1.0,
                   first_dmg_s=None)
     try:
-        _attack(def_ship, atk_ship, window, t0, result)
+        _attack(def_ship, atk_ship, window, t0, result, heavy)
     finally:
         stop.set()
         dt.join(timeout=20)
@@ -134,12 +161,37 @@ def run_battle(fit_name, window=90.0):
     return result
 
 
-def _attack(def_ship, atk_ship, window, t0, result):
+def _attack(def_ship, atk_ship, window, t0, result, heavy=False):
     acct, pw, char, tag = ATTACKER
     mch = MachoClient("127.0.0.1", 26000, acct, pw)
     mch.enter_world(char)
     if not ensure_docked(mch, STATION, SYSTEM, atk_ship):
         log(f"{tag}: attacker could not dock"); return
+    guns = [int(r["itemID"]) for r in db.query(
+        f"SELECT itemID FROM entity WHERE locationID={atk_ship} AND flag BETWEEN 27 AND 34")]
+
+    # heavy attacker: load ammo WHILE DOCKED (instant -- the docked load
+    # path sets m_chargeLoaded immediately, no in-space reload timer).
+    if heavy:
+        st_dogma = mch.bind("dogmaIM", (STATION, STATION_GROUP))
+        for g in guns:
+            try:
+                mch.call_bound(st_dogma, "SetModuleOnline", atk_ship, g)
+            except CallError:
+                pass
+        mch.pump(3)
+        charge = db.query(
+            f"SELECT itemID FROM entity WHERE locationID={atk_ship} AND flag=5 "
+            f"AND typeID={fittings.ANTIMATTER_S} LIMIT 1")
+        if charge:
+            try:
+                mch.call_bound(st_dogma, "LoadAmmoToModules", atk_ship, guns,
+                               fittings.ANTIMATTER_S, int(charge[0]["itemID"]), atk_ship)
+                mch.pump(3)
+                log(f"{tag}: loaded antimatter docked")
+            except CallError as e:
+                log(f"{tag}: docked load: {str(e)[:80]}")
+
     sref = mch.bind("ship", (STATION, STATION_GROUP))
     mch.call_bound(sref, "Undock", atk_ship, False)
     mch.pump(12)
@@ -173,14 +225,12 @@ def _attack(def_ship, atk_ship, window, t0, result):
         mch.call_bound(bey, "CmdOrbit", def_ship, 500)
     except CallError:
         pass
-    guns = [int(r["itemID"]) for r in db.query(
-        f"SELECT itemID FROM entity WHERE locationID={atk_ship} AND flag BETWEEN 27 AND 34")]
     for g in guns:
         try:
             mch.call_bound(dogma, "SetModuleOnline", atk_ship, g)
         except CallError:
             pass
-    mch.pump(3)
+    mch.pump(15 if heavy else 3)   # heavy: let the in-space reload finish
     for g in guns:
         try:
             mch.activate_module(dogma, g, "targetAttack", def_ship, 1000)
@@ -252,5 +302,7 @@ if __name__ == "__main__":
     ap.add_argument("--fit", default="merlin_shield_buffer",
                     choices=sorted(fittings.DEFENDER_FITS))
     ap.add_argument("--window", type=float, default=90.0)
+    ap.add_argument("--heavy", action="store_true",
+                    help="real 150mm railguns (antimatter) to break shields into armor")
     args = ap.parse_args()
-    run_battle(args.fit, args.window)
+    run_battle(args.fit, args.window, heavy=args.heavy)

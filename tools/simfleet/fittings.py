@@ -49,6 +49,10 @@ DEFENDER_FITS = {
 # attacker: fixed civilian-gun Cormorant (ammoless, ~constant DPS)
 ATTACKER_FIT = (CORMORANT, {"hi": [CIV_RAILGUN] * 7})
 
+# heavy attacker: real 150mm railguns (antimatter) -- breaks shields into
+# armor so armor tanks can be tested.  ammo loaded while DOCKED (instant).
+ATTACKER_FIT_HEAVY = (CORMORANT, {"hi": [RAILGUN_150] * 7})
+
 
 def all_fitted_types(fit):
     hull, slots = fit
