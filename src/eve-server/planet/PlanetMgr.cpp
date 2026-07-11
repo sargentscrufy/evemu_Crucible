@@ -40,8 +40,19 @@ PyRep* PlanetMgr::UpdateNetwork(PyList* commandList)
     for (int i = 0; i < commandList->size(); ++i) {
         if (cancel)
             return m_colony->GetColony();
+        // PI-1: each command must be a tuple (command, command_data).  A
+        // malformed element (non-tuple) previously hit AsTuple()'s IsTuple()
+        // assert and aborted the whole node -- guard it and reject cleanly.
+        PyRep* cmdRep = commandList->GetItem(i);
+        if ((cmdRep == nullptr) or !cmdRep->IsTuple()) {
+            _log(SERVICE__ERROR, "UpdateNetwork: command %u is not a tuple (%s)",
+                    i, (cmdRep == nullptr) ? "null" : cmdRep->TypeString());
+            commandList->Dump(PLANET__WARNING, "      ");
+            m_client->SendErrorMsg("Invalid planetary command.  Ref: ServerError 04508.");
+            return nullptr;
+        }
         UUNCommand uunc;
-        if (!uunc.Decode(commandList->GetItem(i)->AsTuple())) {
+        if (!uunc.Decode(cmdRep->AsTuple())) {
             _log(SERVICE__ERROR, "Failed to decode args for UUNCommand");
             commandList->Dump(PLANET__WARNING, "      ");
             m_client->SendErrorMsg("Internal Server Error.  Ref: ServerError 04508.");
