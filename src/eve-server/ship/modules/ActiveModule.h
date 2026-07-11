@@ -100,6 +100,15 @@ protected:
     uint16              m_effectID;                     //passed to us by activate
     uint32              m_targetID;                     //passed to us by activate
 
+    // TACKLE: warp scramble bookkeeping.  A scrambler adds its strength to the
+    // target's WarpScrambleStatus on activate and removes it on deactivate.
+    // Guard so a module applies its point exactly once no matter how many
+    // times Activate()/DeactivateCycle() fire (reactivation, overload, cycle
+    // re-entry), so the status never stacks or leaks and pins a victim.
+    bool                m_scrambleApplied;
+    double              m_scrambleStr;
+    uint32              m_scrambleTgtID;
+
     // protected to allow derived usage
     bool                m_Stop :1;
     bool                m_usesCharge :1;

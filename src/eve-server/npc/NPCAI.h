@@ -55,7 +55,10 @@ class NPCAIMgr {
 protected:
 public:
     NPCAIMgr(NPC *who);
-    ~NPCAIMgr()                                         { /* do nothing here */ }
+    ~NPCAIMgr();
+
+    // NPC-EWAR: release any warp scramble we applied to our target
+    void ReleaseScramble(SystemEntity* pSE);
 
     // this is called from NPC::Process() which is called from SystemManager::Process()
     void Process();
@@ -139,6 +142,8 @@ private:
     uint32 m_sightRange;
     uint32 m_maxAttackRange;// max firing range   default:15000
     uint32 m_warpScramRange;
+    uint32 m_scramTargetID;     // NPC-EWAR: charID/shipID this rat is scrambling (0 = none)
+    double m_scramStrength;     // strength added to that target's WarpScrambleStatus
 
     float m_warpScramChance;
     float m_armorRepairDelayChance;

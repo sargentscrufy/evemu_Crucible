@@ -34,6 +34,9 @@ m_needsCharge(false),
 m_needsTarget(false),
 m_targetID(0),
 m_effectID(0),
+m_scrambleApplied(false),
+m_scrambleStr(0),
+m_scrambleTgtID(0),
 m_Stop(true)
 {
     m_repeat = 1000;    //based on client data
@@ -442,6 +445,27 @@ void ActiveModule::Activate(uint16 effectID, uint32 targetID/*0*/, int16 repeat/
             if (m_targetSE != nullptr)
                 m_targetSE->DestinyMgr()->WebbedMe(m_modRef, true);
         } break;
+        case EVEDB::invGroups::Warp_Scrambler: {
+            // TACKLE: warp scrambler / disruptor.  add this module's warp
+            // scramble strength to the target's WarpScrambleStatus.
+            // CmdWarpToStuff denies warp while status > 0 (warp core stabs
+            // subtract from it).  Group 52 covers both scram and point; the
+            // strength attribute distinguishes them (scram 2, point 1).
+            // m_scrambleApplied guards against stacking on re-activation.
+            if ((m_targetSE != nullptr) and !m_scrambleApplied) {
+                double str = m_modRef->GetAttribute(AttrWarpScrambleStrength).get_float();
+                if (str <= 0) str = 1;
+                InventoryItemRef tgt = m_targetSE->GetSelf();
+                double cur = tgt->HasAttribute(AttrWarpScrambleStatus)
+                        ? tgt->GetAttribute(AttrWarpScrambleStatus).get_float() : 0;
+                tgt->SetAttribute(AttrWarpScrambleStatus, cur + str);
+                m_scrambleApplied = true;
+                m_scrambleStr = str;
+                m_scrambleTgtID = m_targetSE->GetID();
+                _log(MODULE__MESSAGE, "TACKLE: %s scrambled %s (+%.0f, status now %.0f)",
+                        m_modRef->name(), m_targetSE->GetName(), str, cur + str);
+            }
+        } break;
     }
     /*def OnSpecialFX
      *     if start and guid == 'effects.WarpScramble*':
@@ -750,6 +774,31 @@ void ActiveModule::DeactivateCycle(bool abort/*false*/)
         case EVEDB::invGroups::Stasis_Web: {
             if (m_targetSE != nullptr)
                 m_targetSE->DestinyMgr()->WebbedMe(m_modRef, false);
+        } break;
+        case EVEDB::invGroups::Warp_Scrambler: {
+            // TACKLE: release the warp scramble -- subtract exactly the
+            // strength we added, and only if we actually applied one.  Look
+            // the victim up by the stored id (m_targetSE may already be gone
+            // on deactivation) so we never leave a target pinned.
+            if (m_scrambleApplied) {
+                SystemEntity* pTgt = (m_sysMgr != nullptr)
+                        ? m_sysMgr->GetSE(m_scrambleTgtID) : nullptr;
+                if ((pTgt == nullptr) and (m_targetSE != nullptr))
+                    pTgt = m_targetSE;
+                if ((pTgt != nullptr) and (pTgt->GetSelf().get() != nullptr)) {
+                    InventoryItemRef tgt = pTgt->GetSelf();
+                    double cur = tgt->HasAttribute(AttrWarpScrambleStatus)
+                            ? tgt->GetAttribute(AttrWarpScrambleStatus).get_float() : 0;
+                    double nv = cur - m_scrambleStr;
+                    if (nv < 0) nv = 0;
+                    tgt->SetAttribute(AttrWarpScrambleStatus, nv);
+                    _log(MODULE__MESSAGE, "TACKLE: %s released scramble on %s (status now %.0f)",
+                            m_modRef->name(), pTgt->GetName(), nv);
+                }
+                m_scrambleApplied = false;
+                m_scrambleStr = 0;
+                m_scrambleTgtID = 0;
+            }
         } break;
         case EVEDB::invGroups::Survey_Scanner: {
             if (abort) {

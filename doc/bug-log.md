@@ -510,6 +510,63 @@ fixed in one pass (commit: rat spawn rework):
 
 ## Fixed
 
+### Combat campaign (2026-07-11) — fix all combat-validation gaps except consequence
+
+- **DESTINY-7 (Tier 1 crash) — FIXED + VALIDATED.** A client that
+  disconnected mid-combat UAF-crashed the node: `~Client()` freed the
+  ship SystemEntity while it was still on the system tic list / in its
+  bubble, and the next tic dereferenced the dangling entity. Fix:
+  `Client.cpp` now calls `SystemManager::RemoveEntity(pShipSE)` in the
+  destructor before the ship is freed. Validated with
+  `tools/simfleet/destiny7_repro.py` — 4 rounds of hard mid-combat socket
+  drops, container RestartCount stayed 0, zero crash markers.
+- **TACKLE-1 (warp scrambler/disruptor) — FIXED + VALIDATED.** The module
+  handler was commented out; scram/point never set the target's
+  `AttrWarpScrambleStatus`, so nothing could be held. Fix: `ActiveModule.cpp`
+  Warp_Scrambler group case adds the module's warp-scramble strength on
+  activate and removes it on deactivate, with a per-module idempotency
+  guard (`m_scrambleApplied`/`m_scrambleStr`/`m_scrambleTgtID` in
+  `ActiveModule.h`) so the status can't stack or leak. Validated with
+  `tools/simfleet/tackle_test.py`: scrammed target gets `WarpScrambled`
+  on `CmdWarpToStuff`; releasing the point restores warp (status -> 0).
+  Stasis web already worked (`WebbedMe`).
+- **NPC-EWAR-1 (rats scram players) — FIXED (deployed).** `NPCAI.cpp`
+  `AttackTarget` now applies a warp scramble to a piloted target in range
+  (guarded by `m_scramTargetID`), and releases it on `ClearTarget` / rat
+  death (`~NPCAIMgr`, `ReleaseScramble`). Uses the same
+  `SetAttribute(AttrWarpScrambleStatus)` path validated for TACKLE-1.
+  Live belt integration not yet exercised (blocked by SPAWN-14).
+- **SPAWN-13 (belt-rat scatter) — FIXED (deployed).** `RoamSpawns` could
+  yank a fresh belt spawn out from under an arriving pilot when GRID-2
+  bubble recreation briefly left them in different sub-bubbles
+  (`HasPlayers()` read false), warping the rats away strung across the
+  grid. Fix: `SpawnMgr.cpp` skips a belt as a roam source if any pilot is
+  physically within 200 km, independent of bubble bookkeeping. Original
+  scatter race not reproduced live (blocked by SPAWN-14).
+- **COMP-H (test-infra / protocol note):** a bot must online a fitted
+  module by activating the **"online" effect** (`activate_module(dogma,
+  mod, "online", None, 0)` -> effectID 16 -> `GenericModule::Online`), not
+  `dogmaIM.SetModuleOnline`, which returned success but never reached
+  `MM::Online` (module stayed Offline, later `Activate` no-op'd at the
+  online gate). Earlier tests that onlined only via `SetModuleOnline`
+  (e.g. pvp_battle tank onlining) may have measured OFFLINE modules —
+  re-verify.
+
+### SPAWN-14 (OPEN) — belt spawn never arms when pilot lands in a non-belt sub-bubble
+
+- **Found 2026-07-11** while validating SPAWN-13. A bot warps to belt
+  40168291, lands cleanly ("Warp complete", added to belt bubble), and
+  sits 2m40s, but `SystemBubble::Process()` never arms the spawn
+  (`spawn timer hit` / `Spawning NPC` never logged) even with
+  `SpawnTest=true` (5 s timer). The arming condition needs `!m_players.empty()`
+  for the belt bubble and `!m_spawned`; the landing sub-bubble either
+  isn't counting the pilot in `m_players` or is stuck `m_spawned=true`
+  with zero rats (early-return at `SystemBubble.cpp:154`). This currently
+  blocks the belt-ratting loop end-to-end and is the prerequisite for
+  live-validating SPAWN-13 and NPC-EWAR-1. Distinct from the roam fix;
+  needs its own focused pass (the GRID-2 belt-bubble-vs-landing-bubble
+  identity, like the SPAWN-9/10/11 series).
+
 ### CORE-1: XMLParser::ElementParser missing virtual destructor (UB)
 - **Found by:** first ASan CI run (build-sanitized job), 2026-07-07.
 - **Symptom:** `new-delete-type-mismatch` abort in eve-xmlpktgen during

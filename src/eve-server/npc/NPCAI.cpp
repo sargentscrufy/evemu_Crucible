@@ -65,6 +65,8 @@ NPCAIMgr::NPCAIMgr(NPC* who)
   m_missileTypeID(0),
   m_webber(false),
   m_warpScram(false),
+  m_scramTargetID(0),
+  m_scramStrength(0),
   m_isWandering(false)
 {
     assert(m_self.get() != nullptr);
@@ -736,12 +738,46 @@ void NPCAIMgr::Attack(SystemEntity* pSE)
     }
 }
 
+NPCAIMgr::~NPCAIMgr() {
+    // NPC-EWAR: if this rat dies/despawns while scrambling a pilot, release
+    // the point so the victim isn't pinned (unable to warp) forever.
+    if ((m_scramTargetID != 0) and (m_npc != nullptr)
+    and (m_npc->SystemMgr() != nullptr)) {
+        SystemEntity* pTgt = m_npc->SystemMgr()->GetSE(m_scramTargetID);
+        if (pTgt != nullptr)
+            ReleaseScramble(pTgt);
+    }
+}
+
 void NPCAIMgr::ClearTarget(SystemEntity* pSE) {
+    // NPC-EWAR: if we were scrambling this target, release the point first
+    if ((pSE != nullptr) and (m_scramTargetID == pSE->GetID()))
+        ReleaseScramble(pSE);
     m_npc->TargetMgr()->ClearTarget(pSE);
     //m_npc->TargetMgr()->OnTarget(pSE, TargMgr::Mode::Lost);
 
     if (m_npc->TargetMgr()->HasNoTargets())
         SetIdle();
+}
+
+void NPCAIMgr::ReleaseScramble(SystemEntity* pSE) {
+    // subtract our scramble strength back off the target so a scrammed
+    // pilot isn't pinned forever after the rat clears/dies.
+    if ((m_scramTargetID == 0) or (m_scramStrength <= 0))
+        return;
+    if ((pSE != nullptr) and (pSE->GetSelf().get() != nullptr)) {
+        InventoryItemRef tgt = pSE->GetSelf();
+        double cur = tgt->HasAttribute(AttrWarpScrambleStatus)
+                ? tgt->GetAttribute(AttrWarpScrambleStatus).get_float() : 0;
+        double nv = cur - m_scramStrength;
+        if (nv < 0) nv = 0;
+        tgt->SetAttribute(AttrWarpScrambleStatus, nv);
+        _log(NPC__MESSAGE, "NPC-EWAR: %s(%u) released scramble on %s (status now %.0f)",
+                m_npc->GetName(), m_npc->GetID(), pSE->GetName(), nv);
+    }
+    m_scramTargetID = 0;
+    m_scramStrength = 0;
+    m_warpScram = false;
 }
 
 //also check for special effects and write code to implement them
@@ -750,7 +786,29 @@ void NPCAIMgr::ClearTarget(SystemEntity* pSE) {
 void NPCAIMgr::AttackTarget(SystemEntity* pSE) {
     if (pSE == nullptr)
         return;
-    // put checks here for point/tackle
+
+    // NPC EWAR: point/scram.  Guristas/Serpentis tackle frigs pin their
+    // target so it can't warp off.  Apply once (m_scramTargetID guards
+    // against re-stacking) when a scrambling rat has its victim in range;
+    // ReleaseScramble() subtracts it back on target-clear / rat death.
+    if ((m_warpScramRange > 0) and (m_scramTargetID == 0) and pSE->HasPilot()) {
+        double dist = m_npc->GetPosition().distance(pSE->GetPosition());
+        if (dist <= (double)m_warpScramRange) {
+            double str = m_self->HasAttribute(AttrWarpScrambleStrength)
+                    ? m_self->GetAttribute(AttrWarpScrambleStrength).get_float() : 1;
+            if (str <= 0) str = 1;
+            InventoryItemRef tgt = pSE->GetSelf();
+            double cur = tgt->HasAttribute(AttrWarpScrambleStatus)
+                    ? tgt->GetAttribute(AttrWarpScrambleStatus).get_float() : 0;
+            tgt->SetAttribute(AttrWarpScrambleStatus, cur + str);
+            m_scramTargetID = pSE->GetID();
+            m_scramStrength = str;
+            m_warpScram = true;
+            _log(NPC__MESSAGE, "NPC-EWAR: %s(%u) scrambled %s (+%.0f)",
+                    m_npc->GetName(), m_npc->GetID(), pSE->GetName(), str);
+        }
+    }
+
 
     // effects are listed in EVE_Effects.h
     std::string guid = "effects.Laser"; // client looks for 'turret' in ship.ball.modules for 'effects.laser'

@@ -185,6 +185,15 @@ Client::~Client() {
     // remove char from entitylist
     sEntityList.RemovePlayer(this);
 
+    // DESTINY-7: remove the ship SystemEntity from the system's tic list and
+    // its bubble BEFORE freeing pShipSE below.  RemoveClient only drops the
+    // client-map entry; without this the freed ship stays in m_ticEntities
+    // and the bubble, and the next tic (or a bubble destiny broadcast)
+    // dereferences the dangling entity -> SIGSEGV in SendDestinyUpdate.  This
+    // is the mid-combat-disconnect / in-space-logout crash.
+    if ((pShipSE != nullptr) and (m_system != nullptr))
+        m_system->RemoveEntity(pShipSE);
+
     // reverse this so we destroy from newest to older
     // this prevents use after free
     auto cur = m_bindSet.rbegin ();

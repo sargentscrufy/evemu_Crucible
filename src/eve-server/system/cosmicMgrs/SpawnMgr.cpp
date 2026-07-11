@@ -8,6 +8,7 @@
   *
   */
 
+#include "Client.h"
 #include "EVEServerConfig.h"
 
 #include "StaticDataMgr.h"
@@ -225,6 +226,23 @@ void SpawnMgr::RoamSpawns()
     if (m_spawns.empty() or (m_system->BeltCount() < 2))
         return;
 
+    // SPAWN-13: HasPlayers() only sees pilots whose ship SE is keyed to the
+    // exact bubble.  When a player warps into a belt, GRID-2 bubble
+    // recreation can briefly leave the fresh belt spawn in a *different*
+    // sub-bubble than the arriving pilot, so HasPlayers() reads false and we
+    // would yank the rats out from under them -- they warp off strung across
+    // the grid (the "scatter" bug).  Guard with a physical proximity test
+    // against every pilot in the system, independent of bubble bookkeeping.
+    std::vector<GPoint> pilotPos;
+    {
+        std::vector<Client*> clients;
+        m_system->GetClientList(clients);
+        for (Client* c : clients)
+            if ((c != nullptr) and (c->GetShipSE() != nullptr))
+                pilotPos.push_back(c->GetShipSE()->GetPosition());
+    }
+    static const double ROAM_PILOT_KEEPOUT = 200000.0;  // 200 km
+
     // candidate sources: bubbles with a fully-alive spawn group and no
     // players watching (never yank rats out of someone's fight)
     std::vector<uint16> sources;
@@ -237,6 +255,14 @@ void SpawnMgr::RoamSpawns()
             continue;
         SystemBubble* pSB = sBubbleMgr.FindBubbleByID(cur.first);
         if ((pSB == nullptr) or pSB->HasPlayers() or !pSB->IsBelt())
+            continue;
+        // SPAWN-13: also skip if any pilot is physically near this belt,
+        // even if bubble bookkeeping hasn't placed them inside it yet.
+        GPoint bc = pSB->GetCenter();
+        bool pilotNear = false;
+        for (const GPoint& p : pilotPos)
+            if (bc.distance(p) <= ROAM_PILOT_KEEPOUT) { pilotNear = true; break; }
+        if (pilotNear)
             continue;
         sources.push_back(cur.first);
     }
