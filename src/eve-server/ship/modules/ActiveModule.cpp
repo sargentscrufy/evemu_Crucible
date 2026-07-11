@@ -17,6 +17,8 @@
 #include "ship/modules/ModuleItem.h"
 #include "ship/modules/Prospector.h"
 #include "system/Container.h"
+#include "system/Damage.h"
+#include "system/SystemBubble.h"
 #include "system/cosmicMgrs/BeltMgr.h"
 
 
@@ -388,7 +390,10 @@ void ActiveModule::Activate(uint16 effectID, uint32 targetID/*0*/, int16 repeat/
     // COMP-B: an offensive module (missile launcher, turret) activated with
     // no resolvable target must not proceed -- launchers otherwise spawn a
     // targetless missile that crashes on impact.
-    if ((m_targetSE == nullptr) and sFxDataMgr.isOffensive(effectID)) {
+    // SMARTBOMB-1: smartbombs are offensive but intentionally targetless
+    // (area-of-effect around the firer), so exempt them from the guard.
+    if ((m_targetSE == nullptr) and sFxDataMgr.isOffensive(effectID)
+    and (groupID() != EVEDB::invGroups::Smart_Bomb)) {
         Clear();
         throw UserError ("DeniedActivateNoTarget");
     }
@@ -694,8 +699,33 @@ uint32 ActiveModule::DoCycle() {
         case EVEDB::invGroups::Jump_Portal_Generator:
         case EVEDB::invGroups::Remote_ECM_Burst:
         case EVEDB::invGroups::Warp_Disrupt_Field_Generator:
-        case EVEDB::invGroups::Smart_Bomb:
         case EVEDB::invGroups::ECM_Burst: {
+        } break;
+        case EVEDB::invGroups::Smart_Bomb: {
+            // SMARTBOMB-1: area-of-effect burst.  On each cycle deal the
+            // module's damage to every damageable ship/NPC/drone within the
+            // EMP field range of the firing ship (no lock -- it hits the whole
+            // bubble out to range, but never the firer).
+            SystemEntity* mySE = m_shipRef->GetPilot()->GetShipSE();
+            double range = m_modRef->HasAttribute(AttrEmpFieldRange)
+                    ? m_modRef->GetAttribute(AttrEmpFieldRange).get_float() : 0;
+            if ((mySE != nullptr) and (m_bubble != nullptr) and (range > 0)) {
+                GPoint myPos = mySE->GetPosition();
+                std::map<uint32, SystemEntity*> ents;
+                m_bubble->GetEntities(ents);
+                for (auto& cur : ents) {
+                    SystemEntity* pSE = cur.second;
+                    if ((pSE == nullptr) or (pSE == mySE))
+                        continue;
+                    // only living targets: piloted ships, NPCs, drones
+                    if (!pSE->HasPilot() and !pSE->IsNPCSE() and !pSE->IsDroneSE())
+                        continue;
+                    if (myPos.distance(pSE->GetPosition()) > range)
+                        continue;
+                    Damage d(mySE, m_modRef, 1.0f, (uint16)EVEEffectID::empWave);
+                    pSE->ApplyDamage(d);
+                }
+            }
         } break;
     }
 
