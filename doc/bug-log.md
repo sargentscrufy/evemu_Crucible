@@ -5,6 +5,72 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 
 ## Open
 
+### Session 2026-07-12 — production feedback drop (feedback-20260712-180607.log, SARGENTSCRUFY live play)
+
+First round-trip through the feedback-inbox workflow. 13 BUG lines from a
+mining/travel/market shakedown in Todaki→Kakakela→Sobaseki. Triage:
+
+- **MOD-1 (new): turret keeps cycling after its target is destroyed.**
+  Railgun destroyed an asteroid and "stays active, acts like it continues
+  firing." Module deactivation on target death is not firing (or the
+  stop-effect isn't reaching the client) when the target is an asteroid.
+  Check ActiveModule target-loss handling for non-ship targets.
+- **DESTINY-8 (new): orbit target destroyed → ship comes to a stop.** Should
+  drop the orbit but keep flying at the last commanded speed (EVE behavior:
+  orbit target loss leaves you at current velocity). Likely DestinyManager
+  clearing to STOP instead of demoting orbit→GOTO/current-heading.
+- **ROID-1 (new, design+balance): asteroids are targetable and one-shot
+  destructible.** In original EVE asteroids were not targetable (anti-grief).
+  User's chosen direction: KEEP them destroyable but give them real HP so
+  they're not a one-shot. Needs asteroid HP attributes + damage handling.
+- **UI-2 (new, low, possibly client): right-click menu dead for ~1 min after
+  destroying an asteroid**, then self-recovered. Possibly stale entity in the
+  client bracket list — verify our asteroid removal/slim-item cleanup
+  broadcast is well-formed.
+- **UNDOCK-1 (new): undock is slow — long black screen before the ship
+  appears outside the station.** Reported twice in one session ("definitely
+  need to make undocking process faster"). Profile the deferred undock push
+  (DESTINY-5/6 yields) and session-change timing for dead time we control.
+- **DESTINY-9 (new, tuning): warp-to-gate lands a touch long — pilot bounced
+  off the stargate.** Second data point same session: "nearly perfect...
+  make it a little shorter, should fall 250m short" so you approach the gate
+  under engine power instead of colliding. Shave the warp-in landing point
+  ~250 m short of gate collision radius.
+- **NAV-1 (new, feature): one-click jump.** Choosing Jump on a gate should
+  chain warp→approach→jump automatically (stock EVE behavior); today the
+  pilot has to re-click Jump after landing. Implement jump-on-arrival intent
+  in the gate Jump command path.
+- **NPC-4 (new, balance): belt rats too strong for highsec.** 0.8-sec rats
+  fit for 0.4–0.6 space; user wants strength scaled by system security
+  (weaker above 0.6, roughly current at 0.4–0.6). Self-corrected caveat: a
+  rookie ship *should* struggle — but see CUE-1, they were being hit before
+  they could tell they were under attack.
+- **CUE-1 (new): missing aggression feedback — no cue when targeted, when
+  hit, when shields drop.** May be the same client-heuristic family as
+  MUSIC-1 (we already send weapon-FX/damage), but verify we emit the
+  being-targeted notifications (OnTarget hostile/others) that drive client
+  warning sounds.
+- **MUSIC-1 (recurrence): still zero music the whole session** (ambient and
+  combat), while gun/laser sounds confirmed working after the user found a
+  volume-slider issue for effects. Previous reclassification covered combat
+  music triggers; total music silence suggests the client jukebox never
+  starts — worth one more look at what starts ambient music (client-side
+  suspected, keep low priority).
+- **MKT-4 (new): simple-sell dialog quotes the wrong price and places a sell
+  order instead of matching.** Selling Tritanium showed 2.94 ISK ("above
+  regional average") where stock EVE shows the best station buy order
+  (1.91 ISK), and confirming created a sell order rather than filling the
+  buy order. Immediate-sell path in MarketProxyService isn't matching
+  against standing buy orders.
+- **MKT-5 (new): selling into a visible buy order fails with "No sell order
+  found."** Direct fill against a buy order is broken for players — likely
+  the same root as MKT-4 (and adjacent to the MKT-2 NPC-corp execution
+  branch, which only fixed the bot/NPC path). Player-facing economy blocker;
+  highest-value item in this drop together with MKT-4.
+
+Not actionable: "Just checking the bug tool" (FEEDBACK-3 confirmed working
+in production), gun/laser sound report resolved by the user (volume slider).
+
 ### Session 2026-07-11 — combat campaign, weapons, industry, PI, hardening, sound
 
 Fixed + validated this session (details in the commits / linked docs):
