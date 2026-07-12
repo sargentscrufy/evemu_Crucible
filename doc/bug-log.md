@@ -604,6 +604,39 @@ fixed in one pass (commit: rat spawn rework):
   (e.g. pvp_battle tank onlining) may have measured OFFLINE modules —
   re-verify.
 
+### STAND-1 (faction standing loss on kill) — FIXED (deployed 2026-07-12)
+
+- **Gap:** the reputation loop only had its *earn* half. Completing agent
+  missions raised standing (`Agent::UpdateStandings` -> `OnStandingsModified`),
+  but killing a faction's ships never lowered the killer's standing with that
+  faction, so `repStandings` held only the 395 seeded faction-vs-faction rows
+  and never a single character row.
+- **Fix (`NPC.cpp` `NPC::Killed`, in the `pClient != nullptr` block):** on a
+  player kill of a faction NPC (`IsFaction(m_warID)`, excluding
+  `factionRogueDrones`), apply a −0.01 standing delta via
+  `sStandingMgr.UpdateStandings(m_warID, killerID, Standings::UpdateStanding,
+  -loss, "Ship kill")` and push an `OnStandingsModified` notification carrying
+  the new total so the standings UI updates live. Same write/notify path the
+  mission-earn side uses; delta accumulates from a 0 base and is floored at −10.
+- **Validated end-to-end** (`tools/simfleet/standings_kill.py`): Keva
+  `/spawn`s a faction rat (region rat faction, here Serpentis 500020),
+  smart-bombs it, and the kill produces `repStandings(500020 -> 90000004) =
+  -0.01` plus a `repStandingChanges` row `delta=-0.0100 eventTypeID=45
+  msg='Ship kill'`. Read path proven separately
+  (`standings_test.py --readonly`): `standing2.GetCharStandings` returns exactly
+  the rows in `repStandings` (0/1/3-row correlation).
+- **Harness notes worth keeping:** GM `/spawn <typeID>` (needs DEV/SPAWN role,
+  which the fleet test accounts have) drops a killable region-rat-faction NPC
+  point-blank — the reliable way to get a faction kill while SPAWN-14 blocks
+  belt rats. Two gotchas cost real time: (1) the spawned rat must co-locate
+  with a **stationary** ship — spawn while mid-warp and rat/ship land in
+  different bubbles and can never interact; (2) `empWave` (and any weapon) is
+  denied for ~25 s post-undock while the ship is in the warp-safe/align state,
+  so the smart bomb silently no-ops unless you settle first. Civilian Gatling
+  Railguns (typeID 3638) have no charge group and deal **0** damage in EVEmu —
+  don't use them as a test weapon; a smart bomb (23864, 140 EM AoE) one-shots a
+  150-EHP rat with no lock/tracking.
+
 ### SPAWN-14 (OPEN) — belt spawn never arms when pilot lands in a non-belt sub-bubble
 
 - **Found 2026-07-11** while validating SPAWN-13. A bot warps to belt

@@ -27,11 +27,14 @@
 
 #include "eve-server.h"
 
+#include "EVE_Standings.h"
 #include "Client.h"
 #include "EntityList.h"
 #include "map/MapDB.h"
 #include "npc/NPC.h"
 #include "npc/NPCAI.h"
+#include "standing/StandingDB.h"
+#include "standing/StandingMgr.h"
 #include "system/Container.h"
 #include "system/Damage.h"
 #include "system/SystemManager.h"
@@ -332,6 +335,31 @@ void NPC::Killed(Damage &damage) {
         AwardBounty( pClient );
         if (m_system->GetSystemSecurityRating() > 0)
             AwardSecurityStatus(m_self, pClient->GetChar().get());  // this awards secStatusChange for npcs in empire space
+
+        // STAND-1: killing a faction's ships lowers the killer's standing with
+        // that faction -- the "loss" half of the reputation loop (mission
+        // completion already raises standing via Agent::UpdateStandings).  Only
+        // real NPC factions carry reputation; rogue drones are factionless.
+        // UpdateStandings applies the delta (accumulates from a 0 base); we
+        // read the pre-update value to send the client the new total so the
+        // standings UI updates live.
+        if (IsFaction(m_warID) and (m_warID != factionRogueDrones)) {
+            const double loss = 0.0100;   // per-kill faction standing hit (tunable)
+            double newStanding = StandingDB::GetStanding(m_warID, killerID) - loss;
+            if (newStanding < -10.0) newStanding = -10.0;
+            sStandingMgr.UpdateStandings(m_warID, killerID, Standings::UpdateStanding, -loss, "Ship kill");
+            PyTuple* row = new PyTuple(5);
+                row->SetItem(0, new PyInt(m_warID));
+                row->SetItem(1, new PyInt(killerID));
+                row->SetItem(2, new PyFloat(newStanding));
+                row->SetItem(3, new PyInt(-1));
+                row->SetItem(4, PyStatic.NewOne());
+            PyList* list = new PyList();
+                list->AddItem(row);
+            PyTuple* payload = new PyTuple(1);
+                payload->SetItem(0, list);
+            pClient->SendNotification("OnStandingsModified", "charid", payload, false);
+        }
     }
 
     GPoint wreckPosition = m_destiny->GetPosition();
