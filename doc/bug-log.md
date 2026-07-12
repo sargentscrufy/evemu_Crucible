@@ -32,14 +32,29 @@ manufacturing (+consumption), ME/TE research, blueprint copy, PI command-center
 deploy. Weapon audit (doc/weapon-implementation-audit.md): all turrets/missiles/
 tractor implemented.
 
-Still OPEN from this session:
-- **PI-2:** the PI extractor batch (upgrade CC + add ECU + install program)
-  SIGSEGVs the node — blocks the full colony extract→route→cycle→launch loop.
-- **HARDEN-2:** reproducible SIGSEGV in `ShipBound::Undock(PyInt*,PyBool*)`
-  surfaced by the malformed-input probe under repeated re-stage/reconnect.
-- **SPAWN-14:** belt spawn never arms when a pilot lands in a non-belt
-  sub-bubble — blocks the belt-ratting loop and live-validation of SPAWN-13 /
-  NPC-EWAR.
+Tier-0 crash pass (2026-07-11, rev 6):
+- **HARDEN-2 — FIXED + VALIDATED.** `ShipBound::Undock` now rejects cleanly
+  when the pilot is not docked (undocking-while-in-space derefs stale
+  station/ship state in `UndockFromStation`) and validates the `onlineModules`
+  byname shape before casting. Malformed-input probe now passes all 7 cases
+  with zero crashes; legitimate undock still works.
+- **PI-2 — FIXED + VALIDATED.** `Colony::CreatePin`/`InstallProgram` null-guard
+  the pin-item refs (`GetItemRef`/`SpawnItem`) and default the ECU extraction
+  attribute when absent. Extractor batch runs with restarts=0, zero segfaults.
+
+Still OPEN:
+- **SPAWN-14 (root-caused, deferred):** belt spawns never arm for a pilot who
+  warps to a belt. Diagnostics (a top-of-`SystemBubble::Process` probe logging
+  every processed belt/gate bubble with a pilot within 300 km) fired **zero**
+  times while a bot sat at the belt bubble's center — i.e. no *belt-flagged*
+  bubble is near the pilot. The belt the pilot lands in is not being processed
+  as a belt: on warp-in the belt entity ends up in a bubble that isn't flagged
+  `m_belt` (a GRID-2 bubble-identity/flag-migration issue), so the arming code
+  in `SystemBubble::Process` never runs for it. Fix belongs in bubble
+  creation/flag assignment (the SPAWN-9/10/11 series is downstream of this).
+  A Process-level proximity-arming tweak was tried and reverted (can't help a
+  bubble that isn't processed). Blocks the belt-ratting loop and the live
+  validation of SPAWN-13 / NPC-EWAR.
 - **Invention** (blueprint activity 8) unimplemented server-side.
 
 ### SPAWN-11: stale unwatched belt waves — FIXED 2026-07-10, verified live
