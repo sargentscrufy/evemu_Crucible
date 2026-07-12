@@ -281,11 +281,24 @@ PyResult ShipBound::Undock(PyCallArgs &call, PyInt* shipID, PyBool* ignoreContra
         throw CustomError ("Something bad happened as you prepared to board the ship.  Ref: ServerError 15173");
     }
 
+    // HARDEN-2: undocking when the pilot is not actually in a station derefs
+    // stale station/ship state in UndockFromStation (MoveToLocation on a
+    // garbage system, etc.) and can SIGSEGV.  A pilot already in space has
+    // nothing to undock from -- reject cleanly instead of crashing the node.
+    if (!pClient->IsDocked()) {
+        _log(CLIENT__WARNING, "%s: Undock called while not docked; ignoring.", pClient->GetName());
+        return this->GetOID();
+    }
+
     // nowhere near implementing ignoreContraband yet....
 
     //  get vector of online modules as (k,v) pair,
-    //    where key is slotID, value is moduleID
-    if (call.byname.find("onlineModules") != call.byname.end()) {
+    //    where key is slotID, value is moduleID.  HARDEN-2: this is untrusted
+    //    client input -- validate the shapes before casting so a malformed
+    //    byname payload cannot assert/crash (PyRep::AsDict/AsInt IsX asserts).
+    if ((call.byname.find("onlineModules") != call.byname.end())
+    and (call.byname["onlineModules"] != nullptr)
+    and call.byname["onlineModules"]->IsDict()) {
         PyDict* onlineModules = call.byname["onlineModules"]->AsDict();
         if (is_log_enabled(MODULE__INFO)) {
             _log(MODULE__INFO, "Dumping 'onlineModules' List");
@@ -293,7 +306,8 @@ PyResult ShipBound::Undock(PyCallArgs &call, PyInt* shipID, PyBool* ignoreContra
         }
         PyDict::const_iterator cur = onlineModules->begin(), end = onlineModules->end();
         for (; cur != end; ++cur)
-            pShip->AddModuleToOnlineVec(cur->second->AsInt()->value());
+            if ((cur->second != nullptr) and cur->second->IsInt())
+                pShip->AddModuleToOnlineVec(cur->second->AsInt()->value());
     }
 
     pClient->UndockFromStation();

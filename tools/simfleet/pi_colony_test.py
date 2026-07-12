@@ -35,6 +35,7 @@ STATION, SYSTEM = 60010387, 30002642      # Iyen-Oursta (has lava planet 4016828
 PLANET = 40168289                          # Iyen-Oursta I (Lava)
 CC_TYPE = 2145                             # Standard Lava Command Center
 ECU_TYPE = 3062                            # Lava Extractor Control Unit
+RESOURCE_TYPE = 2267                        # Base Metals (a lava P0 resource)
 PILOT = ("fleet01", "fleet", 90000004, "Keva")
 
 # PI command ids
@@ -92,13 +93,29 @@ def run():
     except CallError as e:
         log(f"{tag}: UserUpdateNetwork FAILED: {str(e)[:200]}")
     mch.pump(2)
+    result["cc_created"] = len(colony_rows(char)) > 0
+
+    # Step 2 (PI-2): upgrade CC + add an ECU + install an extractor program.
+    ecu_pin = pf.insert_item("PI ECU", ECU_TYPE, char, STATION, 5)
+    batch = [
+        (CMD_UPGRADE_CC, (cc_pin, 1)),
+        (CMD_CREATE_PIN, ((cc_pin, ecu_pin), ECU_TYPE, 1.6, 3.1)),
+        (CMD_INSTALL_PROGRAM, (ecu_pin, RESOURCE_TYPE, 0.05)),
+    ]
+    try:
+        mch.call_bound(pm, "UserUpdateNetwork", batch)
+        log(f"{tag}: extractor batch returned")
+    except CallError as e:
+        log(f"{tag}: extractor batch FAILED: {str(e)[:200]}")
+    mch.pump(2)
     mch.close()
 
-    cc = colony_rows(char)
-    result["cc_created"] = len(cc) > 0
+    pins = db.query(f"SELECT pinID,typeID FROM piPins WHERE planetID={PLANET}")
+    result["ecu_created"] = any(int(p["typeID"]) == ECU_TYPE for p in pins)
     log("=== VERDICT ===")
-    log(f"  command center row (piCCPin): {cc}")
-    log(f"  >>> PI COMMAND CENTER: {'PASS' if result['cc_created'] else 'FAIL'}")
+    log(f"  command center (piCCPin): {'PASS' if result['cc_created'] else 'FAIL'}")
+    log(f"  pins on planet: {pins}")
+    log(f"  extractor control unit: {'PASS' if result['ecu_created'] else 'FAIL'}")
     return result
 
 

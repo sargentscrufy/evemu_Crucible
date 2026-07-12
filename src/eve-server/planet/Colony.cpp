@@ -375,19 +375,34 @@ void Colony::CreatePin(uint32 groupID, uint32 pinID, uint32 typeID, double latit
     PI_Pin pin = PI_Pin();
     InventoryItemRef iRef(nullptr);
     if (groupID == Command_Centers) {
+        // PI-2: the command-center pin id must resolve to a real item; a
+        // bad/temporary id yields a null ref and dereferencing it (quantity)
+        // SIGSEGVs the node.  Bail cleanly instead.
         iRef = sItemFactory.GetItemRef(m_colonyID);
+        if (iRef.get() == nullptr) {
+            _log(COLONY__ERROR, "Colony::CreatePin() - command center item %u not found; aborting pin.", m_colonyID);
+            return;
+        }
         if (iRef->quantity() > 1) {
             // check for stack of CC items, and split as needed
             ItemData data(typeID, m_client->GetCharacterID(), locTemp, flagNone, iRef->quantity() -1);
             InventoryItemRef iRef2 = sItemFactory.SpawnItem(data);
-            iRef2->Move(m_client->GetShipID(), flagCargoHold);
+            if (iRef2.get() != nullptr)
+                iRef2->Move(m_client->GetShipID(), flagCargoHold);
             iRef->SetQuantity(1);
         }
-        m_client->GetShip()->RemoveItem(iRef);
+        if (m_client->GetShip().get() != nullptr)
+            m_client->GetShip()->RemoveItem(iRef);
     } else {
         // type, owner, location, flag, qty
         ItemData data(typeID, m_client->GetCharacterID(), m_pSE->GetID(), flagNone, 1);
         iRef = sItemFactory.SpawnItem(data);
+        // PI-2: a failed spawn (bad typeID etc.) must not fall through into
+        // the pin switch below, which dereferences iRef unconditionally.
+        if (iRef.get() == nullptr) {
+            _log(COLONY__ERROR, "Colony::CreatePin() - failed to spawn pin item type %u; aborting pin.", typeID);
+            return;
+        }
 
         /*  this shit doesnt work....changes arent sent to client.  not sure why
         m_pg = iRef->GetAttribute(AttrPowerLoad).get_int();
@@ -428,7 +443,10 @@ void Colony::CreatePin(uint32 groupID, uint32 pinID, uint32 typeID, double latit
         case Extractor_Control_Units: { // 1063
             pin.isECU = true;
             pin.lastRunTime = 0;
-            pin.qtyPerCycle = (uint16)iRef->GetAttribute(AttrPinExtractionQuantity).get_int();
+            // a freshly-created ECU has no extraction program yet, so the
+            // quantity attr may be absent -- default to 0 rather than risk it.
+            pin.qtyPerCycle = iRef->HasAttribute(AttrPinExtractionQuantity)
+                    ? (uint16)iRef->GetAttribute(AttrPinExtractionQuantity).get_int() : 0;
         } break;
         case Spaceports:{   // 1030
             pin.isStorage = true;
@@ -808,8 +826,10 @@ void Colony::InstallProgram(uint32 ecuID, uint16 typeID, float headRadius, Plane
     if (typeID < 1) {
         // uninstall program
         itr->second = PI_Pin();
-        // reset extraction quantity in ecu attrib.  this doesnt check for invalid item
-        sItemFactory.GetItemRef(ecuID)->ResetAttribute(AttrPinExtractionQuantity);
+        // reset extraction quantity in ecu attrib -- PI-2: guard the item ref.
+        InventoryItemRef ecuRef = sItemFactory.GetItemRef(ecuID);
+        if (ecuRef.get() != nullptr)
+            ecuRef->ResetAttribute(AttrPinExtractionQuantity);
         return;
     }
     if (itr->second.programType != typeID) {
