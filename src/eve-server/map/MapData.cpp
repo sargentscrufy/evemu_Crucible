@@ -155,6 +155,14 @@ void MapData::GetMissionDestination(Agent* pAgent, uint8 misionType, MissionOffe
 
                 while (run) {
                     run = false;
+                    // MISSION-DEST-1: guard the unsigned size()-1 -- if the list
+                    // empties, size()-1 underflows and sysList.at() throws
+                    // (uncaught -> node crash).  Bail like the no-station path.
+                    if (sysList.empty()) {
+                        offer.destinationID = 0;
+                        _log(AGENT__ERROR, "Agent::GetMissionDestination() - system list exhausted; no station found." );
+                        return;
+                    }
                     uint32 randomIndex = MakeRandomInt(0, (sysList.size() -1));
                     systemID = sysList.at(randomIndex);
                     if (station and (sDataMgr.GetStationCount(systemID) < 1)) {

@@ -1,29 +1,34 @@
 #!/usr/bin/env python3
 """
-FEEDBACK-1/2 validation: Sera joins Local, files a "bug report" in chat,
-and verifies (a) the line lands in server_cache/feedback.log and (b) the
-Deep Space Monitoring Team acknowledgment comes back on the channel.
-Also sends a second message inside the throttle window to confirm only
-one ack fires.
+FEEDBACK-3 validation: local chat is only captured as a dev report when the
+line carries the uppercase token "BUG".
+
+Sequence (single char in Local):
+  1. a plain line with no BUG token  -> NOT logged, NO ack
+  2. a line containing BUG           -> logged to feedback.log + one ack
+  3. a second BUG line in the throttle window -> logged, but NO extra ack
 
     python feedback_probe.py
 """
 
+import os
 import subprocess
 import sys
 import time
 
 from machoclient import MachoClient, CallError, log
 
-sys.path.insert(0, __import__("os").path.join(
-    __import__("os").path.dirname(__import__("os").path.abspath(__file__)),
-    "..", "smoke-bot"))
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "smoke-bot"))
 from evemarshal import WStr  # noqa: E402
 
 CHAR = 90000014
 DOCKER = r"C:\Program Files\Docker\Docker\resources\bin\docker.exe"
-REPORT = "BUG REPORT: testing the local feedback pipeline end to end"
 ACK_SNIPPET = "Deep space monitoring team"
+TAG = str(int(time.time()))                       # unique marker for this run
+PLAIN = f"the gate feels slow today {TAG}"        # no BUG token -> ignored
+REPORT = f"BUG the undock bounce is back {TAG}"   # BUG token -> captured
+REPORT2 = f"BUG and the map is off too {TAG}"     # second BUG -> throttled ack
 
 
 def filetime_now():
@@ -31,15 +36,20 @@ def filetime_now():
 
 
 def send_and_count_acks(mch, local, text, seconds):
-    """Send a local message and count acks that arrive from the moment the
-    call goes out (the ack can land during the call's own recv loop)."""
+    """Send a local message; count acks arriving from the moment we send."""
     n0 = len(mch.notifications)
     mch.call("LSC", "SendMessage", local, WStr(text))
     end = time.time() + seconds
     while time.time() < end:
         mch.pump(2.0)
-    return sum(1 for note in mch.notifications[n0:]
-               if ACK_SNIPPET in repr(note))
+    return sum(1 for note in mch.notifications[n0:] if ACK_SNIPPET in repr(note))
+
+
+def feedback_log():
+    out = subprocess.run(
+        [DOCKER, "exec", "server", "sh", "-c", "tail -40 /app/server_cache/feedback.log"],
+        capture_output=True, text=True, timeout=30)
+    return out.stdout or out.stderr or ""
 
 
 def main():
@@ -51,25 +61,35 @@ def main():
     local = (("solarsystemid2", system_id),)
     mch.call("LSC", "JoinChannels", [local], filetime_now())
     mch.pump(3)
-    log("joined Local; filing report...")
 
-    n_ack = send_and_count_acks(mch, local, REPORT, 8)
-    log(f"acks after report #1: {n_ack}")
+    log("1) plain line (no BUG token)")
+    ack_plain = send_and_count_acks(mch, local, PLAIN, 8)
+    log(f"   acks: {ack_plain}  (expect 0)")
 
-    n_ack2 = send_and_count_acks(mch, local, "second line, same report", 8)
-    log(f"acks after report #2 (throttle window): {n_ack2}")
+    log("2) BUG line")
+    ack_bug = send_and_count_acks(mch, local, REPORT, 8)
+    log(f"   acks: {ack_bug}  (expect 1)")
 
-    out = subprocess.run(
-        [DOCKER, "exec", "server", "sh", "-c",
-         "tail -6 /app/server_cache/feedback.log"],
-        capture_output=True, text=True, timeout=30)
-    log("feedback.log tail:")
-    for line in (out.stdout or out.stderr).strip().splitlines():
-        log(f"  | {line}")
+    log("3) second BUG line inside throttle window")
+    ack_bug2 = send_and_count_acks(mch, local, REPORT2, 8)
+    log(f"   acks: {ack_bug2}  (expect 0 -- throttled)")
 
-    ok = (n_ack == 1) and (n_ack2 == 0) and (REPORT in (out.stdout or ""))
-    log("FEEDBACK VALIDATION " + ("PASS" if ok else
-        f"ISSUES (ack1={n_ack} ack2={n_ack2} logged={REPORT in (out.stdout or '')})"))
+    logtxt = feedback_log()
+    plain_logged = PLAIN in logtxt
+    bug_logged = REPORT in logtxt
+    bug2_logged = REPORT2 in logtxt
+    log("feedback.log (this run's lines):")
+    for line in logtxt.splitlines():
+        if TAG in line:
+            log(f"  | {line}")
+
+    ok = (ack_plain == 0 and ack_bug == 1 and ack_bug2 == 0
+          and not plain_logged and bug_logged and bug2_logged)
+    log("=== VERDICT ===")
+    log(f"  plain line: ack={ack_plain} logged={plain_logged} (want ack=0 logged=False)")
+    log(f"  BUG line:   ack={ack_bug} logged={bug_logged} (want ack=1 logged=True)")
+    log(f"  BUG line 2: ack={ack_bug2} logged={bug2_logged} (want ack=0 logged=True)")
+    log("  >>> FEEDBACK-3 " + ("PASS" if ok else "FAIL"))
     mch.close()
     return 0 if ok else 1
 

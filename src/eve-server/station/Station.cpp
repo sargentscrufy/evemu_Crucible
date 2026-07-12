@@ -138,7 +138,7 @@ uint32 StationItem::GetOfficeID(uint32 corpID)
     if (!IsPlayerCorp(corpID))
         return 0;
     for (auto cur : m_officeMap)
-        if (cur.second.corporationID = corpID)
+        if (cur.second.corporationID == corpID)   // STATION-1: was `=` (assign), so this returned the first office for ANY corp
             return cur.first;
     return 0;
 }

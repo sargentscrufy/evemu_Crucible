@@ -87,7 +87,7 @@ PyResult AlertService::BeanDelivery(PyCallArgs& call, PyList* beans)
 
 PyResult AlertService::GroupBeanDelivery(PyCallArgs& call, PyBuffer* compressedBeans)
 {
-    _log(CLIENT__WARNING, "AlertService::Handle_GroupBeanDelivery(): size=%u", call.tuple->size() );
+    _log(CLIENT__WARNING, "AlertService::Handle_GroupBeanDelivery(): size=%u", (uint32)call.tuple->size() );
     //call.Dump(CLIENT__CALL_DUMP);
 
     return PyStatic.NewNone();

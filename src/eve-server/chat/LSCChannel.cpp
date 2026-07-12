@@ -279,8 +279,12 @@ void LSCChannel::SendMessage(Client * c, const char * message, bool self/*false*
     PyTuple *answer = sm.Encode();
     sEntityList.Multicast("OnLSC", GetTypeString(), &answer, mct);
 
-    // FEEDBACK-1: capture local chat for the dev feedback log
-    if ((m_type == LSC::Type::solarsystem2) and (c != nullptr) and !self) {
+    // FEEDBACK-1: capture local chat for the dev feedback log.  Only lines that
+    // carry the uppercase token "BUG" are treated as reports -- ordinary chatter
+    // no longer fills the log or triggers the auto-ack, so the pipeline stays
+    // signal.  Case-sensitive on purpose: players flag a report by SHOUTING BUG.
+    if ((m_type == LSC::Type::solarsystem2) and (c != nullptr) and !self
+        and (message != nullptr) and (std::string(message).find("BUG") != std::string::npos)) {
         WriteFeedbackLog("%s @ %s: %s", c->GetName(),
                 (c->SystemMgr() != nullptr ? c->SystemMgr()->GetName() : "?"),
                 message);

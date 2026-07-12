@@ -676,6 +676,35 @@ fixed in one pass (commit: rat spawn rework):
   undocking into your own hostile home space doesn't (yet) summon police —
   acceptable v1; a presence/patrol sweep could extend it later.
 
+### Quick-wins batch (2026-07-12)
+
+Small, self-contained fixes found by a code sweep + the local-chat change the
+user asked for. All one-to-few lines, deployed together.
+
+- **FEEDBACK-3 (`LSCChannel.cpp`):** the local-chat dev-feedback log + auto-ack
+  now only fire when a line carries the uppercase token **"BUG"** (case-
+  sensitive `std::string::find`). Ordinary local chatter no longer fills
+  `feedback.log` or trips the Deep Space Monitoring auto-ack, so the report
+  pipeline stays signal. Validated by `feedback_probe.py` (plain line ignored,
+  BUG line logged+acked, second BUG line throttled).
+- **LOOP-1 (`eve-server.cpp:923`):** the main loop slept for the *elapsed*
+  frame time (`start`) instead of the *remaining* budget. Now sleeps
+  `m_sleepTime - elapsed`, so a fast frame no longer spins hot and a slow frame
+  no longer oversleeps -- correct ~100 Hz pacing.
+- **STATION-1 (`Station.cpp:141`):** `GetOfficeID()` used `=` instead of `==`
+  in its office-match condition, so it returned the *first* office in the map
+  for **any** corp. Fixed to `==`.
+- **PLAYER-1 (`SystemManager.cpp:1014`):** the per-system player counter
+  (`m_players`, `uint16`) had a dead `if (m_players < 0)` clamp after
+  `--m_players`; unsigned underflow wrapped 0 -> 65535 and the guard never
+  fired. Now checks `== 0` **before** decrementing.
+- **MISSION-DEST-1 (`MapData.cpp:156`):** `Agent::GetMissionDestination()` could
+  underflow `sysList.size()-1` and throw from `sysList.at()` (uncaught -> node
+  crash) if the candidate list emptied. Added an empty-list guard that returns
+  like the existing no-station path.
+- **FMT-1/2 (`AlertService.cpp:90`, `LSCService.cpp:379`):** `%u` fed a
+  `size_t`; cast to `(uint32)` to match the format specifier.
+
 ### SPAWN-14 (OPEN) — belt spawn never arms when pilot lands in a non-belt sub-bubble
 
 - **Found 2026-07-11** while validating SPAWN-13. A bot warps to belt

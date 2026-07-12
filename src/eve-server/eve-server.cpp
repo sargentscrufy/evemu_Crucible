@@ -920,9 +920,14 @@ int main( int argc, char* argv[] )
         m_run = sConsole.Process();
 
         /* do the stuff for thread sleeping */
+        // LOOP-1: sleep off the REMAINING frame budget, not the elapsed time.
+        // `start` is reused here as the elapsed tick count; the loop must sleep
+        // for m_sleepTime - elapsed to hold the target period.  The old code
+        // slept for `start` (the elapsed time itself), so a fast frame barely
+        // slept (loop spun hot) and a slow frame overslept.
         start = GetTickCount() - start;
         if (m_sleepTime > start)
-            std::this_thread::sleep_for(std::chrono::milliseconds(start));
+            std::this_thread::sleep_for(std::chrono::milliseconds(m_sleepTime - start));
     }
 
     /*

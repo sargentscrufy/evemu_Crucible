@@ -1010,11 +1010,14 @@ void SystemManager::RemoveClient(Client* pClient, bool count/*false*/, bool jump
             pClient->GetName(), pClient->GetCharacterID(), m_data.name.c_str(), m_data.systemID, m_clients.size());
 
     if (count) {
-        --m_players;
-        if (m_players < 0) {
-            m_players = 0;
-            m_clients.clear();  // redundant but safe
-            _log(PLAYER__ERROR, "player count for %s(%u) is < 0", m_data.name.c_str(), m_data.systemID);
+        // PLAYER-1: m_players is unsigned (uint16), so the old post-decrement
+        // `if (m_players < 0)` clamp was dead code -- a decrement from 0 wrapped
+        // to 65535 and the guard never fired.  Check before decrementing.
+        if (m_players == 0) {
+            m_clients.clear();  // count desync; keep the map consistent
+            _log(PLAYER__ERROR, "player count for %s(%u) already 0 on remove", m_data.name.c_str(), m_data.systemID);
+        } else {
+            --m_players;
         }
 
         _log(PLAYER__INFO, "%s(%u): Removed from player count for %s(%u) - new count: %u", \
