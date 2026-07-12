@@ -656,6 +656,61 @@ bool SpawnMgr::DoGuardSpawn(SystemBubble* pBubble)
     return true;
 }
 
+uint8 SpawnMgr::SpawnFactionResponse(uint32 factionID, const GPoint& pos, SystemEntity* target, uint8 count)
+{
+    // STAND-3: the standing-gated consequence layer.  A pilot who is hostile to
+    // the empire whose space they are in gets hunted by that empire's navy.
+    // Reuses the GUARD-1 police ship table but, unlike guards, these are handed
+    // the offender as a target so their normal AI locks and engages.
+    if ((target == nullptr) or !IsFaction(factionID))
+        return 0;
+
+    // navy ship types per empire; CONCORD frigate as the fallback for empires
+    // with no police types in the crucible data (Minmatar).
+    std::vector<uint32> types = { 1896, 1896, 1896 };               // Concord Police Frigate
+    switch (factionID) {
+        case factionCaldari:  types = { 9970, 10660, 9971 };  break;  // Caldari Police
+        case factionGallente: types = { 9991, 9983, 9984 };   break;  // Gallente Police
+        case factionAmarr:    types = { 3768, 3768, 3768 };   break;  // Amarr Police
+    }
+
+    uint32 corpID = sDataMgr.GetFactionCorp(factionID);
+    FactionData data = FactionData();
+        data.allianceID = factionID;
+        data.corporationID = corpID;
+        data.factionID = factionID;
+        data.ownerID = corpID;
+
+    NPC* pNPC(nullptr);
+    InventoryItemRef iRef(nullptr);
+    uint8 spawned = 0;
+    for (uint8 i = 0; i < count; ++i) {
+        uint32 typeID = types[i % types.size()];
+        GPoint spawnPos(pos);
+        spawnPos.MakeRandomPointOnSphere(MakeRandomInt(8, 15) * 1000);   // 8-15km off the offender
+        ItemData idata(typeID, corpID, m_system->GetID(), flagNone, "", spawnPos, "FactionPolice");
+        iRef = sItemFactory.SpawnItem(idata);
+        if (iRef.get() == nullptr) {
+            _log(SPAWN__ERROR, "SpawnFactionResponse: failed to spawn item type %u.", typeID);
+            continue;
+        }
+        pNPC = new NPC(iRef, m_services, m_system, data, this);
+        if (!pNPC->Load()) {
+            _log(SPAWN__ERROR, "SpawnFactionResponse: failed to load NPC %u type %u.", pNPC->GetID(), typeID);
+            pNPC->Delete();
+            continue;
+        }
+        m_system->AddNPC(pNPC);
+        pNPC->DestinyMgr()->SetPosition(spawnPos);
+        pNPC->GetAIMgr()->Target(target);   // hunt the offender
+        ++spawned;
+        _log(SPAWN__POP, "SpawnFactionResponse: %s(%u) faction %u dispatched to hunt %s(%u) in %s.", \
+                iRef->name(), iRef->itemID(), factionID, target->GetName(), target->GetID(), m_system->GetName());
+    }
+
+    return spawned;
+}
+
 bool SpawnMgr::PrepSpawn(SystemBubble* pBubble, uint8 sClass/*Spawn::Class::None*/, uint8 level/*0*/)
 {
     if (pBubble == nullptr)

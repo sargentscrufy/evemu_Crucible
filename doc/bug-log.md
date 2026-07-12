@@ -637,6 +637,45 @@ fixed in one pass (commit: rat spawn rework):
   don't use them as a test weapon; a smart bomb (23864, 140 EM AoE) one-shots a
   150-EHP rat with no lock/tracking.
 
+### STAND-2 (effective standing math) — FIXED (deployed 2026-07-12)
+
+- **Gap:** `Character::GetStandingModified` (the effective-standing formula:
+  Diplomacy lifts negative standings toward 0, Connections raises positive
+  ones) already existed but was dead code (`@todo`, unused) and applied
+  **Connections to every faction**, ignoring that pirate factions use Criminal
+  Connections (skill 3361).
+- **Fix (`Character.cpp`):** positive standings now pick Criminal Connections
+  for the five pirate factions (Guristas/Angel/Blood/Sansha/Serpentis) and
+  Connections for everyone else, via a file-scope `IsPirateFaction()`. And it is
+  now actually *consumed* — STAND-3's faction-police gate reads it, so effective
+  standing finally drives behaviour.
+- **Validated** (`standings_police.py`): base Gallente standing −6 + Diplomacy 5
+  → server computes and logs effective **−5.20** = −6 + (10+−6)·0.04·5, the exact
+  CCP formula. (Harness note: `db.grant_skill` leaves the skillLevel dogma attr
+  280 unset for some skills, so `GetSkillLevel` reads 0 — set attr 280 explicitly
+  or the lift silently won't apply; this bit the first validation run.)
+
+### STAND-3 (faction police / consequence layer) — FIXED (deployed 2026-07-12)
+
+- **Feature:** the standing-gated consequence layer. When a pilot jumps into an
+  empire's space while **effective** standing to that empire is ≤ −5.0 (the EVE
+  faction-police threshold), the empire's navy is dispatched to hunt them.
+- **Implementation:**
+  - `SpawnMgr::SpawnFactionResponse(factionID, pos, target, count)` — spawns
+    `count` navy ships (reusing the GUARD-1 police type table, owned by the
+    faction corp) 8–15 km off the offender and calls `AIMgr->Target(offender)`
+    so their normal AI locks and engages (unlike passive gate guards).
+  - `SystemManager::CheckFactionPolice(pClient)`, called from `AddClient` on
+    stargate arrival (`jump==true`, so once per entry in space, not a hot path).
+    Gates on the four empire factions (500001–500004), pilot in space, and
+    effective standing ≤ −5.0. Squad size scales 2→5 with hostility.
+- **Validated** (`standings_police.py`): Keva, hostile to Gallente, jumps
+  Iyen-Oursta → Faurent (Gallente 0.54); on arrival 2 Gallente Police (Sergeant
+  + Master Sergeant) spawn and are dispatched to hunt her Cormorant. Server
+  stable through repeated spawns (no crash). Only triggers on gate arrival, so
+  undocking into your own hostile home space doesn't (yet) summon police —
+  acceptable v1; a presence/patrol sweep could extend it later.
+
 ### SPAWN-14 (OPEN) — belt spawn never arms when pilot lands in a non-belt sub-bubble
 
 - **Found 2026-07-11** while validating SPAWN-13. A bot warps to belt

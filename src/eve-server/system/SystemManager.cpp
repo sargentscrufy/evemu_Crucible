@@ -962,7 +962,43 @@ void SystemManager::AddClient(Client* pClient, bool count/*false*/, bool jump/*f
         } else {
             m_jumpMap.emplace(stamp, 1);
         }
+
+        // STAND-3: faction police response.  A pilot who jumps into an empire's
+        // space while hostile to that empire (effective standing at or below the
+        // threshold) is met by that empire's navy.  Gated on `jump` so it fires
+        // once on arrival (in space), not on every docked login, and only for
+        // the four empire factions that field a navy.
+        CheckFactionPolice(pClient);
     }
+}
+
+// STAND-3 helper.  Effective standing (base modified by Diplomacy/Connections)
+// is the trigger, tying the reputation system to a real consequence: fall far
+// enough with an empire and you cannot safely fly their space.
+void SystemManager::CheckFactionPolice(Client* pClient)
+{
+    const uint32 factionID = m_data.factionID;
+    // only the four playable empires field a hunting navy here
+    if (factionID < factionCaldari or factionID > factionGallente)
+        return;
+    if (!pClient->IsInSpace() or (pClient->GetShipSE() == nullptr))
+        return;
+
+    const float threshold = -5.0f;   // EVE faction-police standing gate
+    float eff = pClient->GetChar()->GetStandingModified(factionID, pClient->GetCharacterID());
+    if (eff > threshold)
+        return;
+
+    // squad scales with hostility: 2 at the gate, +1 per 2.5 further below it,
+    // capped at 5 so a very low standing does not spawn an unbeatable fleet.
+    // (threshold - eff) >= 0 here, so the uint8 truncation is a floor.
+    uint8 count = 2 + (uint8)((threshold - eff) / 2.5f);
+    if (count > 5) count = 5;
+
+    uint8 spawned = m_spawnMgr->SpawnFactionResponse(
+        factionID, pClient->GetShipSE()->GetPosition(), pClient->GetShipSE(), count);
+    _log(SPAWN__POP, "CheckFactionPolice: %s(%u) eff standing %.2f to faction %u in %s -> %u responders.", \
+            pClient->GetName(), pClient->GetCharacterID(), eff, factionID, m_data.name.c_str(), spawned);
 }
 
 void SystemManager::RemoveClient(Client* pClient, bool count/*false*/, bool jump/*false*/) {

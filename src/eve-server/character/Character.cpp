@@ -1363,8 +1363,29 @@ void Character::SaveBookMarks()
 
 // functions and methods for standings system
 /** @todo  this needs to be moved to common standings code */
-/** @todo  these need to use common standings methods for formulas  */
 /** @todo  these need secStatus tests and calcs for negative secStatus */
+
+// STAND-2: the "connections" family of social skills that raises a POSITIVE
+// standing toward an NPC entity differs by the entity's allegiance -- pirate
+// factions are improved by Criminal Connections, everyone else by Connections.
+// Negative standings are always lifted toward zero by Diplomacy.
+static bool IsPirateFaction(uint32 id)
+{
+    switch (id) {
+        case factionGuristas:
+        case factionAngel:
+        case factionBloodRaider:
+        case factionSanshas:
+        case factionSerpentis:
+            return true;
+        default:
+            return false;
+    }
+}
+
+// Effective standing = base standing modified by the character's social skills
+// (the value the client shows and the server gates on). base can be 0 when no
+// repStandings row exists yet.
 float Character::GetStandingModified(uint32 fromID, uint32 toID)
 {
     if (toID == 0)
@@ -1373,7 +1394,10 @@ float Character::GetStandingModified(uint32 fromID, uint32 toID)
     if (res < 0.0f) {
         res += ((10.0f + res) * (0.04f * GetSkillLevel(EvESkill::Diplomacy)));
     } else {
-        res += ((10.0f - res) * (0.04f * GetSkillLevel(EvESkill::Connections)));
+        const uint16 connSkill = IsPirateFaction(fromID)
+                               ? EvESkill::CriminalConnections
+                               : EvESkill::Connections;
+        res += ((10.0f - res) * (0.04f * GetSkillLevel(connSkill)));
     }
     return res;
 }

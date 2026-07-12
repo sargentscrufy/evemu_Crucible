@@ -137,6 +137,9 @@ public:
     void AddItemToInventory(InventoryItemRef item);
     void RemoveItemFromInventory(InventoryItemRef item);
     void DoSpawnForBubble(SystemBubble* pBubble);
+    // STAND-3: dispatch empire navy against a pilot hostile to this system's
+    // owning empire (called on stargate arrival from AddClient).
+    void CheckFactionPolice(Client* pClient);
 
     /* this is to send new global ball added to system AFTER SetState has been sent */
     void SendStaticBall(SystemEntity* pSE);

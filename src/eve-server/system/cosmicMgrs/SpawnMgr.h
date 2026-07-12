@@ -48,6 +48,11 @@ public:
     // spawned outside the rat class/faction tables (those only hold
     // pirate factions); guards do not roam, respawn, or aggress.
     bool DoGuardSpawn(SystemBubble* pBubble);
+    // STAND-3: empire faction navy dispatched to hunt a specific pilot whose
+    // effective standing to the system's owning empire is hostile.  Unlike
+    // gate guards these actively lock and attack the offender.  Returns the
+    // number of responders spawned.
+    uint8 SpawnFactionResponse(uint32 factionID, const GPoint& pos, SystemEntity* target, uint8 count);
     void DoSpawnForAnomaly(SystemBubble* pBubble, GPoint pos, uint8 level, uint16 typeID);
     void DoSpawnForMission(SystemBubble* pBubble, uint32 regionID);
     void DoSpawnForIncursion(SystemBubble* pBubble, uint32 regionID);
