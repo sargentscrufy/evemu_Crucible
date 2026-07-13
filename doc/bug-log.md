@@ -5,6 +5,18 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 
 ## Open
 
+### Session 2026-07-12 late — live client session (localhost)
+
+- **MKT-6 — FIXED 2026-07-12 (05fef810): market appears completely empty when
+  opened while undocked.** Live-diagnosed from proxy captures of the user's
+  real session: `GetOrders` delivered full books (191 sells for the browsed
+  type) while `GetStationAsks` answered an empty IndexRowset twice — an
+  undocked client has stationID 0 and the query matched nothing, and the
+  client keys the market browse tree's "available items" view off that
+  result. Server now falls back to system-wide asks when the caller is in
+  space. (Docked-at-orderless-station can still look sparse — that's the
+  client's "show only available" filter working as designed.)
+
 ### Session 2026-07-12 — production feedback drop (feedback-20260712-180607.log, SARGENTSCRUFY live play)
 
 First round-trip through the feedback-inbox workflow. 13 BUG lines from a
