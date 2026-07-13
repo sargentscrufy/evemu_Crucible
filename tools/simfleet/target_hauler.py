@@ -26,7 +26,10 @@ from machoclient import MachoClient, CallError, log
 from provision import ensure_docked, SOLARSYSTEM_GROUP, STATION_GROUP
 
 PORT = int(os.environ.get("EVE_PORT", "26010"))
-ACCT, PW, CHAR, TAG = "fleet10", "fleet", 90000013, "Enna"
+# override with EVE_PILOT="acct:pw:charID:tag" -- pick a char the server
+# hasn't cached since its last restart, or the docked staging won't stick
+_p = os.environ.get("EVE_PILOT", "fleet10:fleet:90000013:Enna").split(":")
+ACCT, PW, CHAR, TAG = _p[0], _p[1], int(_p[2]), _p[3]
 STATION, SYSTEM = 60003760, 30000142          # Jita 4-4 CNAP
 BADGER = 648
 NUCLEAR_M = 187
@@ -42,7 +45,10 @@ def stage():
     pf.insert_item("", NUCLEAR_M, CHAR, ship, 5, qty=CARGO_QTY, singleton=0)
     for skill_tid, lvl in db.skill_closure([BADGER]):
         db.grant_skill(CHAR, skill_tid, lvl)
-    db.execute(f"UPDATE chrCharacters SET stationID={STATION}, "
+    # locationID must be the STATION for a docked login -- the server keys
+    # docked-vs-in-space off locationID, not stationID (staging only
+    # stationID caused in-space logins warping to the fresh ship's 0,0,0)
+    db.execute(f"UPDATE chrCharacters SET stationID={STATION}, locationID={STATION}, "
                f"solarSystemID={SYSTEM}, shipID={ship} WHERE characterID={CHAR}")
     return ship
 
@@ -75,9 +81,15 @@ def run(minutes, resume=0):
     else:
         ship = stage()
         log(f"=== {TAG}: 'Target Hauler' Badger {ship}, {CARGO_QTY} Nuclear M in cargo ===")
+        staged = db.query(f"SELECT stationID, locationID FROM chrCharacters "
+                          f"WHERE characterID={CHAR}")[0]
+        log(f"{TAG}: pre-login DB state: {staged}")
 
         mch = MachoClient("127.0.0.1", PORT, ACCT, PW)
         mch.enter_world(CHAR)
+        post = db.query(f"SELECT stationID, locationID FROM chrCharacters "
+                        f"WHERE characterID={CHAR}")[0]
+        log(f"{TAG}: post-login DB state: {post}")
         if not ensure_docked(mch, STATION, SYSTEM, ship):
             log("could not stage docked"); return
 
@@ -87,6 +99,12 @@ def run(minutes, resume=0):
         mch.pump(10)
 
     bey = mch.bind("beyonce", (SYSTEM, SOLARSYSTEM_GROUP))
+    # a real heading (like a player double-clicking in space) -- speed alone
+    # leaves destiny with a null target point after the undock push yields
+    try:
+        mch.call_bound(bey, "CmdGotoDirection", 0.577, 0.408, 0.707)
+    except CallError as e:
+        log(f"heading set: {str(e)[:80]}")
     try:
         mch.call_bound(bey, "CmdSetSpeedFraction", 1.0)
     except CallError as e:
@@ -106,9 +124,10 @@ def run(minutes, resume=0):
             except Exception:
                 pass
             break
-        # hold course: re-assert speed occasionally in case anything
-        # (bump, session change) zeroed it
+        # hold course: re-assert heading + speed occasionally in case
+        # anything (bump, session change) zeroed them
         try:
+            mch.call_bound(bey, "CmdGotoDirection", 0.577, 0.408, 0.707)
             mch.call_bound(bey, "CmdSetSpeedFraction", 1.0)
         except (CallError, Exception):
             pass
