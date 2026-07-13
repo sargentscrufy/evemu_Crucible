@@ -216,6 +216,17 @@ void DestinyManager::ProcessState() {
             if (m_warpState != nullptr) {
                 //warp is in progress
                 uint16 sec_into_warp = (sEntityList.GetStamp() - m_stateStamp);
+                // DESTINY-12: watchdog -- no legitimate in-system warp runs
+                // 10 minutes.  a wedged warp otherwise blocks Dock/Stop/Warp
+                // forever ("warping while stationary").
+                if (sec_into_warp > 600) {
+                    _log(DESTINY__ERROR, "Destiny::ProcessState() - %s(%u) warp ran %us; clearing wedged warp state.",
+                            mySE->GetName(), mySE->GetID(), sec_into_warp);
+                    SafeDelete(m_warpState);
+                    m_targBubble = nullptr;
+                    Stop();
+                    return;
+                }
                 //  speed and distance formulas based on current warp distance
                 if (m_warpState->accel) {
                     WarpAccel(sec_into_warp);
@@ -224,14 +235,19 @@ void DestinyManager::ProcessState() {
                 } else if (m_warpState->decel) {
                     WarpDecel(sec_into_warp);
                 } else {// uh, Houston...we have a problem...
+                    // DESTINY-12: self-heal instead of stranding the ship in
+                    // a permanent "warping" state
                     if (mySE->HasPilot()) {
-                        _log(DESTINY__ERROR, "Destiny::ProcessState() Error!  Ship %s(%u) for Player %s(%u) Has WarpState but checks are false.",  \
+                        _log(DESTINY__ERROR, "Destiny::ProcessState() Error!  Ship %s(%u) for Player %s(%u) Has WarpState but checks are false.  Clearing warp state.",  \
                                     mySE->GetName(), mySE->GetID(), mySE->GetPilot()->GetName(), mySE->GetPilot()->GetCharacterID());
-                        mySE->GetPilot()->SendErrorMsg("Internal Server Error. Ref: ServerError 35928.   Please Dock or Relog to reset your ship.");
+                        mySE->GetPilot()->SendNotifyMsg("Warp drive malfunction -- warp aborted.");
                     } else {
-                        _log(DESTINY__ERROR, "Destiny::ProcessState() Error!  NPC %s(%u) Has WarpState but checks are false.",  \
+                        _log(DESTINY__ERROR, "Destiny::ProcessState() Error!  NPC %s(%u) Has WarpState but checks are false.  Clearing warp state.",  \
                                     mySE->GetName(), mySE->GetID());
                     }
+                    SafeDelete(m_warpState);
+                    m_targBubble = nullptr;
+                    Stop();
                 }
                 return;
             }
@@ -541,6 +557,21 @@ void DestinyManager::Stop() {
     // Clear autopilot
     if (mySE->HasPilot()) {
         mySE->GetPilot()->SetAutoPilot(false);
+    }
+
+    // DESTINY-12: rescue valve for a WEDGED warp -- warp state allocated but
+    // the ship never actually reached warp speed and the warp is stale
+    // (align/init glitch).  A real warp cannot be stopped (velocity is km/s
+    // within seconds); a wedged one left Dock/Stop/Warp refused forever.
+    if ((m_warpState != nullptr)
+    and ((sEntityList.GetStamp() - m_stateStamp) > 15)
+    and (m_velocity.length() < (m_maxShipSpeed * 2))) {
+        _log(DESTINY__WARNING, "%s(%u): Stop() clearing wedged warp state (%.1f m/s, %us into 'warp').",
+                mySE->GetName(), mySE->GetID(), m_velocity.length(),
+                (uint16)(sEntityList.GetStamp() - m_stateStamp));
+        SafeDelete(m_warpState);
+        m_targBubble = nullptr;
+        m_ballMode = Destiny::Ball::Mode::STOP;
     }
 
     if (m_userSpeedFraction == 0.0f) {
