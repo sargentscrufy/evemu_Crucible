@@ -7,6 +7,18 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 
 ### Session 2026-07-12 late — live client session (localhost)
 
+- **DESTINY-12 — FIXED 2026-07-13 (39dddf8e), built (deploy pending player
+  logout): "warping while stationary" wedge blocks Dock/Stop/Warp forever.**
+  Live bugcheck: a 1,015 km hop glitched in align ("warp align/speed is
+  incorrect, but time > shipTimeToWarp" catchall), InitWarp ran, the warp
+  stalled at 3 m/s and never completed — `m_warpState` stayed allocated so
+  IsWarping() answered true for 15+ minutes of refused Dock/Stop/Warp
+  commands. Nothing player-reachable cleared it (the FSM's own broken-state
+  branch told the player to relog). Now: Stop() clears a stale (>15 s)
+  sub-warp-speed warp state; the broken-state branch self-heals; and a
+  10-minute watchdog reaps any surviving warp state. Player remedy in the
+  moment: relog (or, post-fix, Ctrl+Space then dock).
+
 - **DESTINY-10 — ROOT CAUSE CORRECTED + FIXED 2026-07-13 (cd690173).** Not a
   new undock fling: chars flung to the 1e16-m sentinel during the 2026-07-08
   DESTINY-6 load test were being warped BACK there by the login warp-in
