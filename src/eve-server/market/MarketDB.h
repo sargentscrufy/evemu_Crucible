@@ -53,8 +53,14 @@ public:
     static bool RecordTransaction(Market::TxData &data);
     static bool AlterOrderQuantity(uint32 orderID, uint32 new_qty);
 
-    static uint32 FindBuyOrder(uint32 typeID, uint32 stationID, uint32 quantity, double price);
-    static uint32 FindSellOrder(uint32 typeID, uint32 stationID, uint32 quantity, double price);
+    // MKT-5: matching is range-aware.  A buy order is fillable when the
+    // seller is inside the ORDER's advertised range; a sell order is
+    // buyable when it falls inside the BUYER's requested range (jump-count
+    // ranges 1..40 are approximated as region-wide).  quantity only has to
+    // clear the order's minVolume -- partial fills are handled by the
+    // caller looping best-price-first.
+    static uint32 FindBuyOrder(uint32 typeID, uint32 stationID, uint32 solarSystemID, uint32 regionID, uint32 quantity, double price);
+    static uint32 FindSellOrder(uint32 typeID, uint32 stationID, uint32 solarSystemID, uint32 regionID, uint32 quantity, double price, int32 buyerRange);
     static uint32 StoreOrder(Market::SaveData& data);
 
 

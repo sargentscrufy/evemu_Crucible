@@ -300,12 +300,12 @@ void MarketMgr::InvalidateOrdersCache(uint32 regionID, uint32 typeID) {
  * Does not currently handle aurum transactions, but it would be good to do that
  * in the future.
  */
-bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef iRef, uint32 quantity, bool useCorp, uint32 typeID, uint32 stationID, double price, uint16 accountKey/*Account::KeyType::Cash*/) {
+uint32 MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef iRef, uint32 quantity, bool useCorp, uint32 typeID, uint32 stationID, uint16 accountKey/*Account::KeyType::Cash*/) {
     Market::OrderInfo oInfo = Market::OrderInfo();
     if (!MarketDB::GetOrderInfo(orderID, oInfo)) {
         _log(MARKET__ERROR, "ExecuteBuyOrder - Failed to get order info for #%u.", orderID);
 
-        return false;
+        return 0;
     }
 
     // get buyer id and determine if buyer is player, corp, or npc/bot
@@ -335,61 +335,54 @@ bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef
         // send the player some kind of notification about the market order, some standard market error should suffice
         seller->SendNotifyMsg("Your order cannot be processed at this time, please try again later.");
 
-        return false;
+        return 0;
     }
 
-    // quantity status of seller's item vs buyer's order
-    uint8 qtyStatus(Market::QtyStatus::Invalid);
+    // MKT-5: sell exactly what was requested, capped by the order's
+    // remaining volume and the stack on hand.  the old code compared the
+    // whole stack against the order and ignored `quantity` -- selling 500
+    // out of a 2301 stack moved the entire stack.
+    uint32 qtySold(quantity);
+    if (qtySold > oInfo.quantity)
+        qtySold = oInfo.quantity;
+    if (qtySold > iRef->quantity())
+        qtySold = iRef->quantity();
+
+    if (qtySold == 0) {
+        _log(MARKET__WARNING, "ExecuteBuyOrder - nothing to sell into order #%u (qty %u, order %u, stack %u).",
+             orderID, quantity, oInfo.quantity, iRef->quantity());
+        return 0;
+    }
 
     bool shouldDeleteItem(false);
-    uint32 qtySold(0);
 
-    if (iRef->quantity() == oInfo.quantity) {
-        qtyStatus = Market::QtyStatus::Complete;
-        qtySold = oInfo.quantity;
-
-        _log(MARKET__TRACE, "ExecuteBuyOrder - order is Complete");
+    if (qtySold == iRef->quantity()) {
+        // whole stack changes hands
+        _log(MARKET__TRACE, "ExecuteBuyOrder - selling entire stack of %u", qtySold);
 
         if (isPlayer) {
-            _log(MARKET__TRACE, "ExecuteBuyOrder - is player");
-
             // use the "owner change" packet to alert the buyer of the new item
             iRef->Donate(oInfo.ownerID, stationID, flagHangar, true);
         } else if (isCorp) {
-            _log(MARKET__TRACE, "ExecuteBuyOrder - is corp");
-
-            // use the "owner change" packet to alert the buyer of the new item
             iRef->Donate(oInfo.ownerID, stationID, flagCorpMarket, true);
         } else if (isTraderJoe || isTrader) {
             // Trader joe is a placeholder ID that deletes every item sold to
             // him. Other trader accounts behave similarly to Trader Joe, but we
             // keep valid journal entries for them
-            _log(MARKET__TRACE, "ExecuteBuyOrder - trader or trader joe encountered");
-
             shouldDeleteItem = true;
-        } else {
-            _log(MARKET__TRACE, "ExecuteBuyOrder - unhandled edge case");
         }
-
-    } else if (iRef->quantity() > oInfo.quantity) {
-        // The seller is selling more items than the buy order is bidding for.
-        qtyStatus = Market::QtyStatus::Over;
-        qtySold = oInfo.quantity;
-
-        _log(MARKET__TRACE, "ExecuteBuyOrder - order is Over");
+    } else {
+        // partial stack
+        _log(MARKET__TRACE, "ExecuteBuyOrder - selling %u of stack %u", qtySold, iRef->quantity());
 
         if (isTraderJoe || isTrader) {
-            // NPC trader joe is a blackhole, just subtract the amount of items
-            // we're selling to him and call it a day. Also applies to other
-            // trader NPCs.
-            iRef->AlterQuantity(-oInfo.quantity, true);
+            // NPC buyers are a blackhole; just subtract the sold amount
+            iRef->AlterQuantity(-(int32)qtySold, true);
         } else {
-            _log(MARKET__TRACE, "ExecuteBuyOrder - buyer is something else?");
-
-            InventoryItemRef siRef = iRef->Split(oInfo.quantity);
+            InventoryItemRef siRef = iRef->Split(qtySold);
             if (siRef.get() == nullptr) {
-                _log(MARKET__ERROR, "ExecuteBuyOrder - Failed to split %u %s.", siRef->itemID(), siRef->name());
-                return false;
+                _log(MARKET__ERROR, "ExecuteBuyOrder - Failed to split %u from %s.", qtySold, iRef->name());
+                return 0;
             }
 
             // use the "owner change" packet to alert the buyer of the new item
@@ -399,24 +392,12 @@ bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef
                 siRef->Donate(oInfo.ownerID, stationID, flagCorpMarket, true);
             }
         }
-    } else {
-        // The seller is selling fewer items than the buy order is bidding for.
-        qtyStatus = Market::QtyStatus::Under;
-        qtySold = iRef->quantity();
-
-        _log(MARKET__TRACE, "ExecuteBuyOrder - order is Under");
-
-        // use the "owner change" packet to alert the buyer of the new item
-        if (isPlayer) {
-            iRef->Donate(oInfo.ownerID, stationID, flagHangar, true);
-        } else if (isCorp) {
-            iRef->Donate(oInfo.ownerID, stationID, flagCorpMarket, true);
-        } else if (isTraderJoe || isTrader) {
-            shouldDeleteItem = true;
-        }
     }
 
-    float money = price * qtySold;
+    // MKT-5: the fill pays the buy ORDER's listed price (>= the seller's
+    // ask).  paying the ask instead leaked the difference in escrow on
+    // player orders and shortchanged sellers on seeded walls.
+    float money = oInfo.price * qtySold;
     std::string reason = "DESC:  Buying items in ";
     reason += stDataMgr.GetStationName(stationID).c_str();
     uint32 sellerWalletOwnerID = 0;
@@ -505,7 +486,7 @@ bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef
     data.isCorp         = useCorp;
     data.memberID       = seller->GetCharacterID(); // TODO: change this to the corp member ID if useCorp is 1?
     data.clientID       = oInfo.ownerID;
-    data.price          = price;
+    data.price          = oInfo.price;
     data.quantity       = qtySold;
     data.stationID      = stationID;
     data.regionID       = sDataMgr.GetStationRegion(stationID);
@@ -525,16 +506,16 @@ bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef
     }
 
     // update the buyer's original order to reflect the updated amount of items
-    // for purchase
-    if (qtyStatus == Market::QtyStatus::Under) {
+    // for purchase.  NOTE: the goods and isk have already changed hands at
+    // this point, so bookkeeping failures are logged but still report the
+    // fill to the caller.
+    if (qtySold < oInfo.quantity) {
         uint32 newQty(oInfo.quantity - qtySold);
 
         _log(MARKET__TRACE, "ExecuteBuyOrder - Partially satisfied order #%u, altering quantity to %u.", orderID, newQty);
 
-        if (!MarketDB::AlterOrderQuantity(orderID, newQty)) {
+        if (!MarketDB::AlterOrderQuantity(orderID, newQty))
             _log(MARKET__ERROR, "ExecuteBuyOrder - Failed to alter quantity of order #%u.", orderID);
-            return false;
-        }
 
         InvalidateOrdersCache(oInfo.regionID, typeID);
 
@@ -542,16 +523,14 @@ bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef
             SendOnOwnOrderChanged(seller, orderID, Market::Action::Modify, useCorp);
         }
 
-        return true;
+        return qtySold;
     }
 
     _log(MARKET__TRACE, "ExecuteBuyOrder - Satisfied order #%u, deleting.", orderID);
 
     PyRep* order = MarketDB::GetOrderRow(orderID);
-    if (!MarketDB::DeleteOrder(orderID)) {
+    if (!MarketDB::DeleteOrder(orderID))
         _log(MARKET__ERROR, "ExecuteBuyOrder - Failed to delete order #%u.", orderID);
-        return false;
-    }
 
     InvalidateOrdersCache(oInfo.regionID, typeID);
 
@@ -559,11 +538,11 @@ bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef
         SendOnOwnOrderChanged(seller, orderID, Market::Action::Expiry, useCorp, order);
     }
 
-    return true;
+    return qtySold;
 }
 
 // Executes a sell order.
-void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, uint32 sellQuantity, float price, uint32 stationID, uint32 typeID, bool useCorp) {
+uint32 MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, uint32 sellQuantity, uint32 typeID, bool useCorp) {
     // attempt to retrieve information about the sell order, fail if not found
     Market::OrderInfo oInfo = Market::OrderInfo();
     if (!MarketDB::GetOrderInfo(orderID, oInfo)) {
@@ -572,7 +551,7 @@ void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, uint32 sellQuant
             orderID
         );
 
-        return;
+        return 0;
     }
 
     bool orderConsumed(false);
@@ -580,6 +559,9 @@ void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, uint32 sellQuant
     if (sellQuantity > oInfo.quantity) {
         sellQuantity = oInfo.quantity;
     }
+
+    if (sellQuantity == 0)
+        return 0;
 
     if (sellQuantity == oInfo.quantity) {
         orderConsumed = true;
@@ -589,12 +571,15 @@ void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, uint32 sellQuant
         oInfo.ownerID = stDataMgr.GetOwnerID(oInfo.ownerID);
     }
 
+    // MKT-5: the buyer pays the sell ORDER's listed price (<= their max
+    // bid), and delivery lands at the ORDER's station -- remote buys mean
+    // the buyer travels to collect, as in live EVE.
     /** @todo  get/implement accountKey here.... */
-    float money = price * sellQuantity;
+    float money = oInfo.price * sellQuantity;
 
     // send wallet blink event and record the transaction in their journal.
     std::string reason = "DESC:  Buying market items in ";
-    reason += stDataMgr.GetStationName(stationID).c_str();
+    reason += stDataMgr.GetStationName(oInfo.stationID).c_str();
 
     // this will throw if funds are not available.
     AccountService::TransferFunds(
@@ -649,11 +634,13 @@ void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, uint32 sellQuant
 
     InventoryItemRef iRef = sItemFactory.SpawnItem(idata);
     if (iRef.get() == nullptr) {
-        return;
+        return 0;
     }
 
-    // use the "owner change" packet to alert the buyer of the new item
-    iRef->Donate(buyer->GetCharacterID(), stationID, flagHangar, true);
+    // use the "owner change" packet to alert the buyer of the new item.
+    // MKT-5: delivery is at the sell ORDER's station, not wherever the
+    // buyer happens to be docked.
+    iRef->Donate(buyer->GetCharacterID(), oInfo.stationID, flagHangar, true);
 
     // add data to StatisticMgr
     sStatMgr.Add(Stat::iskMarket, money);
@@ -667,10 +654,8 @@ void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, uint32 sellQuant
         _log(MARKET__TRACE, "ExecuteSellOrder - satisfied order #%u, deleting.", orderID);
 
         PyRep* order = MarketDB::GetOrderRow(orderID);
-        if (!MarketDB::DeleteOrder(orderID)) {
+        if (!MarketDB::DeleteOrder(orderID))
             _log(MARKET__ERROR, "ExecuteSellOrder - Failed to delete order #%u.", orderID);
-            return;
-        }
 
         InvalidateOrdersCache(oInfo.regionID, typeID);
 
@@ -680,10 +665,9 @@ void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, uint32 sellQuant
 
         _log(MARKET__TRACE, "ExecuteSellOrder - Partially satisfied order #%u, altering quantity to %u.", orderID, newQty);
 
-        if (!MarketDB::AlterOrderQuantity(orderID, newQty)) {
+        if (!MarketDB::AlterOrderQuantity(orderID, newQty))
             _log(MARKET__ERROR, "ExecuteSellOrder - Failed to alter quantity of order #%u.", orderID);
-            return;
-        }
+
         InvalidateOrdersCache(oInfo.regionID, typeID);
 
         SendOnOwnOrderChanged(seller, orderID, Market::Action::Modify, useCorp);
@@ -697,10 +681,10 @@ void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, uint32 sellQuant
     data.isCorp         = useCorp;
     data.memberID       = buyer->GetCharacterID(); // TODO: change this to the corp member ID if useCorp is 1?
     data.clientID       = oInfo.ownerID;
-    data.price          = price;
+    data.price          = oInfo.price;
     data.quantity       = sellQuantity;
-    data.stationID      = stationID;
-    data.regionID       = sDataMgr.GetStationRegion(stationID);
+    data.stationID      = oInfo.stationID;
+    data.regionID       = sDataMgr.GetStationRegion(oInfo.stationID);
     data.typeID         = typeID;
 
     if (!MarketDB::RecordTransaction(data)) {
@@ -715,6 +699,8 @@ void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, uint32 sellQuant
     if (!MarketDB::RecordTransaction(data)) {
         _log(MARKET__ERROR, "ExecuteSellOrder - Failed to record sell side of transaction.");
     }
+
+    return sellQuantity;
 }
 
 

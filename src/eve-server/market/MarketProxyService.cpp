@@ -235,57 +235,77 @@ PyResult MarketProxyService::PlaceCharOrder(PyCallArgs &call, PyInt* stationID, 
             accountKey = call.client->GetCorpAccountKey();
         }
 
-        // is this standing order or immediate?
-        if (duration->value() == 0) {
-            // immediate. look for open sell order that matches all reqs (price, qty, distance, etc)
-            // check distance, set order range and make station list.
+        // MKT-4/MKT-5: both immediate AND standing buys cross existing sell
+        // orders first, cheapest-first with partial fills across multiple
+        // orders.  a standing buy priced at/above an open ask fills the
+        // overlap and only lists the remainder.
+        uint32 solarSystemID(sDataMgr.GetStationSystem(stationID->value()));
+        uint32 regionID(sDataMgr.GetStationRegion(stationID->value()));
+        uint32 remaining(quantity->value());
+
+        while (remaining > 0) {
             uint32 orderID(MarketDB::FindSellOrder(
                 typeID->value(),
                 stationID->value(),
-                quantity->value(),
-                price->value()
+                solarSystemID,
+                regionID,
+                remaining,
+                price->value(),
+                orderRange->value()
             ));
 
-            if (orderID) {
-                // found one.
-                _log(MARKET__TRACE,
-                    "PlaceCharOrder - Found sell order #%u in %s for %s. (type %i, price %.2f, qty %i, range %i)",
-                    orderID,
-                    stDataMgr.GetStationName(stationID->value()).c_str(),
-                    call.client->GetName(),
-                    typeID->value(),
-                    price->value(),
-                    quantity->value(),
-                    orderRange->value()
-                );
-
-                sMktMgr.ExecuteSellOrder(
-                    call.client,
-                    orderID,
-                    quantity->value(),
-                    price->value(),
-                    stationID->value(),
-                    typeID->value(),
-                    useCorp->value()
-                );
-
-                return nullptr;
-            }
+            if (orderID == 0)
+                break;
 
             _log(MARKET__TRACE,
-                "PlaceCharOrder - Failed to satisfy buy order for %i of type %i at %.2f ISK.",
-                quantity->value(),
+                "PlaceCharOrder - Found sell order #%u for %s. (type %i, price %.2f, qty %u, range %i)",
+                orderID,
+                call.client->GetName(),
                 typeID->value(),
-                price->value()
+                price->value(),
+                remaining,
+                orderRange->value()
             );
 
-            call.client->SendErrorMsg("No sell order found.");  // find/implement type name here
+            uint32 bought(sMktMgr.ExecuteSellOrder(
+                call.client,
+                orderID,
+                remaining,
+                typeID->value(),
+                useCorp->value()
+            ));
+
+            if (bought == 0)
+                break;
+
+            remaining -= (bought > remaining) ? remaining : bought;
+        }
+
+        // immediate order: report the fill result, never list an order.
+        if (duration->value() == 0) {
+            if (remaining == (uint32)quantity->value()) {
+                _log(MARKET__TRACE,
+                    "PlaceCharOrder - Failed to satisfy buy order for %i of type %i at %.2f ISK.",
+                    quantity->value(),
+                    typeID->value(),
+                    price->value()
+                );
+
+                call.client->SendErrorMsg("No sell orders found within range at that price.");
+            } else if (remaining > 0) {
+                call.client->SendNotifyMsg("Only %u of %u units were available at your price; the rest of the order was not filled.",
+                    quantity->value() - remaining, quantity->value());
+            }
 
             return nullptr;
         }
 
-        // determine escrow amount
-        float money(price->value()  * quantity->value());
+        // standing order fully crossed against open asks -- nothing to list.
+        if (remaining == 0)
+            return nullptr;
+
+        // determine escrow amount for the unfilled remainder
+        float money(price->value() * remaining);
 
         // set save data
         Market::SaveData data = Market::SaveData();
@@ -298,12 +318,12 @@ PyResult MarketProxyService::PlaceCharOrder(PyCallArgs &call, PyInt* stationID, 
         data.typeID             = typeID->value();
         data.orderRange         = orderRange->value();
         data.ownerID            = useCorp->value() ?call.client->GetCorporationID():call.client->GetCharacterID();
-        data.solarSystemID      = sDataMgr.GetStationSystem(stationID->value());
-        data.regionID           = sDataMgr.GetStationRegion(stationID->value());
+        data.solarSystemID      = solarSystemID;
+        data.regionID           = regionID;
         data.stationID          = stationID->value();
         data.price              = price->value();
-        data.volEntered         = quantity->value();
-        data.volRemaining       = quantity->value();
+        data.volEntered         = remaining;
+        data.volRemaining       = remaining;
         data.duration           = duration->value();
         data.memberID           = useCorp->value() ?call.client->GetCharacterID():0;
         data.escrow             = money;
@@ -466,62 +486,74 @@ PyResult MarketProxyService::PlaceCharOrder(PyCallArgs &call, PyInt* stationID, 
 
         // they are allowed to sell this thing...
 
-        // is this standing order or immediate?
-        if (duration->value() == 0) {
-            bool completedOrder(false);
+        // MKT-4/MKT-5: both immediate AND standing sells cross existing buy
+        // orders first, best-price-first with partial fills across multiple
+        // orders.  a standing sell priced at/below an open bid fills the
+        // overlap and only lists the remainder.  the old code required a
+        // single same-station buy order covering the full quantity and spun
+        // the identical query 1000 times when there was none.
+        uint32 solarSystemID(sDataMgr.GetStationSystem(stationID->value()));
+        uint32 regionID(sDataMgr.GetStationRegion(stationID->value()));
+        uint32 remaining(quantity->value());
 
-            uint32 orderID(0), origQty(quantity->value());
+        while (remaining > 0) {
+            _log(MARKET__DUMP, "Mkt::PlaceCharOrder(): finding buy order: %i, %i, %u, %.2f", typeID->value(), stationID->value(), remaining, price->value());
 
-            // set an upper bound (this used to be a while loop that spun
-            // forever in some cases)
-            for (int i = 0; i < 1000; i++) {
-                _log(MARKET__DUMP, "Mkt::PlaceCharOrder(): finding buy order: %i, %i, %i, %.2f", typeID->value(), stationID->value(), quantity->value(), price->value());
+            uint32 orderID(MarketDB::FindBuyOrder(
+                typeID->value(),
+                stationID->value(),
+                solarSystemID,
+                regionID,
+                remaining,
+                price->value()
+            ));
 
-                orderID = MarketDB::FindBuyOrder(typeID->value(), stationID->value(), quantity->value(), price->value());
-
-                if (!orderID) {
-                    continue;
-                }
-
-                _log(MARKET__TRACE,
-                    "PlaceCharOrder - Found buy order #%u in %s for %s.",
-                    orderID,
-                    stDataMgr.GetStationName(stationID->value()).c_str(),
-                    call.client->GetName()
-                );
-
-                completedOrder = sMktMgr.ExecuteBuyOrder(
-                    call.client,
-                    orderID,
-                    iRef,
-                    quantity->value(),
-                    useCorp->value(),
-                    typeID->value(),
-                    stationID->value(),
-                    price->value()
-                );
-
-                if (!completedOrder) {
-                    continue;
-                }
-
-                _log(MARKET__DUMP, "Mkt::PlaceCharOrder(): order resolved");
-
+            if (orderID == 0)
                 break;
-            }
 
-            if (!completedOrder) {
-                _log(MARKET__ERROR, "PlaceCharOrder - failed to find a matching market order within 1000 attempts.");
+            _log(MARKET__TRACE,
+                "PlaceCharOrder - Found buy order #%u in %s for %s.",
+                orderID,
+                stDataMgr.GetStationName(stationID->value()).c_str(),
+                call.client->GetName()
+            );
 
-                call.client->SendErrorMsg("Failed to find a suitable market order in a reasonable amount of time.");
+            uint32 sold(sMktMgr.ExecuteBuyOrder(
+                call.client,
+                orderID,
+                iRef,
+                remaining,
+                useCorp->value(),
+                typeID->value(),
+                stationID->value()
+            ));
 
-                return nullptr;
+            if (sold == 0)
+                break;
+
+            remaining -= (sold > remaining) ? remaining : sold;
+        }
+
+        // immediate order: report the fill result, never list an order.
+        if (duration->value() == 0) {
+            if (remaining == (uint32)quantity->value()) {
+                _log(MARKET__TRACE, "PlaceCharOrder - no buy orders matched %u of type %i at %.2f ISK.",
+                     remaining, typeID->value(), price->value());
+
+                call.client->SendErrorMsg("No buy orders found within range at that price.");
+            } else if (remaining > 0) {
+                call.client->SendNotifyMsg("Only %u of %u units could be sold at your price; the rest remain in your hangar.",
+                    quantity->value() - remaining, quantity->value());
             }
 
             return nullptr;
         }
 
-        // they will be placing a sell order:
+        // standing sell fully crossed against open bids -- nothing to list.
+        if (remaining == 0)
+            return nullptr;
+
+        // they will be placing a sell order for the unfilled remainder:
 
         // set save data
         Market::SaveData data = Market::SaveData();
@@ -534,12 +566,12 @@ PyResult MarketProxyService::PlaceCharOrder(PyCallArgs &call, PyInt* stationID, 
         data.typeID             = typeID->value();
         data.orderRange         = orderRange->value();
         data.ownerID            = iRef->ownerID();
-        data.solarSystemID      = sDataMgr.GetStationSystem(stationID->value());
-        data.regionID           = sDataMgr.GetStationRegion(stationID->value());
+        data.solarSystemID      = solarSystemID;
+        data.regionID           = regionID;
         data.stationID          = stationID->value();
         data.price              = price->value();
-        data.volEntered         = quantity->value();
-        data.volRemaining       = quantity->value();
+        data.volEntered         = remaining;
+        data.volRemaining       = remaining;
         data.duration           = duration->value();
         data.memberID           = useCorp->value() ?call.client->GetCharacterID():0;
 
@@ -566,8 +598,9 @@ PyResult MarketProxyService::PlaceCharOrder(PyCallArgs &call, PyInt* stationID, 
         data.contraband = iRef->contraband();   // does this need to check region/system?
         data.jumps = 1;     // not sure if this is used....
 
-        // calculate total for broker fees
-        float total = price->value() * quantity->value();
+        // calculate total for broker fees (on the listed remainder only --
+        // crossed fills pay sales tax inside ExecuteBuyOrder instead)
+        float total = price->value() * remaining;
         std::string reason = "DESC:  Setting up sell order in ";
         reason += stDataMgr.GetStationName(stationID->value()).c_str();
 
@@ -620,14 +653,16 @@ PyResult MarketProxyService::PlaceCharOrder(PyCallArgs &call, PyInt* stationID, 
             return nullptr;
         }
 
-        if (iRef->quantity() == quantity->value()) {
+        // consume the listed remainder from the stack (crossed fills were
+        // already taken out by ExecuteBuyOrder)
+        if (iRef->quantity() == remaining) {
             // take item from seller
             call.client->SystemMgr()->RemoveItemFromInventory(iRef);
             iRef->Delete();
         } else {
             //update the item.
-            if (!iRef->AlterQuantity(-quantity->value(), true)) {
-                _log(MARKET__ERROR, "PlaceCharOrder - Failed to consume %i units from %s", quantity->value(), iRef->name());
+            if (!iRef->AlterQuantity(-(int32)remaining, true)) {
+                _log(MARKET__ERROR, "PlaceCharOrder - Failed to consume %u units from %s", remaining, iRef->name());
                 return nullptr;
             }
         }

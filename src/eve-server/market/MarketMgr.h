@@ -39,15 +39,16 @@ public:
 
     void UpdatePriceHistory();
 
-    // fulfill market order placed by buyer to buy items (usually at reduced
-    // prices).
-    //
-    // Updates qty in args based on order request.
-    //
-    // Returns true if the order is complete; false otherwise.
-    bool ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef iRef, uint32 quantity, bool useCorp, uint32 typeID, uint32 stationID, double price, uint16 accountKey = Account::KeyType::Cash);
-    // market order placed by seller to sell items (usually at higher prices)
-    void ExecuteSellOrder(Client *buyer, uint32 orderID, uint32 quantity, float price, uint32 stationID, uint32 typeID, bool useCorp);
+    // fill up to `quantity` units of iRef into an existing buy order.
+    // MKT-5: pays the ORDER's listed price (escrow-exact) and respects the
+    // requested quantity instead of moving the whole stack.
+    // Returns the quantity actually sold (0 on failure) so callers can
+    // loop best-price-first for partial fills.
+    uint32 ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef iRef, uint32 quantity, bool useCorp, uint32 typeID, uint32 stationID, uint16 accountKey = Account::KeyType::Cash);
+    // buy up to `quantity` units from an existing sell order.  MKT-5: pays
+    // the ORDER's price; delivery lands at the ORDER's station.
+    // Returns the quantity actually bought (0 on failure).
+    uint32 ExecuteSellOrder(Client *buyer, uint32 orderID, uint32 quantity, uint32 typeID, bool useCorp);
     //forces a refresh of market data.
     void SendOnOwnOrderChanged(Client* pClient, uint32 orderID, uint8 action, bool isCorp = false, PyRep* order = nullptr);
 

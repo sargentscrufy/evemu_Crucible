@@ -190,22 +190,34 @@ PyRep *MarketDB::GetOrderRow(uint32 orderID) {
 }
 
 //NOTE: needs a lot of work to implement orderRange
-uint32 MarketDB::FindBuyOrder(uint32 typeID, uint32 stationID, uint32 quantity, double price) {
+uint32 MarketDB::FindBuyOrder(uint32 typeID, uint32 stationID, uint32 solarSystemID, uint32 regionID, uint32 quantity, double price) {
+    // MKT-5: a buy order is fillable when the seller is inside the ORDER's
+    // advertised range.  orderRange is stored unsigned: 4294967295 (-1) =
+    // station only, 0 = solar system, 1..40 = jumps (approximated here as
+    // region-wide -- the client grays out orders it computes as
+    // out-of-range, so over-matching is harmless), 32767 = region.
+    // Partial fills are allowed: volRemaining only has to cover the
+    // order's own minVolume; the caller loops best-price-first.
     DBQueryResult res;
     if (!sDatabase.RunQuery(res,
         "SELECT orderID"
         " FROM mktOrders"
         " WHERE bid=1"
         "  AND typeID=%u"
-        "  AND stationID=%u"
-        "  AND volRemaining >= %u"
-        "  AND price > %.2f"
-        " ORDER BY price DESC"
+        "  AND volRemaining > 0"
+        "  AND minVolume <= %u"
+        "  AND price >= %.2f - 0.005"
+        "  AND (stationID=%u"
+        "   OR (orderRange = 0 AND solarSystemID=%u)"
+        "   OR (orderRange BETWEEN 1 AND 32767 AND regionID=%u))"
+        " ORDER BY price DESC, issued ASC"
         " LIMIT 1;",
         typeID,
-        stationID,
         quantity,
-        price - 0.1/*, sConfig.market.FindBuyOrder*/))
+        price,
+        stationID,
+        solarSystemID,
+        regionID))
     {
         codelog(MARKET__DB_ERROR, "Error in query: %s", res.error.c_str());
         return 0;
@@ -218,23 +230,34 @@ uint32 MarketDB::FindBuyOrder(uint32 typeID, uint32 stationID, uint32 quantity, 
     return 0;    //no order found.
 }
 
-uint32 MarketDB::FindSellOrder(uint32 typeID, uint32 stationID, uint32 quantity, double price)
+uint32 MarketDB::FindSellOrder(uint32 typeID, uint32 stationID, uint32 solarSystemID, uint32 regionID, uint32 quantity, double price, int32 buyerRange)
 {
+    // MKT-5: a sell order is buyable when it sits inside the BUYER's
+    // requested range (delivery happens at the sell order's station).
+    // buyerRange from the client: -1 = this station, 0 = solar system,
+    // 1..40 jumps / 32767 = region (jumps approximated as region).
+    std::string reach = "stationID=" + std::to_string(stationID);
+    if (buyerRange >= 0)
+        reach += " OR solarSystemID=" + std::to_string(solarSystemID);
+    if (buyerRange >= 1)
+        reach += " OR regionID=" + std::to_string(regionID);
+
     DBQueryResult res;
     if (!sDatabase.RunQuery(res,
         "SELECT orderID"
         " FROM mktOrders"
         " WHERE bid=0"
         "  AND typeID=%u"
-        "  AND stationID=%u"
-        "  AND volRemaining >= %u"
-        "  AND price < %.2f"
-        " ORDER BY price ASC"
+        "  AND volRemaining > 0"
+        "  AND minVolume <= %u"
+        "  AND price <= %.2f + 0.005"
+        "  AND (%s)"
+        " ORDER BY price ASC, issued ASC"
         " LIMIT 1;",
         typeID,
-        stationID,
         quantity,
-        price + 0.1/*, sConfig.market.FindSellOrder*/))
+        price,
+        reach.c_str()))
     {
         codelog(MARKET__DB_ERROR, "Error in query: %s", res.error.c_str());
         return 0;
