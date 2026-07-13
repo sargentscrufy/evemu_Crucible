@@ -144,6 +144,10 @@ public:
     void                Depleted(InventoryItemRef iRef);
     void                AddTargetModule(ActiveModule* pMod);
     void                RemoveTargetModule(ActiveModule* pMod);
+    // WEAPON-1: deactivate all modules registered on this (target) entity
+    // that belong to the given attacker's ship -- used when the attacker's
+    // lock breaks so guns don't cycle forever at an unreachable target
+    void                DeactivateModulesFor(SystemEntity* pSE);
 
     /* Packet builders: */
     PyList*             GetTargets() const;

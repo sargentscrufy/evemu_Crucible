@@ -75,7 +75,29 @@ bool TargetManager::Process() {
         }
         switch (itr->second->state) {
             case TargMgr::State::Idle:
-            case TargMgr::State::Locked:{          //do nothing
+            case TargMgr::State::Locked:{
+                // WEAPON-1: break locks on targets that got far beyond the
+                // ship's max targeting range (punted / warped-off targets
+                // otherwise leave guns cycling at unhittable ranges forever
+                // and the client's weapon UI stuck).  2x buffer so normal
+                // combat drift never trips it.
+                SystemEntity* tSE = itr->first;
+                double maxRange = 250000.0;
+                if (mySE->GetSelf().get() != nullptr
+                and mySE->GetSelf()->HasAttribute(AttrMaxTargetRange))
+                    maxRange = mySE->GetSelf()->GetAttribute(AttrMaxTargetRange).get_double();
+                if (maxRange < 250000.0)
+                    maxRange = 250000.0;
+                double distance = mySE->GetPosition().distance(tSE->GetPosition());
+                if (distance > (maxRange * 2)) {
+                    _log(TARGET__INFO, "%s(%u): breaking lock on %s(%u) -- %.0f km beyond max range.", \
+                            mySE->GetName(), mySE->GetID(), tSE->GetName(), tSE->GetID(), distance / 1000);
+                    ++itr;  // ClearTarget->TargetLost erases from m_targets
+                    if (tSE->TargetMgr() != nullptr)
+                        tSE->TargetMgr()->DeactivateModulesFor(mySE);
+                    ClearTarget(tSE);
+                    continue;
+                }
             } break;
             case TargMgr::State::Passive:   // this will be used with stealth modules (which, ofc, are not written yet)
             case TargMgr::State::Locking: {
@@ -544,11 +566,9 @@ void TargetManager::AddTargetModule(ActiveModule* pMod)
 {
     _log(TARGET__INFO, "Adding %s:%s to %s's activeModule list.", \
             pMod->GetShipRef()->name(), pMod->GetSelf()->name(), mySE->GetName() );
-    // i think this check is redundant...shouldnt be able to activate non-miner on roid.
-    if (mySE->IsAsteroidSE())
-        if (!pMod->IsMiningLaser())
-            return;
-
+    // ROID-1: weapons CAN engage asteroids now (they have structure HP),
+    // so every module registers here -- the old skip left guns off the
+    // asteroid's module map and they were never deactivated when it died.
     m_modules.emplace(pMod->itemID(), pMod);
 }
 
@@ -557,6 +577,29 @@ void TargetManager::RemoveTargetModule(ActiveModule* pMod)
     _log(TARGET__INFO, "Removing the %s on %s from %s's activeModule list.", \
             pMod->GetSelf()->name(), pMod->GetShipRef()->name(), mySE->GetName() );
     m_modules.erase(pMod->itemID());
+}
+
+void TargetManager::DeactivateModulesFor(SystemEntity* pSE)
+{
+    // WEAPON-1: an attacker lost lock on us -- stop their modules that are
+    // still cycling on this entity (same treatment as Destroyed(), scoped
+    // to one attacker).
+    if (pSE == nullptr)
+        return;
+
+    auto cur = m_modules.begin();
+    while (cur != m_modules.end()) {
+        ActiveModule* pMod = cur->second;
+        if ((pMod == nullptr)
+        or  (pMod->GetShipRef().get() == nullptr)
+        or  (pMod->GetShipRef()->itemID() != pSE->GetID())) {
+            ++cur;
+            continue;
+        }
+        // erase before Deactivate -- module teardown can re-enter this map
+        cur = m_modules.erase(cur);
+        pMod->Deactivate("TargetDestroyed");
+    }
 }
 
 void TargetManager::Destroyed()

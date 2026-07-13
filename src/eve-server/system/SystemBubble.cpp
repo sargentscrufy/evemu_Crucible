@@ -271,6 +271,11 @@ void SystemBubble::ProcessWander(std::vector<SystemEntity *> &wanderers) {
                              : !InBubble(pDSE->GetPosition())) {
             wanderers.push_back(pDSE);
 
+            // VIS-1: tell the players still in this bubble the ball is
+            // gone.  erasing silently left a ghost ball in their clients
+            // (invisible collision obstacle + phantom overview entry).
+            RemoveBallExclusive(pDSE);
+
             _log(
                 DESTINY__WARNING,
                 "SystemBubble::ProcessWander() - entity %u(sys:%u) not in bubble %u for systemID %u.",

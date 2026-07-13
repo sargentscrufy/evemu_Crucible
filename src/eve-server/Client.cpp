@@ -504,6 +504,26 @@ void Client::ProcessClient() {
                     } break;
                 case Player::State::LoginWarp: {
                     _log(CLIENT__TIMER, "ProcessClient()::CheckState():  case: LoginWarp");
+                    // DESTINY-10: a saved position poisoned by an old fling
+                    // (the 1e16-m goto sentinel) kept being restored by the
+                    // login warp, stranding ships ~66,000 AU out where they
+                    // are unreachable and (VIS-1) leaked into overviews.
+                    // Clamp any landing point beyond plausible system size
+                    // (100 AU) to the first station's perimeter.
+                    if ((SystemMgr() != nullptr) and (m_loginWarpPoint.length() > 1.5e13)) {
+                        GPoint safe(1.0e9, 0, 0);   // near the star, failing better
+                        for (auto cur : SystemMgr()->GetOperationalStatics()) {
+                            SystemEntity* pSSE = cur.second;
+                            if ((pSSE != nullptr) and pSSE->IsStationSE()) {
+                                safe = pSSE->GetPosition();
+                                safe.x += pSSE->GetRadius() + 25000;
+                                break;
+                            }
+                        }
+                        _log(CLIENT__WARNING, "LoginWarp: %s's saved landing point was %.1f AU out -- clamped to a safe point.",
+                             GetName(), m_loginWarpPoint.length() / ONE_AU_IN_METERS);
+                        m_loginWarpPoint = safe;
+                    }
                     // DESTINY-2: the login warp lands at the exact logout
                     // position; if that intersects a station's hull the
                     // client's local collision physics ejects the ship at
