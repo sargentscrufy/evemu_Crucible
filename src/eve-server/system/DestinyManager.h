@@ -141,6 +141,9 @@ public:
     void AlignTo(SystemEntity* pSE);
     void GotoPoint(const GPoint &point);
     void GotoDirection(const GPoint &direction);
+    // DESTINY-8: drop follow/orbit but keep flying the current heading at
+    // the commanded speed (falls back to Stop() when not moving)
+    void KeepHeading();
     void SetSpeedFraction(float fraction=1.0f, bool startMovement=false);
 
     /* Larger movement */

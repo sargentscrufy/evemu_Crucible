@@ -558,7 +558,10 @@ PyResult BeyonceBound::CmdWarpToStuff(PyCallArgs &call, PyString* type, PyRep* i
         } else if (pSE->IsCOSE()) {
             distance += (radius / 2);
         } else if (pSE->IsGateSE()) {
-            distance += (radius / 3);  // fudge the distance a bit for gates... its' a lil close by default
+            // DESTINY-9: land ~250m short of the old point -- warp-in was
+            // clipping the gate model and bouncing the ship off it.  the
+            // last stretch is flown on engines (live-EVE feel).
+            distance += (radius / 3) + 250;
         } else if (pSE->IsMoonSE()) {
             if (pSE->GetMoonSE()->HasTower()) {
                 // if moon has a tower, make warpin point 20km inside edge of tower's bubble.

@@ -1891,33 +1891,51 @@ void DestinyManager::EntityRemoved(SystemEntity *pSE) {
         switch(m_ballMode) {
             case Destiny::Ball::Mode::FOLLOW:
             case Destiny::Ball::Mode::ORBIT: {
-                _log(DESTINY__DEBUG, "%u: Our target entity has gone away. Stopping.", mySE->GetID());
-                Stop();
+                // DESTINY-8: the orbited/followed entity is gone -- keep
+                // flying straight at the commanded speed (live EVE) instead
+                // of slamming to a full stop.
+                _log(DESTINY__DEBUG, "%u: Our target entity has gone away. Maintaining course.", mySE->GetID());
+                KeepHeading();
             } break;
         }
+    }
+}
+
+// DESTINY-8: drop follow/orbit but keep the ship moving on its current
+// heading at the commanded speed.  falls back to Stop() when not moving.
+void DestinyManager::KeepHeading()
+{
+    if ((m_userSpeedFraction > 0.01f) and (m_velocity.length() > 0.1)) {
+        GPoint heading(m_velocity);
+        heading.normalize();
+        GotoDirection(heading);
+    } else {
+        Stop();
     }
 }
 
 bool DestinyManager::IsTargetInvalid()
 {
     /** @todo  this needs a good lookover */
+    // DESTINY-8: an invalid follow/orbit target keeps the ship on course at
+    // the commanded speed (live EVE) instead of a full stop.
     if (mySE->SystemMgr()->GetSE(m_targetEntity.first) == nullptr) {
         // Our target was removed
-        Stop();
+        KeepHeading();
         return true;
     }
     if (!m_targetEntity.second->IsDynamicEntity())
         return false;
     if (m_targetEntity.second->HasPilot()) {
-        if (m_targetEntity.second->GetPilot()->IsDocked()) {  // Our target docked, so STOP
+        if (m_targetEntity.second->GetPilot()->IsDocked()) {  // Our target docked
             //mySE->TargetMgr()->ClearTarget(m_targetEntity.second);
-            Stop();
+            KeepHeading();
             return true;
         }
     }
     if (m_targetEntity.second->DestinyMgr()->IsWarping()) { // The target is warping
         //mySE->TargetMgr()->ClearTarget(m_targetEntity.second);
-        Stop();
+        KeepHeading();
         return true;
     }
     return false;
