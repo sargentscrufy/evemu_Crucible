@@ -628,7 +628,17 @@ void TargetManager::Depleted(MiningLaser* pMod)
     // iterate thru the map of modules and add to map as MiningLasers with their mining volume
     std::map<uint32, ActiveModule*>::iterator itr = m_modules.begin();
     while (itr != m_modules.end()) {
-        mMap.emplace(itr->second->GetMiningModule()->GetMiningVolume(), itr->second->GetMiningModule());
+        // ROID-2: anything that isn't a mining laser (turret, salvager, ...)
+        // registered on the depleting rock was cast blindly to MiningLaser
+        // and deref'd -- null-deref server crash.  deactivate those instead.
+        MiningLaser* pMiner = itr->second->GetMiningModule();
+        if (pMiner == nullptr) {
+            ActiveModule* pMod2 = itr->second;
+            itr = m_modules.erase(itr); //remove module from map here to avoid segfault on rock delete
+            pMod2->Deactivate("TargetDestroyed");
+            continue;
+        }
+        mMap.emplace(pMiner->GetMiningVolume(), pMiner);
         itr = m_modules.erase(itr);     //remove module from map here to avoid segfault on rock delete
     }
 

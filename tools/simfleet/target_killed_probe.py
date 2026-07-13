@@ -190,11 +190,60 @@ def run():
     try: mch.call_bound(bey, "CmdStop")
     except CallError: pass
     mch.pump(4)
-    mch.close()
 
-    log("=== VERDICT ===")
+    log("=== VERDICT (phase A: NPC target) ===")
     log(f"  DESTINY-8 (keep heading on target death): {'PASS' if (goto or maintain) else 'FAIL'}")
     log(f"  MOD-1 server-side gun stop: {'PASS' if deact and not rail_after else 'CHECK LOG'}")
+
+    # ---- Phase B: asteroid takes real damage, is NOT one-shot (ROID-1) ----
+    belt = 40168291
+    rows = db.query(f"SELECT itemID, quantity FROM sysAsteroids WHERE "
+                    f"beltID={belt} ORDER BY quantity DESC LIMIT 1")
+    if not rows:
+        log("phase B skipped: no asteroids in belt"); mch.close(); return
+    roid = int(rows[0]["itemID"])
+    log(f"=== phase B: warping to belt {belt}, shooting asteroid {roid} "
+        f"(qty {rows[0]['quantity']}) ===")
+    try:
+        mch.call_bound(bey, "CmdWarpToStuff", "item", belt, byname={"minRange": 0})
+    except CallError as e:
+        log(f"belt warp: {str(e)[:100]}"); mch.close(); return
+    mch.pump(50)   # warp + settle
+    try: mch.call_bound(bey, "CmdStop")
+    except CallError: pass
+    mch.pump(10)
+
+    t0 = time.time()
+    try: mch.call_bound(dogma, "AddTarget", roid)
+    except CallError as e: log(f"AddTarget roid: {str(e)[:120]}")
+    mch.pump(5)
+    try: mch.call_bound(bey, "CmdOrbit", roid, 1000)
+    except CallError as e: log(f"CmdOrbit roid: {str(e)[:100]}")
+    try:
+        mch.activate_module(dogma, rail, "targetAttack", roid, 1000)
+    except CallError as e:
+        log(f"rail on roid: {str(e)[:120]}")
+    mch.pump(35)   # ~10 rail cycles
+
+    tail = srv_log(int(time.time() - t0 + 5))
+    dmg_lines = re.findall(r".{0,40}\b%d\b.{0,120}" % roid, tail)
+    hits = [ln for ln in dmg_lines if re.search(r"[Dd]amage|structure", ln)]
+    dead = bool(re.search(r"(?:Killed|Removing|explode).{0,60}\b%d\b" % roid, tail, re.I))
+    log("=== OBSERVATIONS (phase B) ===")
+    log(f"  damage lines vs asteroid: {len(hits)} (dead: {dead})")
+    for ln in hits[:6]:
+        log(f"    {ln.strip()[:160]}")
+
+    try: mch.activate_module(dogma, rail, "online", None, 0)
+    except CallError: pass
+    try: mch.call_bound(bey, "CmdStop")
+    except CallError: pass
+    mch.pump(4)
+    mch.close()
+
+    log("=== VERDICT (phase B: asteroid) ===")
+    log(f"  ROID-1 damage applies: {'PASS' if hits else 'FAIL'}; "
+        f"not one-shot: {'PASS' if (hits and not dead) else ('FAIL' if dead else 'n/a')}")
 
 
 if __name__ == "__main__":

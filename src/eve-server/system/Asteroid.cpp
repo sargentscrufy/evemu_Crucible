@@ -76,6 +76,30 @@ AsteroidSE::AsteroidSE(InventoryItemRef self, EVEServiceManager& services, Syste
 m_growTimer(sConfig.cosmic.BeltGrowth *60 *60 *1000)  // hours->ms
 {
     m_growTimer.Disable();
+
+    // ROID-1: asteroids spawn with no HP or damage resonances, so weapon
+    // damage either zeroed out or one-shot them.  Give them real structure
+    // scaled by ore content (destroyable by design on this server, but not
+    // in one volley) and unity resonances so the shield->armor->hull damage
+    // math passes through cleanly (shield/armor stay at zero capacity).
+    if (m_self->GetAttribute(AttrHP).get_float() < 1.0f) {
+        float qty = m_self->GetAttribute(AttrQuantity).get_float();
+        float hp = 500.0f + (qty * 0.15f);
+        m_self->SetAttribute(AttrHP, hp);
+        m_self->SetAttribute(AttrDamage, EvilZero);
+        m_self->SetAttribute(AttrShieldKineticDamageResonance, 1.0f);
+        m_self->SetAttribute(AttrShieldThermalDamageResonance, 1.0f);
+        m_self->SetAttribute(AttrShieldEmDamageResonance, 1.0f);
+        m_self->SetAttribute(AttrShieldExplosiveDamageResonance, 1.0f);
+        m_self->SetAttribute(AttrArmorKineticDamageResonance, 1.0f);
+        m_self->SetAttribute(AttrArmorThermalDamageResonance, 1.0f);
+        m_self->SetAttribute(AttrArmorEmDamageResonance, 1.0f);
+        m_self->SetAttribute(AttrArmorExplosiveDamageResonance, 1.0f);
+        m_self->SetAttribute(AttrKineticDamageResonance, 1.0f);
+        m_self->SetAttribute(AttrThermalDamageResonance, 1.0f);
+        m_self->SetAttribute(AttrEmDamageResonance, 1.0f);
+        m_self->SetAttribute(AttrExplosiveDamageResonance, 1.0f);
+    }
 }
 
 void AsteroidSE::Process() {
@@ -109,11 +133,15 @@ void AsteroidSE::EncodeDestiny( Buffer& into )
 }
 
 void AsteroidSE::MakeDamageState(DoDestinyDamageState &into) {
-    into.shield = 1.0;
+    // ROID-1: report the real structure fraction so weapon damage is
+    // visible on a targeted asteroid (shield/armor have no capacity).
+    float hp = m_self->GetAttribute(AttrHP).get_float();
+    float dmg = m_self->GetAttribute(AttrDamage).get_float();
+    into.shield = 0.0;
     into.recharge = 30000;
     into.timestamp = GetFileTimeNow();
-    into.armor = 1.0;
-    into.structure = 1.0;
+    into.armor = 0.0;
+    into.structure = (hp > 0.0f) ? EvE::max(0.0f, 1.0f - (dmg / hp)) : 1.0;
 }
 
 void AsteroidSE::SendDamageStateChanged() {  //working 24Apr15
