@@ -10,32 +10,48 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 First round-trip through the feedback-inbox workflow. 13 BUG lines from a
 mining/travel/market shakedown in Todaki→Kakakela→Sobaseki. Triage:
 
-- **MOD-1 (new): turret keeps cycling after its target is destroyed.**
-  Railgun destroyed an asteroid and "stays active, acts like it continues
-  firing." Module deactivation on target death is not firing (or the
-  stop-effect isn't reaching the client) when the target is an asteroid.
-  Check ActiveModule target-loss handling for non-ship targets.
-- **DESTINY-8 (new): orbit target destroyed → ship comes to a stop.** Should
-  drop the orbit but keep flying at the last commanded speed (EVE behavior:
-  orbit target loss leaves you at current velocity). Likely DestinyManager
-  clearing to STOP instead of demoting orbit→GOTO/current-heading.
-- **ROID-1 (new, design+balance): asteroids are targetable and one-shot
-  destructible.** In original EVE asteroids were not targetable (anti-grief).
-  User's chosen direction: KEEP them destroyable but give them real HP so
-  they're not a one-shot. Needs asteroid HP attributes + damage handling.
-- **UI-2 (new, low, possibly client): right-click menu dead for ~1 min after
-  destroying an asteroid**, then self-recovered. Possibly stale entity in the
-  client bracket list — verify our asteroid removal/slim-item cleanup
-  broadcast is well-formed.
+- **MOD-1 — FIXED via ROID-1 root cause, bot-certified 2026-07-12.** The
+  railgun "kept firing" because the asteroid never actually died server-side:
+  asteroids had no HP/resonance attributes, so weapon damage zeroed out in
+  the shield branch and the kill/deactivation chain never ran — the client
+  loop was the visible symptom. With ROID-1 in place the full chain is
+  probe-verified (tools/simfleet/target_killed_probe.py): target dies →
+  `TargetManager::Destroyed` → `Deactivate(TargetDestroyed)` on the
+  registered turret → zero gun cycles afterward → the stop effect
+  (OnGodmaShipEffect start=0) reaches the client. Re-check with the real
+  client on the next live session (turret animation is client-rendered).
+- **DESTINY-8 — FIXED 2026-07-12 (b7c2a377), bot-certified.**
+  `DestinyManager::EntityRemoved`/`IsTargetInvalid` slammed FOLLOW/ORBIT to
+  a full Stop() when the target went away. New `KeepHeading()`: drop the
+  orbit but keep flying the current heading at commanded speed (live-EVE),
+  Stop() only when not moving. Probe: rat killed mid-orbit → server logs
+  "Maintaining course", no CmdStop broadcast, ship keeps moving.
+- **ROID-1 — FIXED 2026-07-12 (1eb25f3f), bot-certified.** Asteroids spawn
+  with structure HP scaled by ore content (500 + qty×0.15 — destroyable by
+  design, not one-shot) and unity resonances so damage flows
+  shield→armor→hull; `MakeDamageState` reports the real structure fraction.
+  Probe: 150mm rail applies real damage (41.74/volley, honest tracking
+  misses/hits) and a 78k-unit Pyroxeres shrugs off a 35s volley.
+- **ROID-2 (found during MOD-1 investigation) — FIXED 2026-07-12 (1eb25f3f).**
+  `TargetManager::Depleted` blind-cast every module registered on the
+  emptying rock to MiningLaser and deref'd it — a railgun/salvager on the
+  same asteroid at depletion = guaranteed null-deref server crash. Non-mining
+  modules are now deactivated instead. (Likely the crash path behind the
+  user's exact mining+shooting play pattern.)
+- **UI-2 (open, low, likely client): right-click menu dead for ~1 min after
+  destroying an asteroid**, then self-recovered. Probably downstream of the
+  pre-fix asteroid weirdness (client-side destruction rendering of an entity
+  the server never removed). Re-observe after ROID-1 in live play before
+  spending more on it.
 - **UNDOCK-1 (new): undock is slow — long black screen before the ship
   appears outside the station.** Reported twice in one session ("definitely
   need to make undocking process faster"). Profile the deferred undock push
   (DESTINY-5/6 yields) and session-change timing for dead time we control.
-- **DESTINY-9 (new, tuning): warp-to-gate lands a touch long — pilot bounced
-  off the stargate.** Second data point same session: "nearly perfect...
-  make it a little shorter, should fall 250m short" so you approach the gate
-  under engine power instead of colliding. Shave the warp-in landing point
-  ~250 m short of gate collision radius.
+- **DESTINY-9 — FIXED 2026-07-12 (b7c2a377), deployed (live-verify pending).**
+  Gate warp-in point now lands 250 m shorter (BeyonceService gate branch), so
+  the last stretch is flown on engines instead of bouncing off the gate
+  model. Tuning per the user's exact request; confirm feel on the next real
+  client session.
 - **NAV-1 (new, feature): one-click jump.** Choosing Jump on a gate should
   chain warp→approach→jump automatically (stock EVE behavior); today the
   pilot has to re-click Jump after landing. Implement jump-on-arrival intent

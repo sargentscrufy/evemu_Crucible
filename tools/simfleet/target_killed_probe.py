@@ -134,33 +134,34 @@ def run():
     rat = int(m[-1])
     log(f"target rat {rat}: locking, orbiting, opening fire")
 
-    # lock + orbit + shoot
+    # lock + orbit + open fire + pulse the bomb all at once: the rat runs
+    # from spawn point immediately, so the kill window for the 3600 m
+    # smartbomb is the first few seconds while orbit keeps us glued to it.
     try: mch.call_bound(dogma, "AddTarget", rat)
     except CallError as e: log(f"AddTarget: {str(e)[:100]}")
-    mch.pump(6)
-    try: mch.call_bound(bey, "CmdOrbit", rat, 1000)
+    try: mch.call_bound(bey, "CmdOrbit", rat, 500)
     except CallError as e: log(f"CmdOrbit: {str(e)[:100]}")
-    mch.pump(6)
-    try:
-        mch.activate_module(dogma, rail, "targetAttack", rat, 1000)
-    except CallError as e:
-        log(f"rail activate: {str(e)[:100]}")
-    mch.pump(8)   # let the rail cycle on the live target
 
     kill_note_idx = len(mch.notifications)
     kill_time = time.time()
 
-    # finish it with the smart bomb (one-shots an Athran Agent)
     dead = False
-    for _ in range(12):
+    rail_on = False
+    for i in range(20):
+        if not rail_on:
+            try:
+                mch.activate_module(dogma, rail, "targetAttack", rat, 1000)
+                rail_on = True    # registered on the rat's TargetManager
+            except CallError as e:
+                if i > 2: log(f"rail activate: {str(e)[:80]}")
         try: mch.activate_module(dogma, bomb, "empWave", None, 1000)
         except CallError: pass
-        mch.pump(4)
+        mch.pump(3)
         if re.search(r"(?:Killed|Removing|Deleting).{0,60}\b%d\b|\b%d\b.{0,60}(?:Killed|dead|destroyed)"
-                     % (rat, rat), srv_log(15), re.I):
+                     % (rat, rat), srv_log(12), re.I):
             dead = True
             break
-    log(f"rat dead: {dead}")
+    log(f"rat dead: {dead} (rail registered: {rail_on})")
 
     # observe 20s of post-kill behavior
     mch.pump(20)
