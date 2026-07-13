@@ -7,6 +7,22 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 
 ### Session 2026-07-12 late — live client session (localhost)
 
+- **DESTINY-10 (open): undock fling recurrence.** A bot Badger (target_hauler
+  runner: DB-staged docked at Jita 4-4, Undock, then CmdSetSpeedFraction 1.0
+  ~10 s later) was flung to the 1e16-m sentinel (~66,842 AU) on undock — the
+  DESTINY-5/6 family has a surviving path. Deterministic-looking repro via
+  tools/simfleet/target_hauler.py fresh-stage mode; hunt it with that.
+- **VIS-1 (open): flung/off-grid ships are visible system-wide.** The player
+  saw the flung Badger on his overview at 66,842 AU while not in a fleet with
+  it. Ships outside the viewer's bubble must not be in their ballpark —
+  sentinel-parked entities are apparently added as global (or the fling
+  happened mid-bubble-add). Check BubbleManager global-ball handling for
+  out-of-bubble positions; may resolve itself once DESTINY-10 is fixed, but
+  verify visibility rules regardless.
+- **Login-in-space placement offset (DESTINY-2 adjacent, data point):**
+  resuming a char in space placed the ship ~0.5 AU from its DB-stored entity
+  coordinates (bot relogin after teleport). Workaround: warp in-session.
+
 - **MKT-6 — FIXED 2026-07-12 (05fef810): market appears completely empty when
   opened while undocked.** Live-diagnosed from proxy captures of the user's
   real session: `GetOrders` delivered full books (191 sells for the browsed
