@@ -33,6 +33,9 @@
 #include "agents/AgentBound.h"
 #include "agents/AgentMgrService.h"
 #include "station/Station.h"
+#include "missions/MissionDataMgr.h"
+#include "system/DestinyManager.h"
+#include "ship/Ship.h"
 #include "services/ServiceManager.h"
 
 AgentBound::AgentBound(EVEServiceManager& mgr, AgentMgrService& parent, Agent *agt) :
@@ -232,7 +235,11 @@ PyResult AgentBound::DoAction(PyCallArgs &call, std::optional <PyInt*> actionID)
                 offer.stateID = Mission::State::Accepted;
                 offer.dateAccepted = GetFileTimeNow();
                 offer.expiryTime = GetFileTimeNow() + (30 * m_agent->GetLevel() * EvE::Time::Minute);  // 30m per agent level  ?  test this.
-                if (offer.courierTypeID) {
+                if (offer.typeID == Mission::Type::Encounter) {
+                    // SECMISSION-1: spawn the guarded combat site holding
+                    // the goal item -- the pilot goes and takes it by force
+                    sMissionDataMgr.SpawnMissionSite(call.client, offer);
+                } else if (offer.courierTypeID) {
                     // add item to players hangar
                     sItemFactory.SetUsingClient(call.client);
                     ItemData data(offer.courierTypeID, pchar->itemID(), locTemp, flagNone, offer.courierAmount);
@@ -925,6 +932,15 @@ PyResult AgentBound::GotoLocation(PyCallArgs &call, PyInt* locationType, PyInt* 
     _log(AGENT__DUMP,  "AgentBound::Handle_GotoLocation() - size=%lli", call.tuple->size());
     call.Dump(AGENT__DUMP);
 
+    // SECMISSION-1: same behavior as WarpToLocation (warp to mission site)
+    GPoint point;
+    if (sMissionDataMgr.GetMissionSitePoint(call.client->GetCharacterID(), point)
+    and call.client->IsInSpace()
+    and (call.client->GetShipSE()->DestinyMgr() != nullptr)
+    and (!call.client->GetShipSE()->DestinyMgr()->IsWarping())) {
+        call.client->SetInvul(false);
+        call.client->GetShipSE()->DestinyMgr()->WarpTo(point, 0);
+    }
     return nullptr;
 }
 
@@ -933,5 +949,25 @@ PyResult AgentBound::WarpToLocation(PyCallArgs &call, PyInt* locationType, PyInt
     _log(AGENT__DUMP,  "AgentBound::Handle_WarpToLocation() - size=%lli", call.tuple->size());
     call.Dump(AGENT__DUMP);
 
+    // SECMISSION-1: warp the pilot to their spawned mission site
+    GPoint point;
+    if (!sMissionDataMgr.GetMissionSitePoint(call.client->GetCharacterID(), point)) {
+        call.client->SendErrorMsg("Your agent has no encounter location on file for you.");
+        return nullptr;
+    }
+    if (!call.client->IsInSpace()) {
+        call.client->SendErrorMsg("You must be in space to warp to the mission location.");
+        return nullptr;
+    }
+    DestinyManager* pDestiny = call.client->GetShipSE()->DestinyMgr();
+    if (pDestiny == nullptr)
+        return nullptr;
+    if (pDestiny->IsWarping()) {
+        call.client->SendErrorMsg("You are already warping.");
+        return nullptr;
+    }
+    int32 range = (warpRange == nullptr) ? 0 : (int32)warpRange->value();
+    call.client->SetInvul(false);
+    pDestiny->WarpTo(point, range);
     return nullptr;
 }

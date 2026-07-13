@@ -16,6 +16,9 @@
 #include "database/EVEDBUtils.h"
 #include "missions/MissionDataMgr.h"
 #include "inventory/ItemFactory.h"
+#include "map/MapData.h"
+#include "system/SystemManager.h"
+#include "StaticDataMgr.h"
 
 MissionDataMgr::MissionDataMgr()
 {
@@ -188,8 +191,35 @@ void MissionDataMgr::Populate()
     }
     sLog.Cyan("   MissionDataMgr", "%lu(%lu) Mining Mission Data Sets loaded in %.3fms.", m_mining.size(), m_miningImp.size(), (GetTimeMSeconds() - start));
 
+    // SECMISSION-1: encounter (security/kill) mission sets from qstKill
     start = GetTimeMSeconds();
-    sLog.Cyan("   MissionDataMgr", "0(0) Encounter Mission Data Sets loaded in %.3fms.", (GetTimeMSeconds() - start));
+    MissionDB::LoadKillData(*res);
+    while (res->GetRow(row)) {
+        CourierData data = CourierData();
+        data.missionID     = row.GetInt(0);
+        data.briefingID    = row.GetInt(1);
+        data.name          = row.GetText(2);
+        data.level         = row.GetInt(3);
+        data.typeID        = row.GetInt(4);
+        data.important     = row.GetBool(5);
+        data.storyline     = row.GetBool(6);
+        data.itemTypeID    = row.GetInt(7);
+        data.itemQty       = row.GetInt(8);
+        data.itemVolume    = row.GetFloat(9);
+        data.rewardISK     = row.GetInt(10);
+        data.rewardItemID  = row.GetInt(11);
+        data.rewardItemQty = row.GetInt(12);
+        data.bonusISK      = row.GetInt(13);
+        data.bonusTime     = row.GetInt(14);
+        data.range         = row.GetInt(15);
+        data.raceID        = row.GetInt(16);
+        if (data.important) {
+            m_killImp.emplace(row.GetInt(3), data);
+        } else {
+            m_kill.emplace(row.GetInt(3), data);
+        }
+    }
+    sLog.Cyan("   MissionDataMgr", "%lu(%lu) Encounter Mission Data Sets loaded in %.3fms.", m_kill.size(), m_killImp.size(), (GetTimeMSeconds() - start));
 
     start = GetTimeMSeconds();
     sLog.Cyan("   MissionDataMgr", "0(0) Storyline Mission Data Sets loaded in %.3fms.", (GetTimeMSeconds() - start));
@@ -517,6 +547,42 @@ void MissionDataMgr::CreateMissionOffer(uint8 typeID, uint8 level, uint8 raceID,
         case Mission::Type::Tutorial: {
         } break;
         case Mission::Type::Encounter: {
+            // SECMISSION-1
+            CourierData cData = CourierData();
+            std::vector<CourierData> cVec;
+            if (important) {
+                auto itr = m_killImp.equal_range(level);
+                for (auto it = itr.first; it != itr.second; ++it)
+                    cVec.push_back(it->second);
+            }
+            if (cVec.empty()) {
+                auto itr = m_kill.equal_range(level);
+                for (auto it = itr.first; it != itr.second; ++it)
+                    cVec.push_back(it->second);
+            }
+            if (cVec.empty()) {
+                // no encounter content for this level -- fall back to courier
+                _log(AGENT__WARNING, "CreateMissionOffer - no encounter sets for level %u; falling back to courier.", level);
+                CreateMissionOffer(Mission::Type::Courier, level, raceID, important, data);
+                return;
+            }
+            cData = cVec[MakeRandomInt(0, (cVec.size() -1))];
+
+            data.name               = cData.name;
+            data.typeID             = cData.typeID;
+            data.bonusISK           = cData.bonusISK;
+            data.rewardISK          = cData.rewardISK;
+            data.bonusTime          = cData.bonusTime;
+            data.important          = cData.important;
+            data.storyline          = cData.storyline;
+            data.missionID          = cData.missionID;
+            data.briefingID         = cData.briefingID;
+            data.rewardItemID       = cData.rewardItemID;
+            data.rewardItemQty      = cData.rewardItemQty;
+            data.courierTypeID      = cData.itemTypeID;
+            data.courierAmount      = cData.itemQty;
+            data.courierItemVolume  = cData.itemVolume;
+            data.range              = cData.range;
         } break;
         case Mission::Type::Trade: {
         } break;
@@ -593,4 +659,102 @@ void MissionDataMgr::UpdateMissionData(uint32 charID, MissionOffer& data)
             it->second = data;
             break;
         }
+}
+
+// SECMISSION-1: spawn the guarded mission site for an accepted encounter
+// mission.  v1 model: a cargo container holding the goal item, guarded by a
+// wing of level-appropriate rats, anchored at a deadspace point off a random
+// planet in the agent's system.  Completion is the courier-style fetch check
+// (return to the agent with the goal item), so no kill-tagging is needed --
+// but the guards WILL be between the pilot and the loot.
+void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
+{
+    if (pClient == nullptr)
+        return;
+
+    SystemManager* pSysMgr = pClient->SystemMgr();
+    if (pSysMgr == nullptr) {
+        _log(AGENT__ERROR, "SpawnMissionSite - no system manager for %s", pClient->GetName());
+        return;
+    }
+
+    uint32 systemID = pSysMgr->GetID();
+    GPoint sitePoint = sMapData.GetRandPointOnPlanet(systemID);
+    if (sitePoint.isZero()) {
+        _log(AGENT__ERROR, "SpawnMissionSite - no planet point in system %u", systemID);
+        return;
+    }
+    // push the site off the planet warp-in a bit so it reads as deadspace
+    sitePoint.MakeRandomPointOnSphere(80000 + MakeRandomInt(0, 40000));
+
+    // --- the loot can with the goal item -----------------------------
+    ItemData canData(23 /*Cargo Container*/, ownerSystem, systemID, flagNone, "Mission Objective Container", sitePoint);
+    InventoryItemRef canRef = sItemFactory.SpawnItem(canData);
+    if (canRef.get() == nullptr) {
+        _log(AGENT__ERROR, "SpawnMissionSite - failed to spawn objective container");
+        return;
+    }
+    ItemData goalData(offer.courierTypeID, ownerSystem, canRef->itemID(), flagNone, offer.courierAmount);
+    InventoryItemRef goalRef = sItemFactory.SpawnItem(goalData);
+    if (goalRef.get() == nullptr)
+        _log(AGENT__ERROR, "SpawnMissionSite - failed to spawn goal item %u", offer.courierTypeID);
+
+    DBSystemDynamicEntity canEnt = DBSystemDynamicEntity();
+        canEnt.categoryID = EVEDB::invCategories::Celestial;
+        canEnt.groupID = EVEDB::invGroups::Cargo_Container;
+        canEnt.itemID = canRef->itemID();
+        canEnt.itemName = "Mission Objective Container";
+        canEnt.typeID = 23;
+        canEnt.position = sitePoint;
+        canEnt.allianceID = 0;
+        canEnt.corporationID = 0;
+        canEnt.factionID = 0;
+        canEnt.ownerID = ownerSystem;
+    pSysMgr->BuildDynamicEntity(canEnt);
+
+    // --- the guards ---------------------------------------------------
+    // L1: Guristas frigates (Caldari space v1; faction tables in M4)
+    static const uint16 guardTypes[] = { 16981 /*Pithi Arrogator*/, 16994 /*Pithi Imputor*/, 16996 /*Pithi Infiltrator*/ };
+    uint8 guards = 3 + MakeRandomInt(0, 1);
+    for (uint8 i = 0; i < guards; ++i) {
+        uint16 typeID = guardTypes[MakeRandomInt(0, 2)];
+        const ItemType* iType = sItemFactory.GetType(typeID);
+        if (iType == nullptr)
+            continue;
+        GPoint guardPos(sitePoint);
+        guardPos.MakeRandomPointOnSphere(8000 + MakeRandomInt(0, 7000));
+        ItemData ratData(typeID, ownerSystem, systemID, flagNone, iType->name().c_str(), guardPos);
+        InventoryItemRef ratRef = sItemFactory.SpawnItem(ratData);
+        if (ratRef.get() == nullptr)
+            continue;
+        DBSystemDynamicEntity ratEnt = DBSystemDynamicEntity();
+            ratEnt.categoryID = EVEDB::invCategories::Entity;
+            ratEnt.groupID = iType->groupID();
+            ratEnt.itemID = ratRef->itemID();
+            ratEnt.itemName = iType->name();
+            ratEnt.typeID = typeID;
+            ratEnt.position = guardPos;
+            ratEnt.factionID = sDataMgr.GetRegionRatFaction(pClient->GetRegionID());
+            ratEnt.allianceID = ratEnt.factionID;
+            ratEnt.corporationID = sDataMgr.GetFactionCorp(ratEnt.factionID);
+            ratEnt.ownerID = ratEnt.corporationID;
+        pSysMgr->BuildDynamicEntity(ratEnt);
+    }
+
+    m_sitePoints[offer.characterID] = sitePoint;
+    offer.dungeonLocationID = canRef->itemID();
+    offer.dungeonSolarSystemID = systemID;
+
+    _log(AGENT__MESSAGE, "SpawnMissionSite - '%s' for %s: %u guards + objective can %u in %u at (%.0f, %.0f, %.0f)",
+         offer.name.c_str(), pClient->GetName(), guards, canRef->itemID(), systemID,
+         sitePoint.x, sitePoint.y, sitePoint.z);
+}
+
+bool MissionDataMgr::GetMissionSitePoint(uint32 charID, GPoint& point)
+{
+    auto itr = m_sitePoints.find(charID);
+    if (itr == m_sitePoints.end())
+        return false;
+    point = itr->second;
+    return true;
 }

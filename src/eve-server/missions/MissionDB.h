@@ -23,6 +23,7 @@ public:
     static void CreateOfferID(MissionOffer& data);
     static void LoadOpenOffers(DBQueryResult& res);
     static void LoadMiningData(DBQueryResult& res);
+    static void LoadKillData(DBQueryResult& res);      // SECMISSION-1
     static void LoadMissionData(DBQueryResult& res);
     static void LoadCourierData(DBQueryResult& res);
     static void LoadClosedOffers(DBQueryResult& res);

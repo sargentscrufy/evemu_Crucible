@@ -1864,6 +1864,11 @@ bool Client::IsMissionComplete(MissionOffer& data)
         case Mission::Type::Tutorial: {
         } break;
         case Mission::Type::Encounter: {
+            // SECMISSION-1: fetch-style completion -- back at the agent's
+            // station with the goal item recovered from the combat site
+            if (m_locationID == data.destinationID)
+                if (ContainsTypeQty(data.courierTypeID, data.courierAmount))
+                    return true;
         } break;
         case Mission::Type::Courier: {
             if (m_locationID == data.destinationID)

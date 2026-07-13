@@ -17,6 +17,8 @@
 #include "missions/MissionDB.h"
 
 
+class Client;
+
 class MissionDataMgr
 : public Singleton< MissionDataMgr >
 {
@@ -38,6 +40,10 @@ public:
     void                LoadMissionOffers(uint32 charID, std::vector<MissionOffer>& data);
     void                LoadAgentOffers(const uint32 agentID, std::map<uint32, MissionOffer>& data);
     void                CreateMissionOffer(uint8 typeID, uint8 level, uint8 raceID, bool important, MissionOffer& data);
+    // SECMISSION-1: spawn the guarded site for an accepted encounter
+    // mission and remember its warp-in point for WarpToLocation
+    void                SpawnMissionSite(Client* pClient, MissionOffer& offer);
+    bool                GetMissionSitePoint(uint32 charID, GPoint& point);
 
     std::string         GetTypeName(uint8 typeID);
     std::string         GetTypeLabel(uint8 typeID);
@@ -55,6 +61,9 @@ private:
     std::map<std::string, uint32> m_names;
     std::multimap<uint8, CourierData> m_courier;    // level/data
     std::multimap<uint8, CourierData> m_courierImp;    // level/data
+    std::multimap<uint8, CourierData> m_kill;       // level/data  (SECMISSION-1)
+    std::multimap<uint8, CourierData> m_killImp;    // level/data  (SECMISSION-1)
+    std::map<uint32, GPoint> m_sitePoints;          // charID/site (SECMISSION-1)
     std::multimap<uint8, CourierData> m_mining;     // level/data
     std::multimap<uint8, CourierData> m_miningImp;     // level/data
     std::multimap<uint8, MissionData> m_missions;   // level/data

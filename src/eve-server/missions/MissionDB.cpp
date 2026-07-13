@@ -39,6 +39,18 @@ void MissionDB::LoadMiningData(DBQueryResult& res)
         codelog(DATABASE__ERROR, "Error in LoadMiningData query: %s", res.error.c_str());
 }
 
+// SECMISSION-1: encounter (security/kill) mission sets.  Same shape as the
+// courier data; itemTypeID/itemQty is the goal item retrieved from the
+// guarded mission site.
+void MissionDB::LoadKillData(DBQueryResult& res)
+{
+    if (!sDatabase.RunQuery(res,
+        "SELECT q.id, q.briefingID, q.name, q.level, q.typeID, q.important, q.storyline, q.itemTypeID, q.itemQty, it.volume, q.rewardISK, q.rewardItemID,"
+        " q.rewardItemQty, q.bonusISK, q.bonusTime, q.sysRange, q.raceID"
+        " FROM qstKill AS q LEFT JOIN invTypes AS it ON it.typeID = itemTypeID WHERE briefingID > 0 AND itemTypeID > 0 AND rewardISK > 0"))
+        codelog(DATABASE__ERROR, "Error in LoadKillData query: %s", res.error.c_str());
+}
+
 void MissionDB::CreateOfferID(MissionOffer& data)
 {
     DBerror err;

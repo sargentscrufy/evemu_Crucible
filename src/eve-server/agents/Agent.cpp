@@ -65,10 +65,22 @@ bool Agent::Load() {
 
 void Agent::MakeOffer(uint32 charID, MissionOffer& offer)
 {
-    // this will be based on agent type eventually
+    // SECMISSION-1: mission type follows the agent's division --
+    // Security/Internal Security/Intelligence agents hand out encounter
+    // (kill) missions; everyone else stays courier for now.
     uint8 misionType = Mission::Type::Courier;
+    switch (m_agentData.divisionID) {
+        case 9:     // Intelligence
+        case 10:    // Internal Security
+        case 19:    // Security
+        case 24: {  // Security (empire navies)
+            misionType = Mission::Type::Encounter;
+        } break;
+    }
 
     sMissionDataMgr.CreateMissionOffer(misionType, m_agentData.level, m_agentData.raceID, m_important, offer);
+    // encounter content may be missing for this level -- honor the fallback
+    misionType = offer.typeID;
 
     /*  static mission data from db
     offer.name               = cData.name;
@@ -105,6 +117,16 @@ void Agent::MakeOffer(uint32 charID, MissionOffer& offer)
     //offer.destinationTypeID = 0;
     //offer.dungeonLocationID      = 0;
     //offer.dungeonSolarSystemID   = 0;
+    if (misionType == Mission::Type::Encounter) {
+        // SECMISSION-1: encounter turn-in is back at the agent; the combat
+        // site itself is spawned on accept (see AgentBound::DoAction).
+        offer.destinationID       = m_agentData.stationID;
+        offer.destinationOwnerID  = m_agentData.corporationID;
+        offer.destinationSystemID = m_agentData.solarSystemID;
+        StationData stData = StationData();
+        stDataMgr.GetStationData(m_agentData.stationID, stData);
+        offer.destinationTypeID   = stData.typeID;
+    } else
     sMapData.GetMissionDestination(this, misionType, offer);
     if (offer.destinationID == 0) {
         // make error here and reset
