@@ -92,7 +92,14 @@ PyResult MarketProxyService::GetCorporationOrders(PyCallArgs &call) {
 /** @todo update these to use market manager and cache instead of hitting db? */
 // station, system, region based on selection in market window
 PyResult MarketProxyService::GetStationAsks(PyCallArgs &call) {
-    return MarketDB::GetStationAsks(call.client->GetStationID());
+    // MKT-6: an undocked client has no stationID, and the empty answer
+    // blanks the entire market browse tree (the client keys its
+    // "available items" view off this result).  Fall back to system-wide
+    // asks so the market works in space.  Both queries return the same
+    // typeID-indexed rowset shape.
+    if (call.client->GetStationID() != 0)
+        return MarketDB::GetStationAsks(call.client->GetStationID());
+    return MarketDB::GetSystemAsks(call.client->GetSystemID());
 }
 
 PyResult MarketProxyService::GetSystemAsks(PyCallArgs &call) {
