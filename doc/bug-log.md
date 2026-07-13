@@ -7,18 +7,28 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 
 ### Session 2026-07-12 late — live client session (localhost)
 
-- **DESTINY-10 (open): undock fling recurrence.** A bot Badger (target_hauler
-  runner: DB-staged docked at Jita 4-4, Undock, then CmdSetSpeedFraction 1.0
-  ~10 s later) was flung to the 1e16-m sentinel (~66,842 AU) on undock — the
-  DESTINY-5/6 family has a surviving path. Deterministic-looking repro via
-  tools/simfleet/target_hauler.py fresh-stage mode; hunt it with that.
-- **VIS-1 (open): flung/off-grid ships are visible system-wide.** The player
-  saw the flung Badger on his overview at 66,842 AU while not in a fleet with
-  it. Ships outside the viewer's bubble must not be in their ballpark —
-  sentinel-parked entities are apparently added as global (or the fling
-  happened mid-bubble-add). Check BubbleManager global-ball handling for
-  out-of-bubble positions; may resolve itself once DESTINY-10 is fixed, but
-  verify visibility rules regardless.
+- **DESTINY-10 — ROOT CAUSE CORRECTED + FIXED 2026-07-13 (cd690173).** Not a
+  new undock fling: chars flung to the 1e16-m sentinel during the 2026-07-08
+  DESTINY-6 load test were being warped BACK there by the login warp-in
+  (Client::WarpIn faithfully restores the saved position; Enna/fleet10 was
+  one of the four flung haulers). LoginWarp now clamps landing points beyond
+  100 AU to the first station's perimeter, and 273 sentinel-poisoned entity
+  rows (the battle-trial hull graveyard) were DB-healed to station
+  perimeters. Fresh undock itself was never at fault.
+- **VIS-1 — FIXED 2026-07-13 (cd690173): ghost balls on bubble exit.**
+  `SystemBubble::ProcessWander` erased wandering entities without
+  broadcasting RemoveBall — players in the old bubble kept a ghost ball:
+  phantom overview entries (the 66,842-AU sighting) and an INVISIBLE
+  COLLISION OBSTACLE (live report: "ship wobbling in space like hitting an
+  invisible wall" on the Jita 4-4 grid after the target got punted off it).
+  Wander-exit now RemoveBallExclusive()s before erasing.
+- **WEAPON-1 — NEW + FIXED 2026-07-13 (cd690173): guns stuck cycling at
+  unreachable targets.** Locks now break when a target exceeds 2x the
+  ship's max targeting range, and the attacker's modules registered on that
+  target are deactivated (TargetManager::DeactivateModulesFor). Also removed
+  AddTargetModule's refusal to register non-mining modules on asteroids
+  (post-ROID-1, guns must be in the rock's module map for the
+  death/depletion deactivation chain).
 - **Login-in-space placement offset (DESTINY-2 adjacent, data point):**
   resuming a char in space placed the ship ~0.5 AU from its DB-stored entity
   coordinates (bot relogin after teleport). Workaround: warp in-session.
