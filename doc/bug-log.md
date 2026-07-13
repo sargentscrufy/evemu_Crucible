@@ -56,17 +56,35 @@ mining/travel/market shakedown in Todaki→Kakakela→Sobaseki. Triage:
   music triggers; total music silence suggests the client jukebox never
   starts — worth one more look at what starts ambient music (client-side
   suspected, keep low priority).
-- **MKT-4 (new): simple-sell dialog quotes the wrong price and places a sell
-  order instead of matching.** Selling Tritanium showed 2.94 ISK ("above
-  regional average") where stock EVE shows the best station buy order
-  (1.91 ISK), and confirming created a sell order rather than filling the
-  buy order. Immediate-sell path in MarketProxyService isn't matching
-  against standing buy orders.
-- **MKT-5 (new): selling into a visible buy order fails with "No sell order
-  found."** Direct fill against a buy order is broken for players — likely
-  the same root as MKT-4 (and adjacent to the MKT-2 NPC-corp execution
-  branch, which only fixed the bot/NPC path). Player-facing economy blocker;
-  highest-value item in this drop together with MKT-4.
+- **MKT-4 + MKT-5 — FIXED 2026-07-12 (512c512b), bot-certified 15/15.**
+  Reported as: simple-sell quotes a price then lists a sell order instead of
+  matching (MKT-4), and selling into a visible buy order errors "No sell
+  order found" (MKT-5). Proxy captures from 07-08 show the same immediate
+  sell (2301 Tritanium @ 2.0) retried 3× and failing — broken since seed v2.
+  Root causes, all in the fill path:
+  - `FindBuyOrder`/`FindSellOrder` demanded an exact same-station order with
+    `volRemaining >=` the full quantity. Seed-v2 buy walls are solar-system
+    range at hub stations, so player sells could never match; the retry loop
+    re-ran the identical query 1000×. Now range-aware (station / system /
+    region tiers; jump ranges approximated as region) with partial fills.
+  - `ExecuteBuyOrder` ignored the requested quantity — selling 500 from a
+    2301 stack moved the whole stack — and paid the asked price instead of
+    the order's price (leaked escrow on player orders, shortchanged sellers
+    vs seeded walls). Now fills exactly min(requested, order, stack) at the
+    ORDER's price and returns the quantity filled.
+  - `ExecuteSellOrder` (immediate buys) charged the buyer's max bid and
+    delivered at the buyer's station; now pays the order price and delivers
+    at the ORDER's station (remote buys mean you travel, as in live EVE).
+  - Standing orders never crossed the book: a sell listed below an open bid
+    just sat (the MKT-4 report). Both order types now fill the overlap
+    best-price-first and list only the remainder.
+  Validation: tools/simfleet/market_fill_test.py — cross-station in-system
+  fill, multi-order best-price walk with partial remainder, standing-sell
+  crossing, clean no-match, and remote immediate buy: 15/15 PASS.
+  Note: the "2.94 vs 1.91" quote discrepancy is the client pricing off the
+  regional book; with range-aware fills the quoted regional price is now
+  actually obtainable, so this resolves the report. Revisit only if the
+  quote still looks wrong in live play.
 
 Not actionable: "Just checking the bug tool" (FEEDBACK-3 confirmed working
 in production), gun/laser sound report resolved by the user (volume slider).
