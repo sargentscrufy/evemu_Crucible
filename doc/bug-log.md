@@ -22,6 +22,15 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 - **Login-in-space placement offset (DESTINY-2 adjacent, data point):**
   resuming a char in space placed the ship ~0.5 AU from its DB-stored entity
   coordinates (bot relogin after teleport). Workaround: warp in-session.
+- **DESTINY-11 (open): collision/smartbomb bump velocity unclamped — target
+  punted off-grid.** Live repro: player Hurricane closed to smartbomb range
+  of the bot Badger and fired; the blast/hull bump launched her out of the
+  8000 km bubble within seconds (SetPosition spam → SystemBubble
+  ProcessWander exit) — reads as "she disappeared, not destroyed" on the
+  attacker's client while the server keeps her alive off-grid. Same
+  unclamped-bounce physics family as DESTINY-2. Guns kept cycling at the
+  out-of-range target with 100% misses (harmless but silly — consider
+  breaking lock at extreme range).
 
 - **MKT-6 — FIXED 2026-07-12 (05fef810): market appears completely empty when
   opened while undocked.** Live-diagnosed from proxy captures of the user's
