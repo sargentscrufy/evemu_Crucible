@@ -914,12 +914,16 @@ void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& 
     {
         std::string hint = offer.name + " - Combat Site";
         site->SetItemString("hint", new PyString(hint.c_str()));
+        // SECMISSION-M3c: the right-click menu captions from memo (empty
+        // memo rendered as '[no label: <hint>]' in live testing)
+        site->SetItemString("memo", new PyString(hint.c_str()));
     }
     site->SetItemString("locationType", new PyString("objective.source"));
-    site->SetItemString("memo", new PyString(""));
     site->SetItemString("created", new PyLong((int64)GetFileTimeNow()));
     site->SetItemString("locationNumber", new PyInt(0));
-    site->SetItemString("flag", PyStatic.NewNone());
+    // SECMISSION-M3c: retail marks combat-site bookmarks 'deadspace' --
+    // this is what routes the client's Warp option through the agent
+    site->SetItemString("flag", new PyString("deadspace"));
     site->SetItemString("locationID", new PyInt(offer.dungeonSolarSystemID));
     site->SetItemString("ownerID", new PyInt(offer.characterID));
     site->SetItemString("x", new PyFloat(sitePoint.x));
@@ -936,9 +940,9 @@ void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& 
     {
         std::string hint = offer.name + " - Agent Base";
         agentBm->SetItemString("hint", new PyString(hint.c_str()));
+        agentBm->SetItemString("memo", new PyString(hint.c_str()));   // menu caption
     }
     agentBm->SetItemString("locationType", new PyString("objective.destination"));
-    agentBm->SetItemString("memo", new PyString(""));
     agentBm->SetItemString("created", new PyLong((int64)GetFileTimeNow()));
     agentBm->SetItemString("locationNumber", new PyInt(0));
     agentBm->SetItemString("flag", PyStatic.NewNone());
