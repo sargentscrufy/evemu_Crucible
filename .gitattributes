@@ -1,2 +1,32 @@
-# Have shell scripts always use LF line endings
+# Normalize all text files to LF in the repository.
+#
+# Without this, a Windows checkout (or any tool that rewrites files with CRLF)
+# makes git report every line of every file as changed -- e.g. the 888-file /
+# 214k-line phantom diff this rule was added to kill. `text=auto` lets git
+# detect text vs binary, store LF in the index, and normalize CRLF away when
+# comparing the working tree, so line endings can never pollute a diff again.
+* text=auto
+
+# Shell scripts must be LF or they will not execute on Linux/macOS.
 *.sh text eol=lf
+
+# Windows batch files must be CRLF or cmd.exe can mis-parse them.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Explicitly binary -- never touch line endings, never try to diff as text.
+*.gz  binary
+*.zip binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.ttf binary
+*.dll binary
+*.exe binary
+*.lib binary
+*.so  binary
+*.a   binary
+*.bin binary
