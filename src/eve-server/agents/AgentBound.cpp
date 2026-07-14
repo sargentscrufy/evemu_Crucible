@@ -1015,7 +1015,7 @@ void AgentBound::SendLeaderTaunt(Client* pClient)
     pClient->SendNotifyMsg("%s", line.c_str());
 }
 
-PyResult AgentBound::GotoLocation(PyCallArgs &call, PyInt* locationType, PyInt* locationNumber, PyInt* referringAgentID) {
+PyResult AgentBound::GotoLocation(PyCallArgs &call, PyRep* locationType, PyInt* locationNumber, std::optional<PyInt*> referringAgentID) {
     //sm.StartService('agents').GetAgentMoniker(bookmark.agentID).GotoLocation(bookmark.locationType, bookmark.locationNumber, referringAgentID)
     _log(AGENT__DUMP,  "AgentBound::Handle_GotoLocation() - size=%lli", call.tuple->size());
     call.Dump(AGENT__DUMP);
@@ -1034,7 +1034,7 @@ PyResult AgentBound::GotoLocation(PyCallArgs &call, PyInt* locationType, PyInt* 
     return nullptr;
 }
 
-PyResult AgentBound::WarpToLocation(PyCallArgs &call, PyInt* locationType, PyInt* locationNumber, PyFloat* warpRange, PyBool* fleet, PyInt* referringAgentID) {
+PyResult AgentBound::WarpToLocation(PyCallArgs &call, PyRep* locationType, PyInt* locationNumber, PyRep* warpRange, PyBool* fleet, std::optional<PyInt*> referringAgentID) {
     //sm.StartService('agents').GetAgentMoniker(bookmark.agentID).WarpToLocation(bookmark.locationType, bookmark.locationNumber, warpRange, fleet, referringAgentID)
     _log(AGENT__DUMP,  "AgentBound::Handle_WarpToLocation() - size=%lli", call.tuple->size());
     call.Dump(AGENT__DUMP);
@@ -1056,7 +1056,13 @@ PyResult AgentBound::WarpToLocation(PyCallArgs &call, PyInt* locationType, PyInt
         call.client->SendErrorMsg("You are already warping.");
         return nullptr;
     }
-    int32 range = (warpRange == nullptr) ? 0 : (int32)warpRange->value();
+    int32 range = 0;
+    if (warpRange != nullptr) {
+        if (warpRange->IsFloat())
+            range = (int32)warpRange->AsFloat()->value();
+        else if (warpRange->IsInt())
+            range = warpRange->AsInt()->value();
+    }
     call.client->SetInvul(false);
     pDestiny->WarpTo(point, range);
     // SECMISSION-M3b: the taunt moved to gate activation (KeeperService)

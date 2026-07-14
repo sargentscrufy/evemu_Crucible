@@ -42,8 +42,12 @@ protected:
     PyResult RemoveOfferFromJournal(PyCallArgs& call);
     PyResult GetOfferJournalInfo(PyCallArgs& call);
     PyResult GetEntryPoint(PyCallArgs& call);
-    PyResult GotoLocation(PyCallArgs& call, PyInt* locationType, PyInt* locationNumber, PyInt* referringAgentID);
-    PyResult WarpToLocation(PyCallArgs& call, PyInt* locationType, PyInt* locationNumber, PyFloat* warpRange, PyBool* fleet, PyInt* referringAgentID);
+    // SECMISSION-M3f: the client sends locationType as the bookmark's string
+    // ('objective.source'), warpRange as float OR int depending on the menu
+    // entry, and referringAgentID as None -- loose types or dispatch rejects
+    // the call with method_not_found and the Warp click silently no-ops
+    PyResult GotoLocation(PyCallArgs& call, PyRep* locationType, PyInt* locationNumber, std::optional<PyInt*> referringAgentID);
+    PyResult WarpToLocation(PyCallArgs& call, PyRep* locationType, PyInt* locationNumber, PyRep* warpRange, PyBool* fleet, std::optional<PyInt*> referringAgentID);
 
 private:
     PyTuple* GetMissionObjectives(Client* pClient, MissionOffer& offer);
