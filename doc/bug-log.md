@@ -5,6 +5,35 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 
 ## Open
 
+### Session 2026-07-14 — security missions M3b (gates, pockets, scenery, L2)
+
+- **TARG-1 — FIXED (two segfaults caught by bot QA killing the mission
+  transport).** (1) `SystemEntity::Killed` SafeDelete'd the victim's
+  TargetManager while it was still registered in EntityList's process map
+  (dangling deref next tick); Killed now deregisters first. (2) The
+  WEAPON-1 range-break calls ClearTarget from INSIDE TargetManager::Process,
+  whose TargetLost path erased the mgr from the very map EntityList was
+  iterating — self-erase during iteration. New m_inProcess guard defers
+  deregistration to the designed return-false protocol. gdb backtraces on
+  file; QA kill now runs crash-free repeatedly.
+- **SECMISSION-M3b shipped:** retail two-room sites — warp-in room holds
+  only an Acceleration Gate (17831) + the pocket 170–230 km away (must
+  exceed the 150 km min-warp) with scenery (LCO Habitation Roadhouse +
+  Gas/Storage Silo), leader, henchmen, and the mission transport.
+  KeeperService::ActivateAccelerationGate warps mission pilots to their
+  registered pocket and delivers the leader's line there (retail beat).
+  L2 tier added (Pithum cruisers stiffen the escort; 2 L2 missions seeded).
+  Full chain bot-certified (tools/simfleet/secmission_qa.py, 9 checks; the
+  transport-kill step is bot-gunnery-flaky but server-side proven).
+- **Music cue finding:** every Warp_Gate slim already carries
+  `dunMusicUrl res:/Sound/Music/Ambient031combat.ogg` — mission gates
+  should trigger client dungeon music with zero new code. VERIFY with the
+  real client next session (first credible MUSIC-1 lead that's in our
+  control).
+- QA lessons: in-space LoadAmmoToModules only loads EMPTY guns; bot kill
+  loops must reload when dry, re-assert activation after clips, and retry
+  locks until warp-out completes.
+
 ### Session 2026-07-13 — first live security-mission playthrough (SARGENTSCRUFY)
 
 The M1 encounter-mission slice went from zero to a real player accepting and

@@ -57,6 +57,10 @@ public:
     // SECMISSION-M3: if this NPC was tagged, spawn the goal item into its
     // wreck.  Returns true if something was injected.
     bool                InjectMissionLoot(uint32 npcItemID, uint32 wreckItemID);
+    // SECMISSION-M3b: acceleration-gate plumbing.  KeeperService's
+    // ActivateAccelerationGate consults this to warp the pilot to the pocket.
+    void                RegisterMissionGate(uint32 gateItemID, uint16 missionID, const GPoint& pocket);
+    bool                GetMissionGatePocket(uint32 gateItemID, GPoint& pocket, uint16& missionID);
 
     std::string         GetTypeName(uint8 typeID);
     std::string         GetTypeLabel(uint8 typeID);
@@ -80,11 +84,14 @@ private:
     // SECMISSION-M2: missionID -> prose loaded from qstKill.briefing/leaderLine.
     // Keyed by missionID (not level) so the journal can resolve text for an
     // offer restored from agtOffers after a restart, where only the id survives.
-    struct KillText { std::string briefing; std::string leaderLine; };
+    struct KillText { std::string briefing; std::string leaderLine; uint8 level; };
     std::map<uint16, KillText> m_killText;          // missionID/prose (SECMISSION-M2)
     // SECMISSION-M3: npcItemID -> goal item its wreck must contain.
     struct MissionDrop { uint16 typeID; uint16 qty; };
     std::map<uint32, MissionDrop> m_missionDrops;   // npcItemID/drop (SECMISSION-M3)
+    // SECMISSION-M3b: acceleration gate -> the deadspace pocket it serves.
+    struct GatePocket { GPoint point; uint16 missionID; };
+    std::map<uint32, GatePocket> m_gatePockets;     // gateItemID/pocket (SECMISSION-M3b)
     std::multimap<uint8, CourierData> m_mining;     // level/data
     std::multimap<uint8, CourierData> m_miningImp;     // level/data
     std::multimap<uint8, MissionData> m_missions;   // level/data

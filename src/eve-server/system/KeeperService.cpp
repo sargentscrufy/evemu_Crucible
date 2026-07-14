@@ -42,6 +42,7 @@
 #include "eve-server.h"
 
 #include "system/KeeperService.h"
+#include "missions/MissionDataMgr.h"   // SECMISSION-M3b
 #include "system/SystemManager.h"
 #include "dungeon/DungeonDB.h"
 #include "services/ServiceManager.h"
@@ -101,6 +102,25 @@ PyResult KeeperService::ActivateAccelerationGate(PyCallArgs &call, PyInt* itemID
     call.Dump(DUNG__CALL_DUMP);
 
     Client *pClient(call.client);
+
+    // SECMISSION-M3b: mission acceleration gates warp the pilot to the
+    // deadspace pocket registered for this gate, and the site's leader
+    // delivers his line as the pilot commits.  Non-mission gates fall
+    // through to the legacy dungeon-editor behavior below.
+    {
+        GPoint pocket;
+        uint16 missionID(0);
+        if (sMissionDataMgr.GetMissionGatePocket((uint32)itemID->value(), pocket, missionID)) {
+            pClient->GetShipSE()->DestinyMgr()->SendSpecialEffect10(itemID->value(), 0, "effects.WarpGateEffect", 0, 1, 0);
+            pClient->SetInvul(false);
+            // land 2.5km short of pocket centre -- the transport sits there
+            pClient->GetShipSE()->DestinyMgr()->WarpTo(pocket, 2500);
+            std::string line = sMissionDataMgr.GetLeaderLine(missionID);
+            if (!line.empty())
+                pClient->SendNotifyMsg("%s", line.c_str());
+            return new PyLong(Win32TimeNow());
+        }
+    }
 
     // Send gate activation effect
     pClient->GetShipSE()->DestinyMgr()->SendSpecialEffect10(itemID->value(), 0, "effects.WarpGateEffect", 0, 1, 0);

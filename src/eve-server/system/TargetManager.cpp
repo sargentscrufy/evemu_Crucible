@@ -54,6 +54,7 @@ TargetManager::TargetManager(SystemEntity *self)
 : mySE(self)
 {
     m_canAttack = false;
+    m_inProcess = false;
 
     m_modules.clear();
     m_targets.clear();
@@ -65,6 +66,7 @@ bool TargetManager::Process() {
 
     if (m_targets.empty())
         return false;
+    m_inProcess = true;
 
     //process outgoing targeting (outgoing will call incoming as needed)
     std::map<SystemEntity*, TargetEntry*>::iterator itr = m_targets.begin();
@@ -115,10 +117,12 @@ bool TargetManager::Process() {
         ++itr;
     }
 
+    m_inProcess = false;
+
     if (sConfig.debug.UseProfiling)
         sProfiler.AddTime(Profile::targets, GetTimeUSeconds() - profileStartTime);
 
-    return true;
+    return !m_targets.empty();
 }
 
 void TargetManager::Unload() {
@@ -268,7 +272,8 @@ void TargetManager::RemoveTarget(SystemEntity* tSE) {
     if (m_targets.empty()) {
         m_canAttack = false;
         // no targets to process.  remove from proc map
-        sEntityList.DeleteTargMgr(mySE);
+        if (!m_inProcess)
+            sEntityList.DeleteTargMgr(mySE);
     }
     _log(TARGET__TRACE, "RemoveTarget:  %s(%u) has removed target %s(%u).", \
             mySE->GetName(), mySE->GetID(), tSE->GetName(), tSE->GetID());
@@ -282,7 +287,8 @@ void TargetManager::ClearTarget(SystemEntity *tSE) {
     if (m_targets.empty()) {
         m_canAttack = false;
         // no targets to process.  remove from proc map
-        sEntityList.DeleteTargMgr(mySE);
+        if (!m_inProcess)
+            sEntityList.DeleteTargMgr(mySE);
     }
     _log(TARGET__TRACE, "ClearTarget:  %s(%u) has cleared target %s(%u).", \
             mySE->GetName(), mySE->GetID(), tSE->GetName(), tSE->GetID());
@@ -326,7 +332,8 @@ void TargetManager::ClearTargets(bool notify/*true*/) {
     m_targets.clear();
 
     // no targets to process.  remove from proc map
-    sEntityList.DeleteTargMgr(mySE);
+    if (!m_inProcess)
+        sEntityList.DeleteTargMgr(mySE);
 }
 
 void TargetManager::ClearFromTargets() {
@@ -360,7 +367,8 @@ void TargetManager::TargetLost(SystemEntity *tSE) {
     if (m_targets.empty()) {
         m_canAttack = false;
         // no targets to process.  remove from proc map
-        sEntityList.DeleteTargMgr(mySE);
+        if (!m_inProcess)
+            sEntityList.DeleteTargMgr(mySE);
     }
     _log(TARGET__INFO, "%s(%u) has lost lock on %s(%u)", mySE->GetName(), mySE->GetID(), tSE->GetName(), tSE->GetID());
 

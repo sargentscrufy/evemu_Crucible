@@ -1028,7 +1028,8 @@ PyResult AgentBound::GotoLocation(PyCallArgs &call, PyInt* locationType, PyInt* 
     and (!call.client->GetShipSE()->DestinyMgr()->IsWarping())) {
         call.client->SetInvul(false);
         call.client->GetShipSE()->DestinyMgr()->WarpTo(point, 0);
-        SendLeaderTaunt(call.client);
+        // SECMISSION-M3b: the taunt moved to gate activation (KeeperService)
+        // -- room 1 is hostile-free and silent, per the retail flow
     }
     return nullptr;
 }
@@ -1058,6 +1059,6 @@ PyResult AgentBound::WarpToLocation(PyCallArgs &call, PyInt* locationType, PyInt
     int32 range = (warpRange == nullptr) ? 0 : (int32)warpRange->value();
     call.client->SetInvul(false);
     pDestiny->WarpTo(point, range);
-    SendLeaderTaunt(call.client);
+    // SECMISSION-M3b: the taunt moved to gate activation (KeeperService)
     return nullptr;
 }

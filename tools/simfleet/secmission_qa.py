@@ -82,13 +82,16 @@ def run():
     mch.call_bound(ref, "DoAction", 3)
     mch.pump(4)
     tail = srv(int(time.time() - t0 + 3))
-    m = re.search(r"SpawnMissionSite - '([^']+)' .*leader \+ (\d+) henchmen \+ transport (\d+)", tail)
-    check("site spawned: leader + henchmen + transport", bool(m), (m.group(0)[:110] if m else "no spawn log"))
+    m = re.search(r"SpawnMissionSite - '([^']+)' .*gate (\d+) -> pocket \(leader \+ (\d+) henchmen \+ transport (\d+)", tail)
+    check("two-room site spawned (gate -> pocket)", bool(m), (m.group(0)[:120] if m else "no spawn log"))
     drop = re.search(r"RegisterMissionDrop - npc (\d+) will drop (\d+) x(\d+)", tail)
     check("transport tagged for mission drop", bool(drop), (drop.group(0) if drop else ""))
-    if not (m and drop):
+    gatereg = re.search(r"RegisterMissionGate - gate (\d+) -> pocket", tail)
+    check("gate registered to pocket", bool(gatereg), (gatereg.group(0)[:80] if gatereg else ""))
+    if not (m and drop and gatereg):
         mch.close(); return False
-    transport = int(m.group(3))
+    transport = int(m.group(4))
+    gate = int(gatereg.group(1))
 
     # --- 3. undock + WarpToLocation ------------------------------------
     # docked: online + instant antimatter load into all 7 rails
@@ -136,11 +139,21 @@ def run():
         check("agentMgr.WarpToLocation accepted", True)
     except CallError as e:
         check("agentMgr.WarpToLocation accepted", False, str(e)[:100])
-    mch.pump(45)   # warp + land
+    mch.pump(50)   # warp + land at room 1 (the gate; hostile-free)
+
+    # --- 3b. activate the acceleration gate -> pocket -------------------
+    note_idx = len(mch.notifications)
+    try:
+        mch.call("keeper", "ActivateAccelerationGate", gate)
+        check("ActivateAccelerationGate accepted", True)
+    except CallError as e:
+        check("ActivateAccelerationGate accepted", False, str(e)[:100])
+    mch.pump(40)   # gate warp into the pocket
     notes = "\n".join(repr(n) for n in mch.notifications[note_idx:])
     taunt = any(t in notes for t in ("Pity you", "Cargo is cargo", "you are alone",
-                                     "pays well", "Fresh meat"))
-    check("leader taunt delivered", taunt)
+                                     "pays well", "Fresh meat", "Cruisers on the field",
+                                     "Fourteen head"))
+    check("leader taunt on gate activation", taunt)
 
     # --- 4. kill the transport ------------------------------------------
     # lock it and open up with all seven rails; keep the bomb pulsing too.

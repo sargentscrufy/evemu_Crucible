@@ -28,6 +28,7 @@
 
 #include "ConsoleCommands.h"
 #include "Client.h"
+#include "EntityList.h"
 #include "Container.h"
 #include "EVEServerConfig.h"
 
@@ -148,6 +149,12 @@ void SystemEntity::Killed(Damage& damage)
     if (m_targMgr != nullptr) {
         // loop thru list of all modules targeting this entity and let them know it has been killed.
         m_targMgr->Destroyed();
+        // SECMISSION-M3b/TARG-1: the mgr may still be registered in the
+        // entity list's process map (it had live locks when its owner died)
+        // -- deleting it without deregistering left a dangling pointer that
+        // EntityList::Process dereferenced on the next tick (live segfault
+        // when the mission transport died with the pilot locked).
+        sEntityList.DeleteTargMgr(this);
         // remove TargMgr here to avoid redundant calls upon object deletion
         SafeDelete(m_targMgr);
     }

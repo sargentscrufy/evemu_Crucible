@@ -202,6 +202,10 @@ private:
     std::map<SystemEntity*, TargetedByEntry*> m_targetedBy;  //we own these values, not the keys
 
     bool m_canAttack;   // true if npcs can begin attack (to correct attacking before targetlock)
+    // TARG-1: true while EntityList::Process is inside this mgr's Process().
+    // DeleteTargMgr from within (lock break -> TargetLost) would erase this
+    // mgr from the map being iterated -- the caller erases via return false.
+    bool m_inProcess;
 };
 
 #endif

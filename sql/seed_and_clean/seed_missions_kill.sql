@@ -60,3 +60,19 @@ INSERT INTO qstKill (id, briefingID, briefing, leaderLine, name, level, typeID,
    'A Guristas press gang has been working this system, pulling crews off civilian haulers and pressing them into their own ranks. We have a fix on their staging point -- a deadspace pocket off one of the planets in this system.\n\nThey have a hauler out there loaded with the people they have rounded up, behind a light frigate screen. <b>Clear the screen, kill the hauler, and recover the militants from the wreck.</b>\n\nMost of them are not soldiers. They are dockworkers who drew the wrong shift. Bring them home.',
    'Fresh meat for the fleet, and here comes another volunteer. Wrap him up.',
    'Break the Press Gang', 1, 2, 0, 0, 25373, 1, 120000, 0, 0, 60000, 60, 0, 0);
+
+-- SECMISSION-M4: L2 tier -- Pithum cruisers stiffen the escort (SpawnMissionSite
+-- scales by qstKill.level).  Offered by level-2 Security division agents.
+INSERT INTO qstKill (id, briefingID, briefing, leaderLine, name, level, typeID,
+    important, storyline, itemTypeID, itemQty, rewardISK, rewardItemID,
+    rewardItemQty, bonusISK, bonusTime, sysRange, raceID) VALUES
+
+  (56011, 130400,
+   'This is not a raider picket, pilot. A Guristas convoy escort went rogue with its cargo -- a hauler full of classified transponder codes stripped from three of our patrol wings. They are holding in a deadspace pocket in this system behind a proper escort: cruisers, not the usual frigate rabble.\n\nTake the acceleration gate in, break the escort, and <b>destroy the hauler before those codes reach a buyer.</b> Recover the reports from the wreck and bring them home.\n\nBring a real ship. This one bites back.',
+   'Cruisers on the field and the State still sends one hull. I will mount you next to the last one. Kill him.',
+   'Rogue Escort', 2, 2, 0, 0, 3814, 2, 320000, 0, 0, 160000, 60, 0, 0),
+
+  (56012, 130400,
+   'A Guristas slaver wing has been sweeping the outer belts, and this time they took an entire mining crew -- fourteen of our people, held aboard a hauler in a guarded deadspace pocket in this system.\n\nThe escort is cruiser-class. Punch through it, <b>destroy the hauler, and pull our miners out of the wreckage.</b> Every hour they sit out there is an hour closer to a slave market in Venal.\n\nThe State does not leave its people behind. Neither do you.',
+   'Fourteen head of cargo, and now a hero to feed to the escort. Today keeps getting better.',
+   'Leave No One Behind', 2, 2, 0, 0, 3810, 4, 350000, 0, 0, 175000, 60, 0, 0);

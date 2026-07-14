@@ -241,6 +241,7 @@ void MissionDataMgr::Populate()
             KillText kt;
             kt.briefing   = data.briefing;
             kt.leaderLine = data.leaderLine;
+            kt.level      = data.level;
             m_killText[data.missionID] = kt;
         }
     }
@@ -712,6 +713,14 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
     // push the site off the planet warp-in a bit so it reads as deadspace
     sitePoint.MakeRandomPointOnSphere(80000 + MakeRandomInt(0, 40000));
 
+    // SECMISSION-M3b: retail two-room shape.  Room 1 (the warp-in) holds ONLY
+    // the acceleration gate -- no hostiles at the warp-in, per the retail
+    // spec.  The fight lives in a pocket 90-130 km away; the gate warps the
+    // pilot there (KeeperService::ActivateAccelerationGate).
+    // NOTE: must exceed minWarpDistance (150km) or the gate's WarpTo refuses
+    GPoint pocketPoint(sitePoint);
+    pocketPoint.MakeRandomPointOnSphere(170000 + MakeRandomInt(0, 60000));
+
     // SECMISSION-M3: the site is now shaped like a retail L1 encounter --
     //   leader + 2-4 henchmen + one transport that is holding the goods.
     // The objective is NOT a free-floating can any more: the transport is
@@ -749,10 +758,82 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
         return ratRef->itemID();
     };
 
+    // scenery: non-interactive celestial props that dress the pocket up as
+    // a pirate staging point (CelestialSE; Large Collidable Object group)
+    auto spawnProp = [&](uint16 typeID, const GPoint& pos) {
+        const ItemType* iType = sItemFactory.GetType(typeID);
+        if (iType == nullptr)
+            return;
+        const std::string name = iType->name();
+        ItemData propData(typeID, ownerSystem, systemID, flagNone, name.c_str(), pos);
+        InventoryItemRef propRef = sItemFactory.SpawnItem(propData);
+        if (propRef.get() == nullptr)
+            return;
+        DBSystemDynamicEntity propEnt = DBSystemDynamicEntity();
+            propEnt.categoryID = EVEDB::invCategories::Celestial;
+            propEnt.groupID = iType->groupID();
+            propEnt.itemID = propRef->itemID();
+            propEnt.itemName = name;
+            propEnt.typeID = typeID;
+            propEnt.position = pos;
+            propEnt.allianceID = 0;
+            propEnt.corporationID = 0;
+            propEnt.factionID = 0;
+            propEnt.ownerID = ownerSystem;
+        pSysMgr->BuildDynamicEntity(propEnt);
+    };
+
+    // --- room 1: the acceleration gate ---------------------------------
+    uint32 gateID = 0;
+    {
+        const ItemType* gType = sItemFactory.GetType(17831 /*Acceleration Gate*/);
+        if (gType != nullptr) {
+            ItemData gData(17831, ownerSystem, systemID, flagNone, "Acceleration Gate", sitePoint);
+            InventoryItemRef gRef = sItemFactory.SpawnItem(gData);
+            if (gRef.get() != nullptr) {
+                DBSystemDynamicEntity gEnt = DBSystemDynamicEntity();
+                    gEnt.categoryID = EVEDB::invCategories::Celestial;
+                    gEnt.groupID = EVEDB::invGroups::Warp_Gate;
+                    gEnt.itemID = gRef->itemID();
+                    gEnt.itemName = "Acceleration Gate";
+                    gEnt.typeID = 17831;
+                    gEnt.position = sitePoint;
+                    gEnt.ownerID = ownerSystem;
+                pSysMgr->BuildDynamicEntity(gEnt);
+                gateID = gRef->itemID();
+            }
+        }
+    }
+    if (gateID == 0) {
+        // no gate = fall back to a single-room site at the warp-in point
+        _log(AGENT__WARNING, "SpawnMissionSite - gate failed to spawn; using single-room site.");
+        pocketPoint = sitePoint;
+    } else {
+        RegisterMissionGate(gateID, offer.missionID, pocketPoint);
+    }
+
+    // --- the pocket: scenery + the fight -------------------------------
+    // a Guristas den: habitation module + storage silo
+    GPoint propPos(pocketPoint);
+    propPos.MakeRandomPointOnSphere(12000 + MakeRandomInt(0, 6000));
+    spawnProp(21827 /*LCO Habitation Roadhouse*/, propPos);
+    propPos = pocketPoint;
+    propPos.MakeRandomPointOnSphere(9000 + MakeRandomInt(0, 5000));
+    spawnProp(10788 /*Gas-Storage Silo*/, propPos);
+
+    // SECMISSION-M4: escort composition scales with the mission's level.
+    // L1: light frigates.  L2: frigates stiffened by Pithum cruisers.
+    uint8 level = 1;
+    {
+        auto ktItr = m_killText.find(offer.missionID);
+        if (ktItr != m_killText.end() and (ktItr->second.level > 0))
+            level = ktItr->second.level;
+    }
+
     // --- the transport: this is what is holding the objective ----------
-    // Guristas Hauler.  Sits at the centre of the site; the pilot has to get
-    // through the escort to reach it.
-    uint32 transportID = spawnHostile(13717 /*Guristas Hauler*/, sitePoint);
+    // Guristas Hauler.  Sits at the centre of the pocket; the pilot has to
+    // get through the escort to reach it.
+    uint32 transportID = spawnHostile(13717 /*Guristas Hauler*/, pocketPoint);
     if (transportID == 0) {
         _log(AGENT__ERROR, "SpawnMissionSite - transport failed to spawn; mission '%s' for %s would be uncompletable, aborting site.",
              offer.name.c_str(), pClient->GetName());
@@ -762,33 +843,44 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
     RegisterMissionDrop(transportID, offer.courierTypeID, offer.courierAmount);
 
     // --- the leader: the one who talks -------------------------------
-    GPoint leaderPos(sitePoint);
+    GPoint leaderPos(pocketPoint);
     leaderPos.MakeRandomPointOnSphere(3000 + MakeRandomInt(0, 2000));
     spawnHostile(17006 /*Pithi Wrecker*/, leaderPos);
 
     // --- the henchmen -------------------------------------------------
     // L1 is meant to be easy: 2-4 frigates, no webs/scrams.
+    // L2 adds a pair of Pithum cruisers behind the frigate screen.
     static const uint16 henchTypes[] = { 16981 /*Pithi Arrogator*/, 16994 /*Pithi Imputor*/, 16996 /*Pithi Infiltrator*/ };
+    static const uint16 cruiserTypes[] = { 16982 /*Pithum Ascriber*/, 16998 /*Pithum Nullifier*/, 17004 /*Pithum Silencer*/ };
     uint8 henchmen = 2 + MakeRandomInt(0, 2);
     for (uint8 i = 0; i < henchmen; ++i) {
-        GPoint guardPos(sitePoint);
+        GPoint guardPos(pocketPoint);
         guardPos.MakeRandomPointOnSphere(8000 + MakeRandomInt(0, 7000));
         spawnHostile(henchTypes[MakeRandomInt(0, 2)], guardPos);
     }
+    if (level >= 2) {
+        uint8 cruisers = 1 + MakeRandomInt(0, 1);
+        for (uint8 i = 0; i < cruisers; ++i) {
+            GPoint cruPos(pocketPoint);
+            cruPos.MakeRandomPointOnSphere(12000 + MakeRandomInt(0, 8000));
+            spawnHostile(cruiserTypes[MakeRandomInt(0, 2)], cruPos);
+        }
+        henchmen += cruisers;   // for the spawn log
+    }
 
     m_sitePoints[offer.characterID] = sitePoint;
-    // the site's "location" is now the transport, not a can -- the bookmark
-    // resolves to a real object that is actually in space.
-    offer.dungeonLocationID = transportID;
+    // the site's "location" is the ACCELERATION GATE (room 1) -- warp-to
+    // lands at a safe, hostile-free warp-in; the gate takes you to the fight.
+    offer.dungeonLocationID = (gateID ? gateID : transportID);
     offer.dungeonSolarSystemID = systemID;
 
     // SECMISSION-M2: journal Encounters / right-click locations need a real
     // bookmark list (was always empty PyList).  Site = pickup (source),
     // agent station = return drop-off (destination).
-    BuildEncounterBookmarks(offer, sitePoint, 13717 /*Guristas Hauler*/);
+    BuildEncounterBookmarks(offer, sitePoint, (gateID ? 17831 : 13717));
 
-    _log(AGENT__MESSAGE, "SpawnMissionSite - '%s' for %s: leader + %u henchmen + transport %u (drops %u x%u) in %u at (%.0f, %.0f, %.0f)",
-         offer.name.c_str(), pClient->GetName(), henchmen, transportID,
+    _log(AGENT__MESSAGE, "SpawnMissionSite - '%s' for %s: gate %u -> pocket (leader + %u henchmen + transport %u, drops %u x%u) in %u at (%.0f, %.0f, %.0f)",
+         offer.name.c_str(), pClient->GetName(), gateID, henchmen, transportID,
          offer.courierTypeID, offer.courierAmount, systemID,
          sitePoint.x, sitePoint.y, sitePoint.z);
 }
@@ -940,5 +1032,28 @@ bool MissionDataMgr::InjectMissionLoot(uint32 npcItemID, uint32 wreckItemID)
 
     _log(AGENT__MESSAGE, "InjectMissionLoot - dropped %u x%u into wreck %u (from npc %u)",
          drop.typeID, drop.qty, wreckItemID, npcItemID);
+    return true;
+}
+
+// SECMISSION-M3b: acceleration-gate -> pocket registry
+void MissionDataMgr::RegisterMissionGate(uint32 gateItemID, uint16 missionID, const GPoint& pocket)
+{
+    if (gateItemID == 0)
+        return;
+    GatePocket gp;
+    gp.point = pocket;
+    gp.missionID = missionID;
+    m_gatePockets[gateItemID] = gp;
+    _log(AGENT__MESSAGE, "RegisterMissionGate - gate %u -> pocket (%.0f, %.0f, %.0f) for mission %u",
+         gateItemID, pocket.x, pocket.y, pocket.z, missionID);
+}
+
+bool MissionDataMgr::GetMissionGatePocket(uint32 gateItemID, GPoint& pocket, uint16& missionID)
+{
+    auto itr = m_gatePockets.find(gateItemID);
+    if (itr == m_gatePockets.end())
+        return false;
+    pocket = itr->second.point;
+    missionID = itr->second.missionID;
     return true;
 }
