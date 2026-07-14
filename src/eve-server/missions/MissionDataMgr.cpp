@@ -745,6 +745,11 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
     offer.dungeonLocationID = canRef->itemID();
     offer.dungeonSolarSystemID = systemID;
 
+    // SECMISSION-M2: journal Encounters / right-click locations need a real
+    // bookmark list (was always empty PyList).  Site = pickup (source),
+    // agent station = return drop-off (destination).
+    BuildEncounterBookmarks(offer, sitePoint);
+
     _log(AGENT__MESSAGE, "SpawnMissionSite - '%s' for %s: %u guards + objective can %u in %u at (%.0f, %.0f, %.0f)",
          offer.name.c_str(), pClient->GetName(), guards, canRef->itemID(), systemID,
          sitePoint.x, sitePoint.y, sitePoint.z);
@@ -757,4 +762,91 @@ bool MissionDataMgr::GetMissionSitePoint(uint32 charID, GPoint& point)
         return false;
     point = itr->second;
     return true;
+}
+
+// SECMISSION-M2: util.KeyVal bookmarks matching the courier dump shape in
+// AgentMgrService::GetMyJournalDetails (itemID/typeID/agentID/hint/
+// locationType/coords/solarsystemID/...).  Client routes warp via
+// agentMgr.WarpToLocation using locationType + locationNumber.
+void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& sitePoint)
+{
+    if (offer.bookmarks != nullptr) {
+        PySafeDecRef(offer.bookmarks);
+        offer.bookmarks = nullptr;
+    }
+    offer.bookmarks = new PyList();
+
+    // --- combat site (pickup) -----------------------------------------
+    PyDict* site = new PyDict();
+    site->SetItemString("itemID", new PyInt(offer.dungeonLocationID ? offer.dungeonLocationID : 0));
+    site->SetItemString("typeID", new PyInt(23)); // cargo container at site
+    site->SetItemString("agentID", new PyInt(offer.agentID));
+    {
+        std::string hint = offer.name + " - Combat Site";
+        site->SetItemString("hint", new PyString(hint.c_str()));
+    }
+    site->SetItemString("locationType", new PyString("objective.source"));
+    site->SetItemString("memo", new PyString(""));
+    site->SetItemString("created", new PyLong((int64)GetFileTimeNow()));
+    site->SetItemString("locationNumber", new PyInt(0));
+    site->SetItemString("flag", PyStatic.NewNone());
+    site->SetItemString("locationID", new PyInt(offer.dungeonSolarSystemID));
+    site->SetItemString("ownerID", new PyInt(offer.characterID));
+    site->SetItemString("x", new PyFloat(sitePoint.x));
+    site->SetItemString("y", new PyFloat(sitePoint.y));
+    site->SetItemString("z", new PyFloat(sitePoint.z));
+    site->SetItemString("solarsystemID", new PyInt(offer.dungeonSolarSystemID));
+    offer.bookmarks->AddItem(new PyObject("util.KeyVal", site));
+
+    // --- agent station (return / drop-off) ----------------------------
+    PyDict* agentBm = new PyDict();
+    agentBm->SetItemString("itemID", new PyInt(offer.destinationID));
+    agentBm->SetItemString("typeID", new PyInt(offer.destinationTypeID));
+    agentBm->SetItemString("agentID", new PyInt(offer.agentID));
+    {
+        std::string hint = offer.name + " - Agent Base";
+        agentBm->SetItemString("hint", new PyString(hint.c_str()));
+    }
+    agentBm->SetItemString("locationType", new PyString("objective.destination"));
+    agentBm->SetItemString("memo", new PyString(""));
+    agentBm->SetItemString("created", new PyLong((int64)GetFileTimeNow()));
+    agentBm->SetItemString("locationNumber", new PyInt(0));
+    agentBm->SetItemString("flag", PyStatic.NewNone());
+    agentBm->SetItemString("locationID", new PyInt(offer.destinationSystemID));
+    agentBm->SetItemString("ownerID", new PyInt(offer.characterID));
+    agentBm->SetItemString("x", new PyInt(0));
+    agentBm->SetItemString("y", new PyInt(0));
+    agentBm->SetItemString("z", new PyInt(0));
+    agentBm->SetItemString("solarsystemID", new PyInt(offer.destinationSystemID));
+    offer.bookmarks->AddItem(new PyObject("util.KeyVal", agentBm));
+}
+
+// SECMISSION-M2: custom mission prose (ids >= 56000).  Same mechanism as
+// string titles — client accepts a string where a messageID would go.
+std::string MissionDataMgr::GetCustomBriefing(uint16 missionID)
+{
+    switch (missionID) {
+        case 56001:
+            return "A Guristas freighter was ambushed near this system and its cargo looted. "
+                   "Intel puts the pirates at a temporary staging point off one of our planets. "
+                   "Warp to the site, deal with the hostiles, and recover the stolen goods.";
+        case 56002:
+            return "These logs were on a freighter that was ambushed and boarded by Guristas pirates. "
+                   "Go to the combat site, eliminate the guards, retrieve the reports from the wreckage, "
+                   "and bring them back to me. Time is a factor — the bonus window is tight.";
+        case 56003:
+            return "Pirates seized a shuttle carrying corporate personnel. We believe the hostages "
+                   "are still alive at a temporary holding site in this system. Clear the hostiles "
+                   "and recover the survivors (or their dog tags) for return to this station.";
+        case 56004:
+            return "We have a line on a pirate logistics drop used to resupply local raids. "
+                   "Hit the site, destroy the guards, and bring back samples of their cargo "
+                   "so we can trace the supply chain.";
+        case 56005:
+            return "An informant who sold our shipping schedules to the Guristas is hiding at a "
+                   "deadspace rendezvous. Silence him, recover his data, and report back. "
+                   "Do not let him escape into local.";
+        default:
+            return std::string();
+    }
 }

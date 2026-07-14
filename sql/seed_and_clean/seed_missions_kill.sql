@@ -1,10 +1,12 @@
--- SECMISSION-1: L1 security (encounter) mission content.
+-- SECMISSION-1 / M2: L1 security (encounter) mission content.
 -- Loaded by MissionDB::LoadKillData at boot; offered by Security /
 -- Internal Security / Intelligence division agents.
 -- typeID 2 = Mission::Type::Encounter.  itemTypeID is the goal item the
 -- pilot recovers from the guarded site (Militants 25373, Marines 3810,
--- Reports 3814).  briefingID reuses a retail courier text id until we
--- source retail security briefing ids (cosmetic; objectives are correct).
+-- Reports 3814).
+-- briefingID is still a retail courier id for legacy loaders; custom
+-- mission prose is served as a string from MissionDataMgr::GetCustomBriefing
+-- (ids 56001-56005) the same way string titles work for missionID >= 56000.
 
 CREATE TABLE IF NOT EXISTS qstKill LIKE qstCourier;
 

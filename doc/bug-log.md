@@ -27,9 +27,11 @@ running "Retrieve the Reports" within the hour. Findings, all live-observed:
   location.** The player could not find his mission site — the fetch
   objective points at the TURN-IN station and the borrowed courier prose
   says the goods are "at this station." Manual fix that worked: a type-5
-  coordinate bookmark at the site, warp-to from People & Places. M2 =
-  create that bookmark automatically on accept + surface the site in the
-  objective packet.
+  coordinate bookmark at the site, warp-to from People & Places.
+  **FIXED (SECMISSION-M2):** on accept, `BuildEncounterBookmarks` fills
+  `offer.bookmarks` with util.KeyVal combat-site (objective.source + coords)
+  and agent station (objective.destination). String briefings for 56001–56005
+  via `GetCustomBriefing` (same string path as titles).
 - **v1 restart behavior (known):** mission sites live in server memory
   (m_sitePoints + dynamic rats). A restart mid-mission despawns the guards;
   the objective can (persisted entity) and the accepted offer survive, so

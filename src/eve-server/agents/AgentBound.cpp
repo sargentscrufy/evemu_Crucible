@@ -131,7 +131,14 @@ PyResult AgentBound::DoAction(PyCallArgs &call, std::optional <PyInt*> actionID)
                             button2->SetItem(1, new PyInt(Complete));
                         dialog->AddItem(button2);
                     }
-                    agentSays->SetItem(0, new PyInt(offer.briefingID));
+                    // SECMISSION-M2: custom missions send string briefing prose
+                    {
+                        std::string brief = sMissionDataMgr.GetCustomBriefing(offer.missionID);
+                        if (!brief.empty())
+                            agentSays->SetItem(0, new PyString(brief.c_str()));
+                        else
+                            agentSays->SetItem(0, new PyInt(offer.briefingID));
+                    }
                     agentSays->SetItem(1, new PyInt(offer.characterID));
                 } else {
                     // dialogue data.  if RequestMission is only option, client auto-responds with DoAction(RequestMission optionID)
@@ -179,7 +186,14 @@ PyResult AgentBound::DoAction(PyCallArgs &call, std::optional <PyInt*> actionID)
                 *   contentID is used for specific char's mission keywords.  we're not using it like there here....
                 */
 
-                agentSays->SetItem(0, new PyInt(offer.briefingID));
+                // SECMISSION-M2: string briefing for custom encounter missions
+                {
+                    std::string brief = sMissionDataMgr.GetCustomBriefing(offer.missionID);
+                    if (!brief.empty())
+                        agentSays->SetItem(0, new PyString(brief.c_str()));
+                    else
+                        agentSays->SetItem(0, new PyInt(offer.briefingID));
+                }
                 agentSays->SetItem(1, new PyInt(offer.characterID));
 
                 // dialog can also contain mission data.
@@ -200,7 +214,13 @@ PyResult AgentBound::DoAction(PyCallArgs &call, std::optional <PyInt*> actionID)
             case ViewMission: { //1
                 MissionOffer offer = MissionOffer();
                 m_agent->GetOffer(pchar->itemID(), offer);
-                agentSays->SetItem(0, new PyInt(offer.briefingID));
+                {
+                    std::string brief = sMissionDataMgr.GetCustomBriefing(offer.missionID);
+                    if (!brief.empty())
+                        agentSays->SetItem(0, new PyString(brief.c_str()));
+                    else
+                        agentSays->SetItem(0, new PyInt(offer.briefingID));
+                }
                 agentSays->SetItem(1, new PyInt(offer.characterID));
                 if (offer.stateID < Mission::State::Accepted) {
                     PyTuple* button1 = new PyTuple(2);
@@ -455,7 +475,14 @@ PyResult AgentBound::GetMissionBriefingInfo(PyCallArgs &call) {
         } else {
             briefingInfo->SetItemString("Mission Title ID", new PyInt(offer.missionID));
         }
-        briefingInfo->SetItemString("Mission Briefing ID", new PyInt(offer.briefingID));
+        // SECMISSION-M2: string briefing prose for custom missions
+        {
+            std::string brief = sMissionDataMgr.GetCustomBriefing(offer.missionID);
+            if (!brief.empty())
+                briefingInfo->SetItemString("Mission Briefing ID", new PyString(brief.c_str()));
+            else
+                briefingInfo->SetItemString("Mission Briefing ID", new PyInt(offer.briefingID));
+        }
         switch(offer.typeID) {
             case Mission::Type::Courier:
                 briefingInfo->SetItemString("Mission Image", sMissionDataMgr.GetCourierRes()); break;
@@ -608,7 +635,14 @@ PyResult AgentBound::GetMissionJournalInfo(PyCallArgs &call, std::optional <PyIn
     } else {
         journalInfo->SetItemString("missionNameID", new PyInt(offer.missionID));
     }
-    journalInfo->SetItemString("briefingTextID", new PyInt(offer.briefingID));
+    // SECMISSION-M2: journal "read details" briefing text
+    {
+        std::string brief = sMissionDataMgr.GetCustomBriefing(offer.missionID);
+        if (!brief.empty())
+            journalInfo->SetItemString("briefingTextID", new PyString(brief.c_str()));
+        else
+            journalInfo->SetItemString("briefingTextID", new PyInt(offer.briefingID));
+    }
     journalInfo->SetItemString("missionState", new PyInt(offer.stateID));
     journalInfo->SetItemString("expirationTime", new PyLong(offer.expiryTime) );
     journalInfo->SetItemString("objectives", GetMissionObjectiveInfo(call.client, offer));

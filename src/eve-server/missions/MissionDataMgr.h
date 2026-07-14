@@ -44,6 +44,10 @@ public:
     // mission and remember its warp-in point for WarpToLocation
     void                SpawnMissionSite(Client* pClient, MissionOffer& offer);
     bool                GetMissionSitePoint(uint32 charID, GPoint& point);
+    // SECMISSION-M2: journal bookmarks for combat site + agent turn-in
+    void                BuildEncounterBookmarks(MissionOffer& offer, const GPoint& sitePoint);
+    // SECMISSION-M2: custom prose for missionID >= 56000 (empty = use briefingID)
+    std::string         GetCustomBriefing(uint16 missionID);
 
     std::string         GetTypeName(uint8 typeID);
     std::string         GetTypeLabel(uint8 typeID);
