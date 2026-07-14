@@ -234,7 +234,11 @@ PyResult AgentBound::DoAction(PyCallArgs &call, std::optional <PyInt*> actionID)
                 m_agent->GetOffer(pchar->itemID(), offer);
                 offer.stateID = Mission::State::Accepted;
                 offer.dateAccepted = GetFileTimeNow();
-                offer.expiryTime = GetFileTimeNow() + (30 * m_agent->GetLevel() * EvE::Time::Minute);  // 30m per agent level  ?  test this.
+                // EXPIRY-1: 30min/level expired missions mid-session (live:
+                // 'Retrieve the Reports' failed while the pilot ran another
+                // mission).  Retail accepted missions live for days; the
+                // BONUS window (bonusTime) is the tight timer, not expiry.
+                offer.expiryTime = GetFileTimeNow() + EvE::Time::Day;
                 if (offer.typeID == Mission::Type::Encounter) {
                     // SECMISSION-1: spawn the guarded combat site holding
                     // the goal item -- the pilot goes and takes it by force
