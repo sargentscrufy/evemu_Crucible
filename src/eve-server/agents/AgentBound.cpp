@@ -443,7 +443,14 @@ PyResult AgentBound::GetMissionBriefingInfo(PyCallArgs &call) {
     PyDict *briefingInfo = new PyDict();
         briefingInfo->SetItemString("ContentID", new PyInt(offer.characterID));
         briefingInfo->SetItemString("Mission Keywords", keywords);
-        briefingInfo->SetItemString("Mission Title ID", new PyInt(offer.missionID));
+        // SECMISSION-1: custom missions (id >= 56000) have no client-side
+        // title text -- send the name string instead (the client renders
+        // either).  Retail ids keep the int lookup.
+        if (offer.missionID >= 56000) {
+            briefingInfo->SetItemString("Mission Title ID", new PyString(offer.name));
+        } else {
+            briefingInfo->SetItemString("Mission Title ID", new PyInt(offer.missionID));
+        }
         briefingInfo->SetItemString("Mission Briefing ID", new PyInt(offer.briefingID));
         switch(offer.typeID) {
             case Mission::Type::Courier:
@@ -614,7 +621,12 @@ PyResult AgentBound::GetMissionJournalInfo(PyCallArgs &call, std::optional <PyIn
 PyDict* AgentBound::GetMissionObjectiveInfo(Client* pClient, MissionOffer& offer)
 {
     PyDict* objectiveData = new PyDict();
-    objectiveData->SetItemString("missionTitleID", new PyInt(offer.missionID));
+    // SECMISSION-1: string title for custom missions (see briefing note)
+    if (offer.missionID >= 56000) {
+        objectiveData->SetItemString("missionTitleID", new PyString(offer.name));
+    } else {
+        objectiveData->SetItemString("missionTitleID", new PyInt(offer.missionID));
+    }
     objectiveData->SetItemString("contentID", new PyInt(offer.characterID));
     objectiveData->SetItemString("importantStandings", new PyInt(offer.important));     // boolean integer
     // will need to test for this to set correctly.....
