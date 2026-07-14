@@ -5,6 +5,37 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 
 ## Open
 
+### Session 2026-07-13 — first live security-mission playthrough (SARGENTSCRUFY)
+
+The M1 encounter-mission slice went from zero to a real player accepting and
+running "Retrieve the Reports" within the hour. Findings, all live-observed:
+
+- **BONUS-1 — FIXED (deployed): mission time bonus never paid and always
+  showed expired.** bonusTime is MINUTES; completion compared it against a
+  negative filetime delta (never pays — for ANY mission type, ever) and the
+  journal computed remaining time as `minutes − filetimeDelta×Minute`
+  (always negative → client renders "Bonus no longer available" at accept;
+  screenshot evidence). Display also showed `reward×2` instead of the real
+  bonusISK. All three fixed; qstKill seeds corrected 1800 → 30 (minutes).
+- **SECMISSION title collision — FIXED (deployed):** custom missionID 56002
+  rendered as "Arch Angel Fusion S" (client-side ID lookup collision).
+  Custom missions (id ≥ 56000) now send the mission NAME as a string in
+  Mission Title ID / missionTitleID; retail ids keep the int path. If the
+  client accepts this (verify next session), custom briefing PROSE via the
+  same mechanism is the follow-up.
+- **M2 validated by live play: the journal must carry the combat-site
+  location.** The player could not find his mission site — the fetch
+  objective points at the TURN-IN station and the borrowed courier prose
+  says the goods are "at this station." Manual fix that worked: a type-5
+  coordinate bookmark at the site, warp-to from People & Places. M2 =
+  create that bookmark automatically on accept + surface the site in the
+  objective packet.
+- **v1 restart behavior (known):** mission sites live in server memory
+  (m_sitePoints + dynamic rats). A restart mid-mission despawns the guards;
+  the objective can (persisted entity) and the accepted offer survive, so
+  the mission remains completable as free loot. Fine for dev; M2 should
+  persist dungeon fields to agtOffers and respawn guards on demand.
+
 ### Session 2026-07-12 late — live client session (localhost)
 
 - **DESTINY-12 — FIXED 2026-07-13 (39dddf8e), built (deploy pending player
