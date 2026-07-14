@@ -936,27 +936,33 @@ void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& 
     offer.bookmarks = new PyList();
 
     // --- combat site (pickup) -----------------------------------------
+    // SECMISSION-M3e: TWO fixes decoded from the live client, both from the
+    // client's own data files (no server-source guessing):
+    //  1) WARP: the leaf menu was the GATE OBJECT's menu (Approach, no Warp)
+    //     because itemID pointed at the gate item -- the client resolved it
+    //     to a real on-grid object.  A COORDINATE bookmark (itemID = system,
+    //     typeID = SolarSystem, with x/y/z) is a spot-in-space and gets the
+    //     location menu WITH 'Warp to Location'.  This mirrors the working
+    //     People & Places coordinate bookmark exactly.
+    //  2) LABEL: '[no label: X]' is what localization.GetByLabel returns for
+    //     an unknown LABEL PATH.  The client feeds our hint straight to
+    //     GetByLabel, so hint must be a real label path.  From the client's
+    //     localization_main table: UI/Agents/Bookmarks/Encounter/Deadspace
+    //     (235228) = 'Encounter (Deadspace) - {location}'.  The client fills
+    //     {location} from locationID (the system).
     PyDict* site = new PyDict();
-    site->SetItemString("itemID", new PyInt(offer.dungeonLocationID ? offer.dungeonLocationID : 0));
-    site->SetItemString("typeID", new PyInt(siteTypeID)); // the transport holding the goods
+    site->SetItemString("itemID", new PyInt(offer.dungeonSolarSystemID));       // spot in system, not the gate
+    site->SetItemString("typeID", new PyInt(EVEDB::invTypes::SolarSystem));     // coordinate bookmark
     site->SetItemString("agentID", new PyInt(offer.agentID));
+    site->SetItemString("hint", new PyString("UI/Agents/Bookmarks/Encounter/Deadspace"));
     {
-        // SECMISSION-M3d: the client's agent-bookmark menu builds this leaf
-        // label from its own (encrypted) code keyed off locationType, not
-        // from a field we send -- any value here renders '[no label: X]'.
-        // The reliable location is the real People & Places bookmark created
-        // at accept (see the SaveNewBookmark call below); this hint stays a
-        // readable string as a harmless fallback.
-        std::string label = offer.name + " - Combat Site";
-        site->SetItemString("hint", new PyString(label.c_str()));
-        site->SetItemString("memo", new PyString(label.c_str()));
+        std::string memo = offer.name + " - Combat Site";
+        site->SetItemString("memo", new PyString(memo.c_str()));
     }
     site->SetItemString("locationType", new PyString("objective.source"));
     site->SetItemString("created", new PyLong((int64)GetFileTimeNow()));
     site->SetItemString("locationNumber", new PyInt(0));
-    // SECMISSION-M3c: retail marks combat-site bookmarks 'deadspace' --
-    // this is what routes the client's Warp option through the agent
-    site->SetItemString("flag", new PyString("deadspace"));
+    site->SetItemString("flag", PyStatic.NewNone());
     site->SetItemString("locationID", new PyInt(offer.dungeonSolarSystemID));
     site->SetItemString("ownerID", new PyInt(offer.characterID));
     site->SetItemString("x", new PyFloat(sitePoint.x));
@@ -970,10 +976,10 @@ void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& 
     agentBm->SetItemString("itemID", new PyInt(offer.destinationID));
     agentBm->SetItemString("typeID", new PyInt(offer.destinationTypeID));
     agentBm->SetItemString("agentID", new PyInt(offer.agentID));
+    agentBm->SetItemString("hint", new PyString("UI/Agents/Bookmarks/AgentBase"));
     {
-        std::string label = offer.name + " - Agent Base";
-        agentBm->SetItemString("hint", new PyString(label.c_str()));
-        agentBm->SetItemString("memo", new PyString(label.c_str()));
+        std::string memo = offer.name + " - Agent Base";
+        agentBm->SetItemString("memo", new PyString(memo.c_str()));
     }
     agentBm->SetItemString("locationType", new PyString("objective.destination"));
     agentBm->SetItemString("created", new PyLong((int64)GetFileTimeNow()));
