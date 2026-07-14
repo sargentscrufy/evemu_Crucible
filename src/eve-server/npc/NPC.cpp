@@ -31,6 +31,7 @@
 #include "Client.h"
 #include "EntityList.h"
 #include "map/MapDB.h"
+#include "missions/MissionDataMgr.h"   // SECMISSION-M3: mission transport wreck drops
 #include "npc/NPC.h"
 #include "npc/NPCAI.h"
 #include "standing/StandingDB.h"
@@ -389,6 +390,12 @@ void NPC::Killed(Damage &damage) {
 
     if ((MakeRandomFloat() < sConfig.npc.LootDropChance) or (m_allyID == factionRogueDrones))
         DropLoot(wreckItemRef, m_self->groupID(), killerID);
+
+    // SECMISSION-M3: if this NPC was tagged as a mission transport, its wreck
+    // must contain the objective.  Deliberately NOT gated on LootDropChance --
+    // a mission item is not random loot, and a failed roll would silently make
+    // the mission uncompletable.
+    sMissionDataMgr.InjectMissionLoot(m_self->itemID(), wreckItemRef->itemID());
 
     DBSystemDynamicEntity wreckEntity = DBSystemDynamicEntity();
         wreckEntity.allianceID = (killer->GetAllianceID() == 0 ? m_allyID : killer->GetAllianceID());

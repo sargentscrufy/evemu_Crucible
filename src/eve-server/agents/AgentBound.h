@@ -47,6 +47,8 @@ protected:
 
 private:
     PyTuple* GetMissionObjectives(Client* pClient, MissionOffer& offer);
+    // SECMISSION-M3: site leader's taunt when the pilot warps to an encounter
+    void SendLeaderTaunt(Client* pClient);
     PyDict* GetMissionObjectiveInfo(Client* pClient, MissionOffer& offer);
 };
 

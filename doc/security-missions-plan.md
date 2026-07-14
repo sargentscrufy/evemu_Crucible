@@ -89,6 +89,49 @@ slice, and it defines M2/M3:
    objective item (NPC::Killed hook + mission-tag registry: tagged NPC's
    wreck gets the goal item injected). L1 difficulty: easy.
 
+## Status — 2026-07-14
+
+Implemented and awaiting a live playtest (not yet built or bot-tested):
+
+- **Briefings are real prose, served from the DB.** `qstKill` gained
+  `briefing` + `leaderLine` TEXT columns; `GetCustomBriefing()` reads them
+  instead of a hardcoded C++ switch, so mission text can be rewritten
+  without a server rebuild. Prose names the faction (Guristas), the
+  ambushed freighter, and the objective, per spec item 1.
+- **Mission location shows up.** `BuildEncounterBookmarks()` fills
+  `offer.bookmarks` (was always an empty `PyList` — the root cause of "we
+  still don't get a mission location") with the combat site
+  (`objective.source`) and the agent station (`objective.destination`).
+- **The site is shaped like retail** (spec items 5 + 6): leader
+  (Pithi Wrecker) + 2–4 Pithi frigate henchmen + a **Guristas Hauler that
+  is carrying the objective**. The free-floating "Mission Objective
+  Container" is gone.
+- **The transport drops the goods.** `RegisterMissionDrop()` tags the
+  hauler's itemID at spawn; `NPC::Killed` calls `InjectMissionLoot()`,
+  which spawns the goal item straight into the hauler's wreck.
+  Deliberately NOT gated on `LootDropChance` — a failed roll would make
+  the mission silently uncompletable.
+
+**DEPLOY NOTE — this will break if you skip it:** `LoadKillData` now
+selects `q.briefing, q.leaderLine`. Against an *old* `qstKill` that query
+errors, no encounter sets load, and `CreateMissionOffer` silently falls
+back to courier missions. `sql/seed_and_clean/seed_missions_kill.sql` must
+be re-applied (it drops + recreates the table) before running the server.
+
+### Not done yet
+
+- **Acceleration gate + pocket (spec items 3 + 4).** The site is still a
+  single deadspace point in open space, warped to directly. There is no
+  gate and no second pocket. This is the biggest remaining gap.
+- **Local broadcast (spec item 4).** `LSCChannel::SendMessage()` is
+  attributed to a `Client*`; there is no server-side path to speak as an
+  NPC without hand-rolling an `OnLSC` notification with a spoofed sender.
+  The leader's `leaderLine` currently arrives as a client notification on
+  warp *start*, not as Local chat on arrival. Both need fixing together.
+- **Restart durability.** `m_sitePoints` and `offer.bookmarks` are
+  in-memory only. A server restart mid-mission loses the warp point and
+  the journal bookmarks (the offer itself survives in `agtOffers`).
+
 ## Milestones
 
 ### M1 — Content + spawn primitive (open space)

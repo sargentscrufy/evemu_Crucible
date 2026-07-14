@@ -81,6 +81,10 @@ struct CourierData {
     uint32 bonusISK;
     float itemVolume;
     std::string name;
+    // SECMISSION-M2: encounter prose, from qstKill.briefing / qstKill.leaderLine.
+    // Empty for courier/mining sets, which still use the numeric briefingID.
+    std::string briefing;
+    std::string leaderLine;
 };
 
 namespace Mission {

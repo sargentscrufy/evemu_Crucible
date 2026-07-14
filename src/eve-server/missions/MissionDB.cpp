@@ -44,9 +44,12 @@ void MissionDB::LoadMiningData(DBQueryResult& res)
 // guarded mission site.
 void MissionDB::LoadKillData(DBQueryResult& res)
 {
+    // SECMISSION-M2: briefing/leaderLine are TEXT columns on qstKill (may be
+    // NULL for legacy rows -- the loader NULL-checks them).  Serving prose from
+    // the DB means mission text can be rewritten without rebuilding the server.
     if (!sDatabase.RunQuery(res,
         "SELECT q.id, q.briefingID, q.name, q.level, q.typeID, q.important, q.storyline, q.itemTypeID, q.itemQty, it.volume, q.rewardISK, q.rewardItemID,"
-        " q.rewardItemQty, q.bonusISK, q.bonusTime, q.sysRange, q.raceID"
+        " q.rewardItemQty, q.bonusISK, q.bonusTime, q.sysRange, q.raceID, q.briefing, q.leaderLine"
         " FROM qstKill AS q LEFT JOIN invTypes AS it ON it.typeID = itemTypeID WHERE briefingID > 0 AND itemTypeID > 0 AND rewardISK > 0"))
         codelog(DATABASE__ERROR, "Error in LoadKillData query: %s", res.error.c_str());
 }

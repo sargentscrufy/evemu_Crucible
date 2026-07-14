@@ -46,6 +46,17 @@ void MissionDataMgr::Clear()
     m_courier.clear();
     m_xoffers.clear();
     m_missions.clear();
+    // SECMISSION-1/M2/M3: these were never cleared -- a second Populate() would
+    // have stacked duplicate encounter sets on top of the existing ones.
+    m_kill.clear();
+    m_killImp.clear();
+    m_killText.clear();
+    m_sitePoints.clear();
+    m_missionDrops.clear();
+    m_courierImp.clear();
+    m_miningImp.clear();
+    m_missionsImp.clear();
+    m_aoffers.clear();
 }
 
 int MissionDataMgr::Initialize()
@@ -213,10 +224,23 @@ void MissionDataMgr::Populate()
         data.bonusTime     = row.GetInt(14);
         data.range         = row.GetInt(15);
         data.raceID        = row.GetInt(16);
+        // SECMISSION-M2: prose columns are nullable -- GetText on a NULL is a
+        // null char* and would blow up std::string's ctor, so gate on IsNull.
+        data.briefing      = row.IsNull(17) ? "" : row.GetText(17);
+        data.leaderLine    = row.IsNull(18) ? "" : row.GetText(18);
         if (data.important) {
             m_killImp.emplace(row.GetInt(3), data);
         } else {
             m_kill.emplace(row.GetInt(3), data);
+        }
+        // index prose by missionID: an offer reloaded from agtOffers after a
+        // restart carries the id but not the text, and the journal still has
+        // to render it.
+        if (!data.briefing.empty() or !data.leaderLine.empty()) {
+            KillText kt;
+            kt.briefing   = data.briefing;
+            kt.leaderLine = data.leaderLine;
+            m_killText[data.missionID] = kt;
         }
     }
     sLog.Cyan("   MissionDataMgr", "%lu(%lu) Encounter Mission Data Sets loaded in %.3fms.", m_kill.size(), m_killImp.size(), (GetTimeMSeconds() - start));
@@ -687,71 +711,84 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
     // push the site off the planet warp-in a bit so it reads as deadspace
     sitePoint.MakeRandomPointOnSphere(80000 + MakeRandomInt(0, 40000));
 
-    // --- the loot can with the goal item -----------------------------
-    ItemData canData(23 /*Cargo Container*/, ownerSystem, systemID, flagNone, "Mission Objective Container", sitePoint);
-    InventoryItemRef canRef = sItemFactory.SpawnItem(canData);
-    if (canRef.get() == nullptr) {
-        _log(AGENT__ERROR, "SpawnMissionSite - failed to spawn objective container");
-        return;
-    }
-    ItemData goalData(offer.courierTypeID, ownerSystem, canRef->itemID(), flagNone, offer.courierAmount);
-    InventoryItemRef goalRef = sItemFactory.SpawnItem(goalData);
-    if (goalRef.get() == nullptr)
-        _log(AGENT__ERROR, "SpawnMissionSite - failed to spawn goal item %u", offer.courierTypeID);
+    // SECMISSION-M3: the site is now shaped like a retail L1 encounter --
+    //   leader + 2-4 henchmen + one transport that is holding the goods.
+    // The objective is NOT a free-floating can any more: the transport is
+    // tagged, and its WRECK carries the goal item (see InjectMissionLoot,
+    // called from NPC::Killed).  Kill the escort, kill the hauler, loot it.
+    const uint32 factionID = sDataMgr.GetRegionRatFaction(pClient->GetRegionID());
+    const uint32 corpID    = sDataMgr.GetFactionCorp(factionID);
 
-    DBSystemDynamicEntity canEnt = DBSystemDynamicEntity();
-        canEnt.categoryID = EVEDB::invCategories::Celestial;
-        canEnt.groupID = EVEDB::invGroups::Cargo_Container;
-        canEnt.itemID = canRef->itemID();
-        canEnt.itemName = "Mission Objective Container";
-        canEnt.typeID = 23;
-        canEnt.position = sitePoint;
-        canEnt.allianceID = 0;
-        canEnt.corporationID = 0;
-        canEnt.factionID = 0;
-        canEnt.ownerID = ownerSystem;
-    pSysMgr->BuildDynamicEntity(canEnt);
-
-    // --- the guards ---------------------------------------------------
-    // L1: Guristas frigates (Caldari space v1; faction tables in M4)
-    static const uint16 guardTypes[] = { 16981 /*Pithi Arrogator*/, 16994 /*Pithi Imputor*/, 16996 /*Pithi Infiltrator*/ };
-    uint8 guards = 3 + MakeRandomInt(0, 1);
-    for (uint8 i = 0; i < guards; ++i) {
-        uint16 typeID = guardTypes[MakeRandomInt(0, 2)];
+    // small helper so leader/henchmen/transport all spawn identically
+    auto spawnHostile = [&](uint16 typeID, const GPoint& pos) -> uint32 {
         const ItemType* iType = sItemFactory.GetType(typeID);
-        if (iType == nullptr)
-            continue;
-        GPoint guardPos(sitePoint);
-        guardPos.MakeRandomPointOnSphere(8000 + MakeRandomInt(0, 7000));
-        ItemData ratData(typeID, ownerSystem, systemID, flagNone, iType->name().c_str(), guardPos);
+        if (iType == nullptr) {
+            _log(AGENT__ERROR, "SpawnMissionSite - unknown typeID %u", typeID);
+            return 0;
+        }
+        const std::string name = iType->name();
+        ItemData ratData(typeID, ownerSystem, systemID, flagNone, name.c_str(), pos);
         InventoryItemRef ratRef = sItemFactory.SpawnItem(ratData);
-        if (ratRef.get() == nullptr)
-            continue;
+        if (ratRef.get() == nullptr) {
+            _log(AGENT__ERROR, "SpawnMissionSite - failed to spawn typeID %u", typeID);
+            return 0;
+        }
         DBSystemDynamicEntity ratEnt = DBSystemDynamicEntity();
             ratEnt.categoryID = EVEDB::invCategories::Entity;
             ratEnt.groupID = iType->groupID();
             ratEnt.itemID = ratRef->itemID();
-            ratEnt.itemName = iType->name();
+            ratEnt.itemName = name;
             ratEnt.typeID = typeID;
-            ratEnt.position = guardPos;
-            ratEnt.factionID = sDataMgr.GetRegionRatFaction(pClient->GetRegionID());
-            ratEnt.allianceID = ratEnt.factionID;
-            ratEnt.corporationID = sDataMgr.GetFactionCorp(ratEnt.factionID);
-            ratEnt.ownerID = ratEnt.corporationID;
+            ratEnt.position = pos;
+            ratEnt.factionID = factionID;
+            ratEnt.allianceID = factionID;
+            ratEnt.corporationID = corpID;
+            ratEnt.ownerID = corpID;
         pSysMgr->BuildDynamicEntity(ratEnt);
+        return ratRef->itemID();
+    };
+
+    // --- the transport: this is what is holding the objective ----------
+    // Guristas Hauler.  Sits at the centre of the site; the pilot has to get
+    // through the escort to reach it.
+    uint32 transportID = spawnHostile(13717 /*Guristas Hauler*/, sitePoint);
+    if (transportID == 0) {
+        _log(AGENT__ERROR, "SpawnMissionSite - transport failed to spawn; mission '%s' for %s would be uncompletable, aborting site.",
+             offer.name.c_str(), pClient->GetName());
+        return;
+    }
+    // tag it: its wreck will contain the goal item
+    RegisterMissionDrop(transportID, offer.courierTypeID, offer.courierAmount);
+
+    // --- the leader: the one who talks -------------------------------
+    GPoint leaderPos(sitePoint);
+    leaderPos.MakeRandomPointOnSphere(3000 + MakeRandomInt(0, 2000));
+    spawnHostile(17006 /*Pithi Wrecker*/, leaderPos);
+
+    // --- the henchmen -------------------------------------------------
+    // L1 is meant to be easy: 2-4 frigates, no webs/scrams.
+    static const uint16 henchTypes[] = { 16981 /*Pithi Arrogator*/, 16994 /*Pithi Imputor*/, 16996 /*Pithi Infiltrator*/ };
+    uint8 henchmen = 2 + MakeRandomInt(0, 2);
+    for (uint8 i = 0; i < henchmen; ++i) {
+        GPoint guardPos(sitePoint);
+        guardPos.MakeRandomPointOnSphere(8000 + MakeRandomInt(0, 7000));
+        spawnHostile(henchTypes[MakeRandomInt(0, 2)], guardPos);
     }
 
     m_sitePoints[offer.characterID] = sitePoint;
-    offer.dungeonLocationID = canRef->itemID();
+    // the site's "location" is now the transport, not a can -- the bookmark
+    // resolves to a real object that is actually in space.
+    offer.dungeonLocationID = transportID;
     offer.dungeonSolarSystemID = systemID;
 
     // SECMISSION-M2: journal Encounters / right-click locations need a real
     // bookmark list (was always empty PyList).  Site = pickup (source),
     // agent station = return drop-off (destination).
-    BuildEncounterBookmarks(offer, sitePoint);
+    BuildEncounterBookmarks(offer, sitePoint, 13717 /*Guristas Hauler*/);
 
-    _log(AGENT__MESSAGE, "SpawnMissionSite - '%s' for %s: %u guards + objective can %u in %u at (%.0f, %.0f, %.0f)",
-         offer.name.c_str(), pClient->GetName(), guards, canRef->itemID(), systemID,
+    _log(AGENT__MESSAGE, "SpawnMissionSite - '%s' for %s: leader + %u henchmen + transport %u (drops %u x%u) in %u at (%.0f, %.0f, %.0f)",
+         offer.name.c_str(), pClient->GetName(), henchmen, transportID,
+         offer.courierTypeID, offer.courierAmount, systemID,
          sitePoint.x, sitePoint.y, sitePoint.z);
 }
 
@@ -768,7 +805,7 @@ bool MissionDataMgr::GetMissionSitePoint(uint32 charID, GPoint& point)
 // AgentMgrService::GetMyJournalDetails (itemID/typeID/agentID/hint/
 // locationType/coords/solarsystemID/...).  Client routes warp via
 // agentMgr.WarpToLocation using locationType + locationNumber.
-void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& sitePoint)
+void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& sitePoint, uint16 siteTypeID)
 {
     if (offer.bookmarks != nullptr) {
         PySafeDecRef(offer.bookmarks);
@@ -779,7 +816,7 @@ void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& 
     // --- combat site (pickup) -----------------------------------------
     PyDict* site = new PyDict();
     site->SetItemString("itemID", new PyInt(offer.dungeonLocationID ? offer.dungeonLocationID : 0));
-    site->SetItemString("typeID", new PyInt(23)); // cargo container at site
+    site->SetItemString("typeID", new PyInt(siteTypeID)); // the transport holding the goods
     site->SetItemString("agentID", new PyInt(offer.agentID));
     {
         std::string hint = offer.name + " - Combat Site";
@@ -814,39 +851,81 @@ void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& 
     agentBm->SetItemString("flag", PyStatic.NewNone());
     agentBm->SetItemString("locationID", new PyInt(offer.destinationSystemID));
     agentBm->SetItemString("ownerID", new PyInt(offer.characterID));
-    agentBm->SetItemString("x", new PyInt(0));
-    agentBm->SetItemString("y", new PyInt(0));
-    agentBm->SetItemString("z", new PyInt(0));
+    // NOTE: float, not int -- the site bookmark above sends PyFloat for x/y/z
+    // and the client unpacks both bookmarks through the same path.  Mixing
+    // PyInt and PyFloat here is exactly the kind of thing that makes the
+    // journal silently drop a bookmark.
+    agentBm->SetItemString("x", new PyFloat(0.0));
+    agentBm->SetItemString("y", new PyFloat(0.0));
+    agentBm->SetItemString("z", new PyFloat(0.0));
     agentBm->SetItemString("solarsystemID", new PyInt(offer.destinationSystemID));
     offer.bookmarks->AddItem(new PyObject("util.KeyVal", agentBm));
 }
 
-// SECMISSION-M2: custom mission prose (ids >= 56000).  Same mechanism as
-// string titles — client accepts a string where a messageID would go.
+// SECMISSION-M2: custom mission prose (ids >= 56000).  Same mechanism as string
+// titles -- the client accepts a string where a messageID would go.
+//
+// Backed by qstKill.briefing rather than a hardcoded switch: mission text is
+// content, not code, and rewriting a briefing should not cost a server rebuild.
+// Empty return = caller falls back to the numeric briefingID.
 std::string MissionDataMgr::GetCustomBriefing(uint16 missionID)
 {
-    switch (missionID) {
-        case 56001:
-            return "A Guristas freighter was ambushed near this system and its cargo looted. "
-                   "Intel puts the pirates at a temporary staging point off one of our planets. "
-                   "Warp to the site, deal with the hostiles, and recover the stolen goods.";
-        case 56002:
-            return "These logs were on a freighter that was ambushed and boarded by Guristas pirates. "
-                   "Go to the combat site, eliminate the guards, retrieve the reports from the wreckage, "
-                   "and bring them back to me. Time is a factor — the bonus window is tight.";
-        case 56003:
-            return "Pirates seized a shuttle carrying corporate personnel. We believe the hostages "
-                   "are still alive at a temporary holding site in this system. Clear the hostiles "
-                   "and recover the survivors (or their dog tags) for return to this station.";
-        case 56004:
-            return "We have a line on a pirate logistics drop used to resupply local raids. "
-                   "Hit the site, destroy the guards, and bring back samples of their cargo "
-                   "so we can trace the supply chain.";
-        case 56005:
-            return "An informant who sold our shipping schedules to the Guristas is hiding at a "
-                   "deadspace rendezvous. Silence him, recover his data, and report back. "
-                   "Do not let him escape into local.";
-        default:
-            return std::string();
+    auto itr = m_killText.find(missionID);
+    if (itr == m_killText.end())
+        return std::string();
+    return itr->second.briefing;
+}
+
+// SECMISSION-M3: the line the site's leader delivers when the pilot lands.
+std::string MissionDataMgr::GetLeaderLine(uint16 missionID)
+{
+    auto itr = m_killText.find(missionID);
+    if (itr == m_killText.end())
+        return std::string();
+    return itr->second.leaderLine;
+}
+
+// SECMISSION-M3: tag an NPC so that when it dies its wreck contains the mission
+// goal item.  This is what makes "kill the transport, take the reports off the
+// wreck" work instead of parking the objective in a free-floating can.
+void MissionDataMgr::RegisterMissionDrop(uint32 npcItemID, uint16 goalTypeID, uint16 goalQty)
+{
+    if ((npcItemID == 0) or (goalTypeID == 0) or (goalQty == 0))
+        return;
+    MissionDrop drop;
+    drop.typeID = goalTypeID;
+    drop.qty    = goalQty;
+    m_missionDrops[npcItemID] = drop;
+    _log(AGENT__MESSAGE, "RegisterMissionDrop - npc %u will drop %u x%u", npcItemID, goalTypeID, goalQty);
+}
+
+// SECMISSION-M3: called from NPC::Killed once the wreck exists.  Spawns the
+// goal item straight into the wreck container, then clears the tag so a
+// respawned itemID can never inherit a stale drop.
+bool MissionDataMgr::InjectMissionLoot(uint32 npcItemID, uint32 wreckItemID)
+{
+    auto itr = m_missionDrops.find(npcItemID);
+    if (itr == m_missionDrops.end())
+        return false;
+
+    const MissionDrop drop = itr->second;
+    m_missionDrops.erase(itr);      // one-shot: consume the tag
+
+    if (wreckItemID == 0) {
+        _log(AGENT__ERROR, "InjectMissionLoot - npc %u died with no wreck; goal item %u LOST.  Mission is now uncompletable.",
+             npcItemID, drop.typeID);
+        return false;
     }
+
+    ItemData goalData(drop.typeID, ownerSystem, wreckItemID, flagNone, drop.qty);
+    InventoryItemRef goalRef = sItemFactory.SpawnItem(goalData);
+    if (goalRef.get() == nullptr) {
+        _log(AGENT__ERROR, "InjectMissionLoot - failed to spawn goal item %u x%u into wreck %u.  Mission is now uncompletable.",
+             drop.typeID, drop.qty, wreckItemID);
+        return false;
+    }
+
+    _log(AGENT__MESSAGE, "InjectMissionLoot - dropped %u x%u into wreck %u (from npc %u)",
+         drop.typeID, drop.qty, wreckItemID, npcItemID);
+    return true;
 }

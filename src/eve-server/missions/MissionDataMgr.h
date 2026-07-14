@@ -45,9 +45,18 @@ public:
     void                SpawnMissionSite(Client* pClient, MissionOffer& offer);
     bool                GetMissionSitePoint(uint32 charID, GPoint& point);
     // SECMISSION-M2: journal bookmarks for combat site + agent turn-in
-    void                BuildEncounterBookmarks(MissionOffer& offer, const GPoint& sitePoint);
-    // SECMISSION-M2: custom prose for missionID >= 56000 (empty = use briefingID)
+    void                BuildEncounterBookmarks(MissionOffer& offer, const GPoint& sitePoint, uint16 siteTypeID);
+    // SECMISSION-M2: custom prose for missionID >= 56000 (empty = use briefingID).
+    // Backed by the qstKill.briefing TEXT column -- editable without a rebuild.
     std::string         GetCustomBriefing(uint16 missionID);
+    // SECMISSION-M3: what the site's leader says when the pilot lands.
+    std::string         GetLeaderLine(uint16 missionID);
+    // SECMISSION-M3: tag an NPC so its wreck carries the mission goal item.
+    // Called by SpawnMissionSite for the transport; consumed by NPC::Killed.
+    void                RegisterMissionDrop(uint32 npcItemID, uint16 goalTypeID, uint16 goalQty);
+    // SECMISSION-M3: if this NPC was tagged, spawn the goal item into its
+    // wreck.  Returns true if something was injected.
+    bool                InjectMissionLoot(uint32 npcItemID, uint32 wreckItemID);
 
     std::string         GetTypeName(uint8 typeID);
     std::string         GetTypeLabel(uint8 typeID);
@@ -68,6 +77,14 @@ private:
     std::multimap<uint8, CourierData> m_kill;       // level/data  (SECMISSION-1)
     std::multimap<uint8, CourierData> m_killImp;    // level/data  (SECMISSION-1)
     std::map<uint32, GPoint> m_sitePoints;          // charID/site (SECMISSION-1)
+    // SECMISSION-M2: missionID -> prose loaded from qstKill.briefing/leaderLine.
+    // Keyed by missionID (not level) so the journal can resolve text for an
+    // offer restored from agtOffers after a restart, where only the id survives.
+    struct KillText { std::string briefing; std::string leaderLine; };
+    std::map<uint16, KillText> m_killText;          // missionID/prose (SECMISSION-M2)
+    // SECMISSION-M3: npcItemID -> goal item its wreck must contain.
+    struct MissionDrop { uint16 typeID; uint16 qty; };
+    std::map<uint32, MissionDrop> m_missionDrops;   // npcItemID/drop (SECMISSION-M3)
     std::multimap<uint8, CourierData> m_mining;     // level/data
     std::multimap<uint8, CourierData> m_miningImp;     // level/data
     std::multimap<uint8, MissionData> m_missions;   // level/data

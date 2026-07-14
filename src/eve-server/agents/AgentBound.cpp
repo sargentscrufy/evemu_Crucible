@@ -991,6 +991,30 @@ PyResult AgentBound::GetEntryPoint(PyCallArgs &call) {
     return nullptr;
 }
 
+// SECMISSION-M3: the site leader taunts the pilot on the way in.
+//
+// LIMITATION: retail broadcasts this in Local chat from the NPC.  We cannot do
+// that yet -- LSCChannel::SendMessage() is attributed to a Client*, and there is
+// no server-side path to speak as an NPC without hand-rolling an OnLSC
+// notification with a spoofed sender.  Until that exists this lands as a client
+// notification, which carries the beat but is not the retail presentation.
+// It also fires on warp START, not on arrival; there is no warp-complete hook
+// on this path yet.  Both are M4 items.
+void AgentBound::SendLeaderTaunt(Client* pClient)
+{
+    if (pClient == nullptr)
+        return;
+    MissionOffer offer = MissionOffer();
+    if (!m_agent->HasMission(pClient->GetCharacterID(), offer))
+        return;
+    if (offer.typeID != Mission::Type::Encounter)
+        return;
+    std::string line = sMissionDataMgr.GetLeaderLine(offer.missionID);
+    if (line.empty())
+        return;
+    pClient->SendNotifyMsg("%s", line.c_str());
+}
+
 PyResult AgentBound::GotoLocation(PyCallArgs &call, PyInt* locationType, PyInt* locationNumber, PyInt* referringAgentID) {
     //sm.StartService('agents').GetAgentMoniker(bookmark.agentID).GotoLocation(bookmark.locationType, bookmark.locationNumber, referringAgentID)
     _log(AGENT__DUMP,  "AgentBound::Handle_GotoLocation() - size=%lli", call.tuple->size());
@@ -1004,6 +1028,7 @@ PyResult AgentBound::GotoLocation(PyCallArgs &call, PyInt* locationType, PyInt* 
     and (!call.client->GetShipSE()->DestinyMgr()->IsWarping())) {
         call.client->SetInvul(false);
         call.client->GetShipSE()->DestinyMgr()->WarpTo(point, 0);
+        SendLeaderTaunt(call.client);
     }
     return nullptr;
 }
@@ -1033,5 +1058,6 @@ PyResult AgentBound::WarpToLocation(PyCallArgs &call, PyInt* locationType, PyInt
     int32 range = (warpRange == nullptr) ? 0 : (int32)warpRange->value();
     call.client->SetInvul(false);
     pDestiny->WarpTo(point, range);
+    SendLeaderTaunt(call.client);
     return nullptr;
 }
