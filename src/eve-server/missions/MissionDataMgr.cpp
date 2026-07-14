@@ -18,6 +18,7 @@
 #include "inventory/ItemFactory.h"
 #include "map/MapData.h"
 #include "system/SystemManager.h"
+#include "system/Container.h"
 #include "StaticDataMgr.h"
 
 MissionDataMgr::MissionDataMgr()
@@ -917,6 +918,17 @@ bool MissionDataMgr::InjectMissionLoot(uint32 npcItemID, uint32 wreckItemID)
         return false;
     }
 
+    // the item must be ADDED to the wreck's live container, exactly like
+    // SystemEntity::DropLoot does -- spawning it with the wreck as bare
+    // locationID corrupts the container's inventory (live: segfault the
+    // moment the mission transport died)
+    WreckContainerRef wreckRef = sItemFactory.GetWreckContainer(wreckItemID);
+    if (wreckRef.get() == nullptr) {
+        _log(AGENT__ERROR, "InjectMissionLoot - wreck %u has no container ref; goal item %u LOST.",
+             wreckItemID, drop.typeID);
+        return false;
+    }
+
     ItemData goalData(drop.typeID, ownerSystem, wreckItemID, flagNone, drop.qty);
     InventoryItemRef goalRef = sItemFactory.SpawnItem(goalData);
     if (goalRef.get() == nullptr) {
@@ -924,6 +936,7 @@ bool MissionDataMgr::InjectMissionLoot(uint32 npcItemID, uint32 wreckItemID)
              drop.typeID, drop.qty, wreckItemID);
         return false;
     }
+    wreckRef->AddItem(goalRef);
 
     _log(AGENT__MESSAGE, "InjectMissionLoot - dropped %u x%u into wreck %u (from npc %u)",
          drop.typeID, drop.qty, wreckItemID, npcItemID);
