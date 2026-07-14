@@ -679,6 +679,17 @@ void NPCAIMgr::Targeted(SystemEntity* pSE) {
     if (!m_armorRepairTimer.Enabled())
         if (MakeRandomFloat() > m_armorRepairDelayChance)
             m_armorRepairTimer.Start(m_armorRepairDuration);
+
+    // NPC-FIRE-1: reactive aggro (this path -- the pilot shot first) locked
+    // the target back but never started the weapon timers; only proactive
+    // aggro (Target()) did.  Attack() checks a disabled m_mainAttackTimer
+    // forever, so rats engaged by the player yellow-boxed and never
+    // returned fire (live: entire henchman escort silent).  Mirror the
+    // timer starts from Target().
+    if (!m_mainAttackTimer.Enabled())
+        m_mainAttackTimer.Start(m_attackSpeed);
+    if (!m_missileTimer.Enabled() and (m_launcherCycleTime > 100))
+        m_missileTimer.Start(m_launcherCycleTime);
 }
 
 void NPCAIMgr::TargetLost(SystemEntity* pSE) {

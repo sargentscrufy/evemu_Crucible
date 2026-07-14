@@ -947,3 +947,45 @@ user asked for. All one-to-few lines, deployed together.
   build; same parser machinery (XMLParserEx) also used by the server for
   config loading.
 - **Fix:** virtual dtor on the base class, `src/eve-core/utils/XMLParser.h`.
+
+### 2026-07-14 live session #3 — six-report round (M3i)
+
+- **TARG-2 (FIXED, `SystemManager.cpp` UnloadSystem):** use-after-free crash
+  ~20s after the mission fight ended.  Entities delete in map order at
+  system unload, but TargetManagers hold cross-refs to OTHER entities'
+  modules — the dying hauler's `ClearModules()` aborted the (already
+  deleted) attacker's module cycle through its dangling DestinyManager.
+  Two-phase teardown: sever all target/module links first, then delete.
+- **NPC-FIRE-1 (FIXED, `NPCAI.cpp`):** entire henchman escort locked the
+  pilot but never returned fire.  Reactive aggro (`Targeted()` — pilot
+  shot first, the standard mission flow) never started
+  `m_mainAttackTimer`/`m_missileTimer`; only proactive aggro (`Target()`)
+  did.  `Attack()` checks a disabled timer forever.  Timer starts now
+  mirrored in `Targeted()`.  Additionally the Pithi henchman types carry
+  tutorial-tier damage (2+2 x 0.625 = ~2.5/volley, imperceptible) — mission
+  henchmen now spawn with AttrDamageMultiplier 4 (~retail L1 punch).
+- **PROP-1 (FIXED, `SystemEntity.cpp` + spawn attrs):** targeting/shooting
+  the site scenery (Gas/Storage Silo) crashed the CLIENT.  Scenery items
+  have no hitpoint attributes, so `ItemSystemEntity::MakeDamageState`
+  computed 0/0 = NaN and the client choked decoding the damage state.
+  Zero-denominator guards + real HP pools on mission props and gates.
+- **LOOT-2 (FIXED, M3i, `MissionDataMgr.cpp` + `NPC.cpp`):** transport
+  wreck displayed full but opened empty on the live client.  Objective now
+  drops as its own jettisoned cargo container beside the kill (retail
+  shape; the container loot path was proven live in M2).  Also moved the
+  drop before the wreck-failure early-returns so a failed wreck can never
+  lose the objective.
+- **SECMISSION pocket at 1000-1200km (was 450-550):** the inbound warp to
+  the gate often TRANSITED the pocket bubble (client keeps balls from
+  every bubble a warp passes through), so hostiles showed on overview from
+  room 1.  At ~1000km a random pocket direction rarely crosses the
+  approach corridor.
+- **EFFECT-2 (OPEN):** pilot reports own turrets pointed at target but no
+  firing animation this session (EFFECT-1 modules-list fix is in place
+  and previously animated).  Needs a live slim/OnSpecialFX capture.
+- **GATE-ORIENT (OPEN, cosmetic):** acceleration gate model does not face
+  the pocket; ball protocol carries no orientation for RIGID celestials.
+  Needs research (dungeon rotation data / client model autofacing).
+- **MUSIC-1 (OPEN):** no combat music at sites; dunMusicUrl rides the
+  Warp_Gate type but the pilot skipped the gate room this run.  Verify on
+  a gate-room landing now that the gate ball is visible (M3g).

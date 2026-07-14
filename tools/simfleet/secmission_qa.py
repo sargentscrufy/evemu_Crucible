@@ -10,7 +10,7 @@ Sera (qatest) at the Perimeter L1 security agent:
                           (leader taunt arrives as a notify)
   4. smartbomb the transport until it dies
   5. VERIFY: InjectMissionLoot fired and the goal item row sits inside the
-     transport's wreck container
+     jettisoned objective container dropped beside the transport (M3i)
 
     python secmission_qa.py
 """
@@ -192,15 +192,17 @@ def run():
         if not db.query(f"SELECT itemID FROM entity WHERE itemID={ship}"):
             log("QA ship destroyed by escort"); break
     tail = srv(int(time.time() - t1 + 5))
-    inj = re.search(r"InjectMissionLoot - dropped (\d+) x(\d+) into wreck (\d+)", tail)
+    # M3i: the objective now drops in its own jettisoned container (retail
+    # shape), not inside the wreck
+    inj = re.search(r"InjectMissionLoot - dropped (\d+) x(\d+) in container (\d+)", tail)
     check("transport killed + InjectMissionLoot fired", bool(inj), (inj.group(0) if inj else ""))
 
-    # --- 5. goal item is inside the wreck --------------------------------
+    # --- 5. goal item is inside the objective container -------------------
     if inj:
-        wreck = int(inj.group(3))
-        rows = db.query(f"SELECT typeID, quantity FROM entity WHERE locationID={wreck}")
+        can = int(inj.group(3))
+        rows = db.query(f"SELECT typeID, quantity FROM entity WHERE locationID={can}")
         goal = [r for r in rows if int(r["typeID"]) == int(inj.group(1))]
-        check("goal item row inside wreck container", bool(goal), f"({rows})")
+        check("goal item row inside objective container", bool(goal), f"({rows})")
 
     # cleanup: quit mission, log off
     try:

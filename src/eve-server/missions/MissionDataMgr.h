@@ -54,9 +54,12 @@ public:
     // SECMISSION-M3: tag an NPC so its wreck carries the mission goal item.
     // Called by SpawnMissionSite for the transport; consumed by NPC::Killed.
     void                RegisterMissionDrop(uint32 npcItemID, uint16 goalTypeID, uint16 goalQty);
-    // SECMISSION-M3: if this NPC was tagged, spawn the goal item into its
-    // wreck.  Returns true if something was injected.
-    bool                InjectMissionLoot(uint32 npcItemID, uint32 wreckItemID);
+    // SECMISSION-M3: if this NPC was tagged, drop the mission objective.
+    // M3i: drops a jettisoned cargo container beside the kill (the retail
+    // shape, and the loot path proven reliable in live testing) -- wreck
+    // inventory injection showed full-but-empty wrecks on the live client.
+    // Returns true if the objective dropped.
+    bool                InjectMissionLoot(uint32 npcItemID, SystemManager* pSysMgr, const GPoint& pos);
     // SECMISSION-M3b: acceleration-gate plumbing.  KeeperService's
     // ActivateAccelerationGate consults this to warp the pilot to the pocket.
     void                RegisterMissionGate(uint32 gateItemID, uint16 missionID, const GPoint& pocket);

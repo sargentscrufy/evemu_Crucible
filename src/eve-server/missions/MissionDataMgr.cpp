@@ -740,8 +740,14 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
     //    bubble's edge and vanish from the client (live-repro'd: bumping
     //    the hauler knocked it out of the shared bubble = mission broken).
     // Must also exceed minWarpDistance (150km) or the gate's WarpTo refuses.
+    // SECMISSION-M3i: 1000-1200km out.  450km put the pocket close enough
+    // that the pilot's inbound warp to the gate often TRANSITED the pocket
+    // bubble -- the client keeps balls from every bubble a warp passes
+    // through, so the hostiles showed on overview from the warp-in (live
+    // report).  At ~1000km a random pocket direction rarely intersects the
+    // approach corridor.
     GPoint pocketPoint(sitePoint);
-    pocketPoint.MakeRandomPointOnSphere(450000 + MakeRandomInt(0, 100000));
+    pocketPoint.MakeRandomPointOnSphere(1000000 + MakeRandomInt(0, 200000));
 
     // SECMISSION-M3: the site is now shaped like a retail L1 encounter --
     //   leader + 2-4 henchmen + one transport that is holding the goods.
@@ -756,7 +762,7 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
     // the attacker to zero range (it has no guns), ramming the pilot,
     // stuttering across the grid, and drifting over the bubble edge --
     // where its ball (and its death, and its wreck) became invisible.
-    auto spawnHostile = [&](uint16 typeID, const GPoint& pos, bool pinned = false) -> uint32 {
+    auto spawnHostile = [&](uint16 typeID, const GPoint& pos, bool pinned = false, float dmgMult = 0.f) -> uint32 {
         const ItemType* iType = sItemFactory.GetType(typeID);
         if (iType == nullptr) {
             _log(AGENT__ERROR, "SpawnMissionSite - unknown typeID %u", typeID);
@@ -771,6 +777,11 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
         }
         if (pinned)     // effectively stationary (0 risks div-by-zero in destiny speed math)
             ratRef->SetAttribute(AttrMaxVelocity, 5);
+        // NPC-FIRE-1: the Pithi henchman types carry tutorial-tier stats
+        // (2+2 damage x 0.625 mult = ~2.5/volley -- imperceptible); scale
+        // them to retail L1 punch (~10-15/volley)
+        if (dmgMult > 0.f)
+            ratRef->SetAttribute(AttrDamageMultiplier, dmgMult);
         DBSystemDynamicEntity ratEnt = DBSystemDynamicEntity();
             ratEnt.categoryID = EVEDB::invCategories::Entity;
             ratEnt.groupID = iType->groupID();
@@ -797,6 +808,14 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
         InventoryItemRef propRef = sItemFactory.SpawnItem(propData);
         if (propRef.get() == nullptr)
             return;
+        // PROP-1: give scenery real hitpoint pools -- without them the
+        // damage state sent on targeting was NaN (see the guard in
+        // ItemSystemEntity::MakeDamageState) and structures die instantly
+        // if anything ever damages them
+        propRef->SetAttribute(AttrShieldCapacity, 100000);
+        propRef->SetAttribute(AttrShieldCharge,   100000);
+        propRef->SetAttribute(AttrArmorHP,        100000);
+        propRef->SetAttribute(AttrHP,             250000);
         DBSystemDynamicEntity propEnt = DBSystemDynamicEntity();
             propEnt.categoryID = EVEDB::invCategories::Celestial;
             propEnt.groupID = iType->groupID();
@@ -819,6 +838,11 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
             ItemData gData(17831, ownerSystem, systemID, flagNone, "Acceleration Gate", sitePoint);
             InventoryItemRef gRef = sItemFactory.SpawnItem(gData);
             if (gRef.get() != nullptr) {
+                // PROP-1: hitpoint pools so the targeting damage state is finite
+                gRef->SetAttribute(AttrShieldCapacity, 100000);
+                gRef->SetAttribute(AttrShieldCharge,   100000);
+                gRef->SetAttribute(AttrArmorHP,        100000);
+                gRef->SetAttribute(AttrHP,             250000);
                 DBSystemDynamicEntity gEnt = DBSystemDynamicEntity();
                     gEnt.categoryID = EVEDB::invCategories::Celestial;
                     gEnt.groupID = EVEDB::invGroups::Warp_Gate;
@@ -884,7 +908,7 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
     for (uint8 i = 0; i < henchmen; ++i) {
         GPoint guardPos(pocketPoint);
         guardPos.MakeRandomPointOnSphere(8000 + MakeRandomInt(0, 7000));
-        spawnHostile(henchTypes[MakeRandomInt(0, 2)], guardPos);
+        spawnHostile(henchTypes[MakeRandomInt(0, 2)], guardPos, false, 4.f);
     }
     if (level >= 2) {
         uint8 cruisers = 1 + MakeRandomInt(0, 1);
@@ -1065,7 +1089,7 @@ void MissionDataMgr::RegisterMissionDrop(uint32 npcItemID, uint16 goalTypeID, ui
 // SECMISSION-M3: called from NPC::Killed once the wreck exists.  Spawns the
 // goal item straight into the wreck container, then clears the tag so a
 // respawned itemID can never inherit a stale drop.
-bool MissionDataMgr::InjectMissionLoot(uint32 npcItemID, uint32 wreckItemID)
+bool MissionDataMgr::InjectMissionLoot(uint32 npcItemID, SystemManager* pSysMgr, const GPoint& pos)
 {
     auto itr = m_missionDrops.find(npcItemID);
     if (itr == m_missionDrops.end())
@@ -1074,34 +1098,49 @@ bool MissionDataMgr::InjectMissionLoot(uint32 npcItemID, uint32 wreckItemID)
     const MissionDrop drop = itr->second;
     m_missionDrops.erase(itr);      // one-shot: consume the tag
 
-    if (wreckItemID == 0) {
-        _log(AGENT__ERROR, "InjectMissionLoot - npc %u died with no wreck; goal item %u LOST.  Mission is now uncompletable.",
+    if (pSysMgr == nullptr) {
+        _log(AGENT__ERROR, "InjectMissionLoot - npc %u died with no system manager; goal item %u LOST.",
              npcItemID, drop.typeID);
         return false;
     }
 
-    // the item must be ADDED to the wreck's live container, exactly like
-    // SystemEntity::DropLoot does -- spawning it with the wreck as bare
-    // locationID corrupts the container's inventory (live: segfault the
-    // moment the mission transport died)
-    WreckContainerRef wreckRef = sItemFactory.GetWreckContainer(wreckItemID);
-    if (wreckRef.get() == nullptr) {
-        _log(AGENT__ERROR, "InjectMissionLoot - wreck %u has no container ref; goal item %u LOST.",
-             wreckItemID, drop.typeID);
+    // SECMISSION-M3i: the objective drops as a jettisoned cargo container
+    // beside the kill -- the retail shape, and the exact loot path the M2
+    // site used, which the pilot looted successfully in live testing.
+    // (Injecting into the wreck's inventory showed a full-but-empty wreck
+    // on the live client.)
+    GPoint canPos(pos);
+    canPos.MakeRandomPointOnSphere(1500);
+    ItemData canData(23 /*Cargo Container*/, ownerSystem, pSysMgr->GetID(), flagNone,
+                     "Jettisoned Mission Cargo", canPos);
+    InventoryItemRef canRef = sItemFactory.SpawnItem(canData);
+    if (canRef.get() == nullptr) {
+        _log(AGENT__ERROR, "InjectMissionLoot - failed to spawn objective container; goal item %u LOST.", drop.typeID);
         return false;
     }
-
-    ItemData goalData(drop.typeID, ownerSystem, wreckItemID, flagNone, drop.qty);
+    ItemData goalData(drop.typeID, ownerSystem, canRef->itemID(), flagNone, drop.qty);
     InventoryItemRef goalRef = sItemFactory.SpawnItem(goalData);
     if (goalRef.get() == nullptr) {
-        _log(AGENT__ERROR, "InjectMissionLoot - failed to spawn goal item %u x%u into wreck %u.  Mission is now uncompletable.",
-             drop.typeID, drop.qty, wreckItemID);
+        _log(AGENT__ERROR, "InjectMissionLoot - failed to spawn goal item %u x%u; mission uncompletable.",
+             drop.typeID, drop.qty);
         return false;
     }
-    wreckRef->AddItem(goalRef);
 
-    _log(AGENT__MESSAGE, "InjectMissionLoot - dropped %u x%u into wreck %u (from npc %u)",
-         drop.typeID, drop.qty, wreckItemID, npcItemID);
+    DBSystemDynamicEntity canEnt = DBSystemDynamicEntity();
+        canEnt.categoryID = EVEDB::invCategories::Celestial;
+        canEnt.groupID = EVEDB::invGroups::Cargo_Container;
+        canEnt.itemID = canRef->itemID();
+        canEnt.itemName = "Jettisoned Mission Cargo";
+        canEnt.typeID = 23;
+        canEnt.position = canPos;
+        canEnt.allianceID = 0;
+        canEnt.corporationID = 0;
+        canEnt.factionID = 0;
+        canEnt.ownerID = ownerSystem;
+    pSysMgr->BuildDynamicEntity(canEnt);
+
+    _log(AGENT__MESSAGE, "InjectMissionLoot - dropped %u x%u in container %u beside npc %u",
+         drop.typeID, drop.qty, canRef->itemID(), npcItemID);
     return true;
 }
 

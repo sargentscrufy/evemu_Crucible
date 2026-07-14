@@ -489,11 +489,18 @@ void ItemSystemEntity::MakeDamageState(DoDestinyDamageState &into) {
     if (m_self->groupID() == EVEDB::invGroups::Force_Field) {
         SystemEntity::MakeDamageState(into);
     } else {
-        into.shield = (m_self->GetAttribute(AttrShieldCharge).get_double() / m_self->GetAttribute(AttrShieldCapacity).get_double());
+        // PROP-1: scenery items (mission silos/structures, gates) have no
+        // hitpoint attributes -- 0/0 here put NaN in the damage state and
+        // the live client CRASHED decoding it the moment such an entity
+        // was targeted.  Missing pools read as full.
+        double sCap = m_self->GetAttribute(AttrShieldCapacity).get_double();
+        double aHP  = m_self->GetAttribute(AttrArmorHP).get_double();
+        double hHP  = m_self->GetAttribute(AttrHP).get_double();
+        into.shield = (sCap > 0) ? (m_self->GetAttribute(AttrShieldCharge).get_double() / sCap) : 1.0;
         into.recharge = m_self->GetAttribute(AttrShieldRechargeRate).get_double();
         into.timestamp = GetFileTimeNow();
-        into.armor = 1.0 - (m_self->GetAttribute(AttrArmorDamage).get_double() / m_self->GetAttribute(AttrArmorHP).get_double());
-        into.structure = 1.0 - (m_self->GetAttribute(AttrDamage).get_double() / m_self->GetAttribute(AttrHP).get_double());
+        into.armor = 1.0 - ((aHP > 0) ? (m_self->GetAttribute(AttrArmorDamage).get_double() / aHP) : 0.0);
+        into.structure = 1.0 - ((hHP > 0) ? (m_self->GetAttribute(AttrDamage).get_double() / hHP) : 0.0);
     }
 }
 

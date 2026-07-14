@@ -364,6 +364,16 @@ void NPC::Killed(Damage &damage) {
     }
 
     GPoint wreckPosition = m_destiny->GetPosition();
+
+    // SECMISSION-M3i: if this NPC was tagged as a mission transport, the
+    // objective drops in its own jettisoned container beside the kill (the
+    // retail shape; wreck-inventory injection read as empty on the live
+    // client).  Deliberately BEFORE the wreck block and not gated on
+    // LootDropChance -- a failed wreck or loot roll must never silently
+    // make the mission uncompletable.
+    sMissionDataMgr.InjectMissionLoot(m_self->itemID(), m_system,
+                                      wreckPosition.isNaN() ? GetPosition() : wreckPosition);
+
     if (wreckPosition.isNaN()) {
         sLog.Error("NPC::Killed()", "Wreck Position is NaN");
         return;
@@ -390,12 +400,6 @@ void NPC::Killed(Damage &damage) {
 
     if ((MakeRandomFloat() < sConfig.npc.LootDropChance) or (m_allyID == factionRogueDrones))
         DropLoot(wreckItemRef, m_self->groupID(), killerID);
-
-    // SECMISSION-M3: if this NPC was tagged as a mission transport, its wreck
-    // must contain the objective.  Deliberately NOT gated on LootDropChance --
-    // a mission item is not random loot, and a failed roll would silently make
-    // the mission uncompletable.
-    sMissionDataMgr.InjectMissionLoot(m_self->itemID(), wreckItemRef->itemID());
 
     DBSystemDynamicEntity wreckEntity = DBSystemDynamicEntity();
         wreckEntity.allianceID = (killer->GetAllianceID() == 0 ? m_allyID : killer->GetAllianceID());
