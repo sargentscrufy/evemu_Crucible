@@ -600,7 +600,14 @@ PyResult AgentBound::GetMissionJournalInfo(PyCallArgs &call, std::optional <PyIn
 
     PyDict* journalInfo = new PyDict();
     journalInfo->SetItemString("contentID", new PyInt(offer.characterID));
-    journalInfo->SetItemString("missionNameID", new PyInt(offer.missionID));
+    // SECMISSION-1: string title for custom missions -- this field drives
+    // the journal pane header (live: 56001 rendered as 'Arch Angel
+    // Fusion M' via client ID collision)
+    if (offer.missionID >= 56000) {
+        journalInfo->SetItemString("missionNameID", new PyString(offer.name));
+    } else {
+        journalInfo->SetItemString("missionNameID", new PyInt(offer.missionID));
+    }
     journalInfo->SetItemString("briefingTextID", new PyInt(offer.briefingID));
     journalInfo->SetItemString("missionState", new PyInt(offer.stateID));
     journalInfo->SetItemString("expirationTime", new PyLong(offer.expiryTime) );
