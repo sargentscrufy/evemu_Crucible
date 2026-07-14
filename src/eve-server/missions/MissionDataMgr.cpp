@@ -19,6 +19,7 @@
 #include "map/MapData.h"
 #include "system/SystemManager.h"
 #include "system/Container.h"
+#include "system/BookmarkDB.h"
 #include "StaticDataMgr.h"
 
 MissionDataMgr::MissionDataMgr()
@@ -879,6 +880,34 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
     // agent station = return drop-off (destination).
     BuildEncounterBookmarks(offer, sitePoint, (gateID ? 17831 : 13717));
 
+    // SECMISSION-M3d: the agent-menu bookmark above is cosmetic-only on this
+    // client (its Warp/label come from encrypted client code we can't drive).
+    // Create a REAL People & Places bookmark at the warp-in so the pilot has
+    // a clean, working "Warp to Location" -- the mechanism proven in live
+    // testing.  Coordinate bookmark: itemID/locationID = the system, type =
+    // SolarSystem, x/y/z = the site.  Cleared + recreated per accept.
+    {
+        BookmarkDB bmDB;
+        // drop any stale mission bookmark this char still has
+        DBerror err;
+        sDatabase.RunQuery(err,
+            "DELETE FROM bookmarks WHERE ownerID = %u AND memo LIKE '%% - Mission Site'",
+            offer.characterID);
+        BmData bm = BmData();
+        bm.ownerID    = offer.characterID;
+        bm.creatorID  = offer.characterID;
+        bm.itemID     = systemID;
+        bm.locationID = systemID;
+        bm.typeID     = EVEDB::invTypes::SolarSystem;
+        bm.point      = sitePoint;
+        bm.created    = GetFileTimeNow();
+        bm.memo       = offer.name + " - Mission Site";
+        bm.note       = "Warp here for your security mission site.";
+        bmDB.SaveNewBookmark(bm);
+        _log(AGENT__MESSAGE, "SpawnMissionSite - created P&P bookmark %u for %s at the site.",
+             bm.bookmarkID, pClient->GetName());
+    }
+
     _log(AGENT__MESSAGE, "SpawnMissionSite - '%s' for %s: gate %u -> pocket (leader + %u henchmen + transport %u, drops %u x%u) in %u at (%.0f, %.0f, %.0f)",
          offer.name.c_str(), pClient->GetName(), gateID, henchmen, transportID,
          offer.courierTypeID, offer.courierAmount, systemID,
@@ -912,13 +941,15 @@ void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& 
     site->SetItemString("typeID", new PyInt(siteTypeID)); // the transport holding the goods
     site->SetItemString("agentID", new PyInt(offer.agentID));
     {
-        // SECMISSION-M3c: hint is a client LOCALIZATION messageID, not free
-        // text -- a raw string rendered '[no label: <string>]'.  Confirmed
-        // from the client's localization data (resLocalization.stuff):
-        // 235228 = 'Encounter (Deadspace) - {location}' (retail caption).
-        site->SetItemString("hint", new PyInt(235228));
-        std::string memo = offer.name + " - Combat Site";
-        site->SetItemString("memo", new PyString(memo.c_str()));
+        // SECMISSION-M3d: the client's agent-bookmark menu builds this leaf
+        // label from its own (encrypted) code keyed off locationType, not
+        // from a field we send -- any value here renders '[no label: X]'.
+        // The reliable location is the real People & Places bookmark created
+        // at accept (see the SaveNewBookmark call below); this hint stays a
+        // readable string as a harmless fallback.
+        std::string label = offer.name + " - Combat Site";
+        site->SetItemString("hint", new PyString(label.c_str()));
+        site->SetItemString("memo", new PyString(label.c_str()));
     }
     site->SetItemString("locationType", new PyString("objective.source"));
     site->SetItemString("created", new PyLong((int64)GetFileTimeNow()));
@@ -940,10 +971,9 @@ void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& 
     agentBm->SetItemString("typeID", new PyInt(offer.destinationTypeID));
     agentBm->SetItemString("agentID", new PyInt(offer.agentID));
     {
-        // 235205 = 'Agent Home Base - {location}' (see note above)
-        agentBm->SetItemString("hint", new PyInt(235205));
-        std::string memo = offer.name + " - Agent Base";
-        agentBm->SetItemString("memo", new PyString(memo.c_str()));
+        std::string label = offer.name + " - Agent Base";
+        agentBm->SetItemString("hint", new PyString(label.c_str()));
+        agentBm->SetItemString("memo", new PyString(label.c_str()));
     }
     agentBm->SetItemString("locationType", new PyString("objective.destination"));
     agentBm->SetItemString("created", new PyLong((int64)GetFileTimeNow()));
