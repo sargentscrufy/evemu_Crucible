@@ -278,7 +278,11 @@ PyResult AgentBound::DoAction(PyCallArgs &call, std::optional <PyInt*> actionID)
                 /** @todo  add fleet sharing  */
                 if (offer.rewardISK)
                     AccountService::TransferFunds(m_agent->GetID(), pchar->itemID(), offer.rewardISK, "Mission Reward", Journal::EntryType::AgentMissionReward, m_agent->GetID());
-                if ((offer.bonusTime > 0) and (offer.bonusTime < (offer.dateAccepted - GetFileTimeNow())))
+                // BONUS-1: bonusTime is MINUTES; the old check compared
+                // minutes against a negative filetime delta, so the time
+                // bonus never paid for any mission type.
+                if ((offer.bonusTime > 0)
+                and ((GetFileTimeNow() - offer.dateAccepted) < (offer.bonusTime * EvE::Time::Minute)))
                     AccountService::TransferFunds(m_agent->GetID(), pchar->itemID(), offer.bonusISK, "Mission Bonus Reward", Journal::EntryType::AgentMissionTimeBonusReward, m_agent->GetID());
                 /** @todo  add lp, etc, etc  */
                 if (offer.rewardLP)
@@ -692,12 +696,15 @@ PyDict* AgentBound::GetMissionObjectiveInfo(Client* pClient, MissionOffer& offer
             //extra->SetItemString("blueprintInfo", PyStatic.NewNone());
         PyTuple* bonusRewards = new PyTuple(4);
         if (offer.dateAccepted > 0) {
-            bonusRewards->SetItem(0, new PyLong(offer.bonusTime - (offer.dateAccepted - offer.dateIssued) * EvE::Time::Minute));  // bonus time - elapsed time * minutes
+            // BONUS-1: remaining bonus window in filetime ticks, counted
+            // from ACCEPT (the old math multiplied a filetime delta by the
+            // Minute constant -- the client always rendered 'expired')
+            bonusRewards->SetItem(0, new PyLong((offer.bonusTime * EvE::Time::Minute) - (int64)(GetFileTimeNow() - offer.dateAccepted)));
         } else {
-            bonusRewards->SetItem(0, new PyLong(offer.bonusTime * EvE::Time::Minute));  // bonus time * minutes
+            bonusRewards->SetItem(0, new PyLong(offer.bonusTime * EvE::Time::Minute));  // full window; countdown starts on accept
         }
             bonusRewards->SetItem(1, new PyInt(itemTypeCredits));   // bonus is *usually* isk.  for now, we'll keep it as isk (easier)
-            bonusRewards->SetItem(2, new PyInt(offer.rewardISK *2));
+            bonusRewards->SetItem(2, new PyInt(offer.bonusISK));    // BONUS-1: show the actual bonus payout
             bonusRewards->SetItem(3, extra);
         bonusList->AddItem(bonusRewards);
     }
