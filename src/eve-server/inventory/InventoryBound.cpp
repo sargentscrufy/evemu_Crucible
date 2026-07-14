@@ -493,6 +493,15 @@ PyRep* InventoryBound::MoveItems(Client* pClient, std::vector< int32 >& items, E
 
         fromFlag = iRef->flag();
 
+        // LOOT-1: taking an item you don't own (space container, wreck,
+        // mission objective can) must transfer ownership -- a plain Move
+        // keeps the old owner and the item is invisible in the taker's
+        // inventory (live report: mission Reports 'vanished' into cargo).
+        if ((!donating) and (!customs)
+        and IsCharacterID(m_ownerID)
+        and (iRef->ownerID() != m_ownerID))
+            iRef->ChangeOwner(m_ownerID, true);
+
         if (moveStack)
             quantity = iRef->quantity();
 

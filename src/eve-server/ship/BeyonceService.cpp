@@ -425,6 +425,14 @@ PyResult BeyonceBound::CmdWarpToStuff(PyCallArgs &call, PyString* type, PyRep* i
             warpToPoint.x = x;
             warpToPoint.y = y;
             warpToPoint.z = z;
+            // DESTINY-9b: coordinate bookmarks land 600m short along the
+            // approach vector so a warp to an object's exact spot (mission
+            // cans, saved spots on structures) can't clip into it
+            GVector bmApproach(call.client->GetShipSE()->GetPosition(), warpToPoint);
+            if (bmApproach.length() > 1000) {
+                bmApproach.normalize();
+                warpToPoint -= (bmApproach * 600.0);
+            }
         } else {
             // Bookmark type is of a static system entity, so search for it and obtain its coordinates:
             pSE = pSystem->GetSE( toID );
@@ -586,9 +594,12 @@ PyResult BeyonceBound::CmdWarpToStuff(PyCallArgs &call, PyString* type, PyRep* i
         }
         if (radius < 90000) {
             // this will include stations (max station radius 60km)
+            // DESTINY-9b: land 650m short of the object's surface -- exact
+            // surface landings clipped/bounced the ship off the model
+            // (live report; same family as the gate fix)
             GVector vectorFromOrigin(call.client->GetShipSE()->GetPosition(), warpToPoint);
             vectorFromOrigin.normalize();   //we now have a direction
-            GPoint stopPoint = (vectorFromOrigin * radius);
+            GPoint stopPoint = (vectorFromOrigin * (radius + 650.0));
             warpToPoint -= stopPoint;
         }
     }
