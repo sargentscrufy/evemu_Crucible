@@ -62,6 +62,33 @@ mission-specific triggers/scripting beyond kill-all and kill-named.
   server-side mission cache needing restart — all three touch the same
   agent/mission state code this work opens up.
 
+## The retail flow — user spec from live playtesting (2026-07-13)
+
+This is the target experience, written by the user after running the M1
+slice, and it defines M2/M3:
+
+1. **Clear briefing fiction**: "these logs were on a freighter that was
+   ambushed and boarded by X-faction pirates; go in and retrieve them."
+   (Custom prose per mission — string mission titles are proven to render,
+   so string briefings are the same mechanism: send briefing text as a
+   string for custom missions. Add a `briefing` TEXT column to qstKill.)
+2. **Journal / right-click location**: mission site appears under its own
+   right-click-space submenu (retail called it Encounters), not Personal
+   Locations — driven by agent mission bookmarks on the offer
+   (offer.bookmarks; client routes warps through agentMgr WarpToLocation,
+   already implemented). Personal-Locations drops stay as debug fallback.
+3. **Warp-in is safe**: no hostiles at the warp-in point — just an
+   **acceleration gate**. Activate → ship aligns → warps to the pocket.
+4. **Pocket theater**: on player arrival the enemy leader **broadcasts in
+   Local** ("I've killed the crew and taken the reports... too bad you
+   won't live to take them back") — LSC hooks from the feedback system
+   can post to system local as an NPC speaker.
+5. **The fight**: 2–4 frigate henchmen aggro immediately (NPC AI already
+   does sight-range aggro) plus a hostile **transport**.
+6. **The drop**: killing the transport drops a wreck/container holding the
+   objective item (NPC::Killed hook + mission-tag registry: tagged NPC's
+   wreck gets the goal item injected). L1 difficulty: easy.
+
 ## Milestones
 
 ### M1 — Content + spawn primitive (open space)
