@@ -1027,7 +1027,9 @@ PyResult AgentBound::GotoLocation(PyCallArgs &call, PyRep* locationType, PyInt* 
     and (call.client->GetShipSE()->DestinyMgr() != nullptr)
     and (!call.client->GetShipSE()->DestinyMgr()->IsWarping())) {
         call.client->SetInvul(false);
-        call.client->GetShipSE()->DestinyMgr()->WarpTo(point, 0);
+        // SECMISSION-M3h: 15km standoff -- the 12.7km gate model sits at
+        // the site point (see WarpToLocation below)
+        call.client->GetShipSE()->DestinyMgr()->WarpTo(point, 15000);
         // SECMISSION-M3b: the taunt moved to gate activation (KeeperService)
         // -- room 1 is hostile-free and silent, per the retail flow
     }
@@ -1063,6 +1065,11 @@ PyResult AgentBound::WarpToLocation(PyCallArgs &call, PyRep* locationType, PyInt
         else if (warpRange->IsInt())
             range = warpRange->AsInt()->value();
     }
+    // SECMISSION-M3h: the site point is the acceleration gate's centre and
+    // the gate model is 12.7km across -- 'within 0m' dropped the pilot
+    // INSIDE the model.  Land at the model's edge instead.
+    if (range < 15000)
+        range = 15000;
     call.client->SetInvul(false);
     pDestiny->WarpTo(point, range);
     // SECMISSION-M3b: the taunt moved to gate activation (KeeperService)

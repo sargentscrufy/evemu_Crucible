@@ -232,8 +232,14 @@ void SystemBubble::ProcessWander(std::vector<SystemEntity *> &wanderers) {
         _log(DESTINY__TRACE, "SystemBubble::ProcessWander() getting dynamicSE");
         pDSE = itr->second->GetDynamicSE();
         if (pDSE == nullptr) {
-            _log(DESTINY__TRACE, "SystemBubble::ProcessWander() pDSE is nullptr");
-            itr = m_dynamicEntities.erase(itr);
+            // SECMISSION-M3g: an entity without a DynamicSE has no destiny
+            // and cannot wander -- keep it.  Erasing it here removed it from
+            // m_dynamicEntities, and SendAddBalls builds an arriving player's
+            // grid from that map, so mission acceleration gates and scenery
+            // (plain ISE/CelestialSE) went invisible to anyone warping in
+            // more than a minute after they spawned.
+            _log(DESTINY__TRACE, "SystemBubble::ProcessWander() pDSE is nullptr - keeping non-dynamic entity");
+            ++itr;
             continue;
         }
 

@@ -351,6 +351,15 @@ void ActiveModule::Activate(uint16 effectID, uint32 targetID/*0*/, int16 repeat/
             Clear();
             throw UserError ("DeniedActivateTargetNotPresent");
         }
+    } else {
+        // WEAPON-2: reset stale target state from the previous activation.
+        // Deactivate("TargetDestroyed") nulls m_targetSE but left
+        // m_needsTarget true; re-activating before the next lock resolved
+        // then null-deref'd m_targetSE at end of cycle (segfault, GDB-caught
+        // by the mission QA bot).
+        m_needsTarget = false;
+        m_targetSE = nullptr;
+        m_targetID = 0;
     }
 
     if (m_targetSE != nullptr) {
@@ -492,8 +501,10 @@ void ActiveModule::Activate(uint16 effectID, uint32 targetID/*0*/, int16 repeat/
         m_Stop = true;
 
     // check for one-hit kills and stop module after cycle completes
+    // WEAPON-2: m_targetSE can be null here (target destroyed mid-cycle
+    // nulls it via Deactivate) -- treat a vanished target like a dead one
     if (m_needsTarget)
-        if (m_targetSE->IsDead())
+        if ((m_targetSE == nullptr) or m_targetSE->IsDead())
             m_Stop = true;
 }
 

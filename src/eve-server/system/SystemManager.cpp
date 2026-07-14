@@ -312,6 +312,22 @@ void SystemManager::UnloadSystem() {
     // close anomaly mgr, which saves and removes sigs from system
     m_anomMgr->Close();
 
+    // TARG-2: two-phase teardown.  Entities are deleted in map order below,
+    // but TargetManagers hold cross-references to OTHER entities' modules
+    // (AddTargetModule): an NPC deleted after a ship then aborted that
+    // ship's module cycles through the module's dangling DestinyManager
+    // (GDB-caught use-after-free -- crashed the server twice in live play).
+    // Sever every targeting/module cross-link while all entities are still
+    // alive; the per-entity destructors then find nothing left to abort.
+    for (auto cur : m_entities) {
+        if (cur.second == nullptr)
+            continue;
+        if (cur.second->TargetMgr() != nullptr) {
+            cur.second->TargetMgr()->ClearModules();
+            cur.second->TargetMgr()->ClearAllTargets(false);
+        }
+    }
+
     // remove static and dynamic entities
     std::map<uint32, SystemEntity*>::iterator itr = m_entities.begin();
     SystemEntity* pSE(nullptr);

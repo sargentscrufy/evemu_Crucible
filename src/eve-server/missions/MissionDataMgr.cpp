@@ -64,6 +64,21 @@ void MissionDataMgr::Clear()
 int MissionDataMgr::Initialize()
 {
     Populate();
+
+    // SECMISSION-M3g: mission sites are spawned as persistent items, so every
+    // accept leaked its gate/props/rats into the entity table and they came
+    // back as ghost objects on the next boot (39 of them and counting in
+    // Perimeter).  Sites never survive a restart anyway (m_sitePoints and
+    // m_gatePockets are memory-only), so purge the leftovers before any
+    // system loads its dynamics.
+    DBerror err;
+    sDatabase.RunQuery(err,
+        "DELETE FROM entity WHERE typeID IN"
+        " (17831,"                              // Acceleration Gate
+        " 21827, 10788,"                        // site scenery props
+        " 13717, 17006,"                        // Guristas Hauler, Pithi Wrecker
+        " 16981, 16994, 16996,"                 // L1 henchman frigates
+        " 16982, 16998, 17004)");               // L2 escort cruisers
     sLog.Blue("   MissionDataMgr", "Mission Data Manager Initialized.");
     return 1;
 }
@@ -716,11 +731,17 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
 
     // SECMISSION-M3b: retail two-room shape.  Room 1 (the warp-in) holds ONLY
     // the acceleration gate -- no hostiles at the warp-in, per the retail
-    // spec.  The fight lives in a pocket 90-130 km away; the gate warps the
+    // spec.  The fight lives in a deadspace pocket; the gate warps the
     // pilot there (KeeperService::ActivateAccelerationGate).
-    // NOTE: must exceed minWarpDistance (150km) or the gate's WarpTo refuses
+    // SECMISSION-M3g: the pocket must land OUTSIDE the gate's bubble
+    // (BUBBLE_RADIUS_METERS = 300km) so it gets a bubble of its own:
+    //  - room 2 is not visible from the warp-in (retail behavior), and
+    //  - a bumped rat has 300km of headroom before it can fall off its
+    //    bubble's edge and vanish from the client (live-repro'd: bumping
+    //    the hauler knocked it out of the shared bubble = mission broken).
+    // Must also exceed minWarpDistance (150km) or the gate's WarpTo refuses.
     GPoint pocketPoint(sitePoint);
-    pocketPoint.MakeRandomPointOnSphere(170000 + MakeRandomInt(0, 60000));
+    pocketPoint.MakeRandomPointOnSphere(450000 + MakeRandomInt(0, 100000));
 
     // SECMISSION-M3: the site is now shaped like a retail L1 encounter --
     //   leader + 2-4 henchmen + one transport that is holding the goods.
@@ -730,8 +751,12 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
     const uint32 factionID = sDataMgr.GetRegionRatFaction(pClient->GetRegionID());
     const uint32 corpID    = sDataMgr.GetFactionCorp(factionID);
 
-    // small helper so leader/henchmen/transport all spawn identically
-    auto spawnHostile = [&](uint16 typeID, const GPoint& pos) -> uint32 {
+    // small helper so leader/henchmen/transport all spawn identically.
+    // 'pinned' nails the NPC in place (transport): its AI otherwise chased
+    // the attacker to zero range (it has no guns), ramming the pilot,
+    // stuttering across the grid, and drifting over the bubble edge --
+    // where its ball (and its death, and its wreck) became invisible.
+    auto spawnHostile = [&](uint16 typeID, const GPoint& pos, bool pinned = false) -> uint32 {
         const ItemType* iType = sItemFactory.GetType(typeID);
         if (iType == nullptr) {
             _log(AGENT__ERROR, "SpawnMissionSite - unknown typeID %u", typeID);
@@ -744,6 +769,8 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
             _log(AGENT__ERROR, "SpawnMissionSite - failed to spawn typeID %u", typeID);
             return 0;
         }
+        if (pinned)     // effectively stationary (0 risks div-by-zero in destiny speed math)
+            ratRef->SetAttribute(AttrMaxVelocity, 5);
         DBSystemDynamicEntity ratEnt = DBSystemDynamicEntity();
             ratEnt.categoryID = EVEDB::invCategories::Entity;
             ratEnt.groupID = iType->groupID();
@@ -834,7 +861,7 @@ void MissionDataMgr::SpawnMissionSite(Client* pClient, MissionOffer& offer)
     // --- the transport: this is what is holding the objective ----------
     // Guristas Hauler.  Sits at the centre of the pocket; the pilot has to
     // get through the escort to reach it.
-    uint32 transportID = spawnHostile(13717 /*Guristas Hauler*/, pocketPoint);
+    uint32 transportID = spawnHostile(13717 /*Guristas Hauler*/, pocketPoint, true);
     if (transportID == 0) {
         _log(AGENT__ERROR, "SpawnMissionSite - transport failed to spawn; mission '%s' for %s would be uncompletable, aborting site.",
              offer.name.c_str(), pClient->GetName());

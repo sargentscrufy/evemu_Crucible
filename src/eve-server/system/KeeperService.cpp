@@ -113,8 +113,12 @@ PyResult KeeperService::ActivateAccelerationGate(PyCallArgs &call, PyInt* itemID
         if (sMissionDataMgr.GetMissionGatePocket((uint32)itemID->value(), pocket, missionID)) {
             pClient->GetShipSE()->DestinyMgr()->SendSpecialEffect10(itemID->value(), 0, "effects.WarpGateEffect", 0, 1, 0);
             pClient->SetInvul(false);
-            // land 2.5km short of pocket centre -- the transport sits there
-            pClient->GetShipSE()->DestinyMgr()->WarpTo(pocket, 2500);
+            // SECMISSION-M3h: land 30km short of pocket centre -- the
+            // transport sits at the centre with its escort 8-20km around
+            // it; 2.5km dropped the pilot INSIDE the hostile blob (and
+            // physically clipping the hauler).  30km reads like a retail
+            // deadspace warp-in: fight starts at engagement range.
+            pClient->GetShipSE()->DestinyMgr()->WarpTo(pocket, 30000);
             std::string line = sMissionDataMgr.GetLeaderLine(missionID);
             if (!line.empty())
                 pClient->SendNotifyMsg("%s", line.c_str());
