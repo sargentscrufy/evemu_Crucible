@@ -912,11 +912,13 @@ void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& 
     site->SetItemString("typeID", new PyInt(siteTypeID)); // the transport holding the goods
     site->SetItemString("agentID", new PyInt(offer.agentID));
     {
-        std::string hint = offer.name + " - Combat Site";
-        site->SetItemString("hint", new PyString(hint.c_str()));
-        // SECMISSION-M3c: the right-click menu captions from memo (empty
-        // memo rendered as '[no label: <hint>]' in live testing)
-        site->SetItemString("memo", new PyString(hint.c_str()));
+        // SECMISSION-M3c: hint is a client LOCALIZATION messageID, not free
+        // text -- a raw string rendered '[no label: <string>]'.  Confirmed
+        // from the client's localization data (resLocalization.stuff):
+        // 235228 = 'Encounter (Deadspace) - {location}' (retail caption).
+        site->SetItemString("hint", new PyInt(235228));
+        std::string memo = offer.name + " - Combat Site";
+        site->SetItemString("memo", new PyString(memo.c_str()));
     }
     site->SetItemString("locationType", new PyString("objective.source"));
     site->SetItemString("created", new PyLong((int64)GetFileTimeNow()));
@@ -938,9 +940,10 @@ void MissionDataMgr::BuildEncounterBookmarks(MissionOffer& offer, const GPoint& 
     agentBm->SetItemString("typeID", new PyInt(offer.destinationTypeID));
     agentBm->SetItemString("agentID", new PyInt(offer.agentID));
     {
-        std::string hint = offer.name + " - Agent Base";
-        agentBm->SetItemString("hint", new PyString(hint.c_str()));
-        agentBm->SetItemString("memo", new PyString(hint.c_str()));   // menu caption
+        // 235205 = 'Agent Home Base - {location}' (see note above)
+        agentBm->SetItemString("hint", new PyInt(235205));
+        std::string memo = offer.name + " - Agent Base";
+        agentBm->SetItemString("memo", new PyString(memo.c_str()));
     }
     agentBm->SetItemString("locationType", new PyString("objective.destination"));
     agentBm->SetItemString("created", new PyLong((int64)GetFileTimeNow()));
