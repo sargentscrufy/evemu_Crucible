@@ -123,3 +123,9 @@ sql.tar.gz
 CMakeSettings.json
 log.ini
 tools/simfleet/trader_metrics.csv
+
+# Python
+__pycache__/
+*.pyc
+mcps/
+

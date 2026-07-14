@@ -38,8 +38,8 @@ running "Retrieve the Reports" within the hour. Findings, all live-observed:
 
 ### Session 2026-07-12 late — live client session (localhost)
 
-- **DESTINY-12 — FIXED 2026-07-13 (39dddf8e), built (deploy pending player
-  logout): "warping while stationary" wedge blocks Dock/Stop/Warp forever.**
+- **DESTINY-12 — FIXED 2026-07-13 (39dddf8e), staged rev 7 (2026-07-14):
+  "warping while stationary" wedge blocks Dock/Stop/Warp forever.**
   Live bugcheck: a 1,015 km hop glitched in align ("warp align/speed is
   incorrect, but time > shipTimeToWarp" catchall), InitWarp ran, the warp
   stalled at 3 m/s and never completed — `m_warpState` stayed allocated so
