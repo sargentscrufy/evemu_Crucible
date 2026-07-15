@@ -1,5 +1,13 @@
 # [EVEmu](https://evemu.dev) - An EVE Online Emulator
 
+> **🔱 Private-server fork.** This fork redirects EVEmu Crucible toward a stable,
+> private-use server with a simulated population — hardened core, bot pilots,
+> working security missions, and a live economy. Start here:
+> - **[Progress report](doc/PROGRESS.md)** — everything built and fixed since the fork (2026-07-07)
+> - **[Redirection plan](plan.md)** — architecture and phase roadmap
+> - **[Bug log](doc/bug-log.md)** — every bug found, root-caused, and its fix status
+> - **[Changelog](doc/ChangeLog.md)** — per-release notes
+
 <p align="center">
 	<a href="https://github.com/EvEmu-Project/evemu_Crucible/pulse"><img src="https://img.shields.io/tokei/lines/github/EvEmu-Project/evemu_Crucible" /></a>
 	<a href="https://www.codefactor.io/repository/github/evemu-project/evemu_crucible"><img src="https://img.shields.io/codefactor/grade/github/evemu-project/evemu_crucible" /></a>

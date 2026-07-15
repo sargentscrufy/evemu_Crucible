@@ -995,3 +995,18 @@ user asked for. All one-to-few lines, deployed together.
 - **MUSIC-1 (OPEN):** no combat music at sites; dunMusicUrl rides the
   Warp_Gate type but the pilot skipped the gate room this run.  Verify on
   a gate-room landing now that the gate ball is visible (M3g).
+
+### NETWORK-2: disconnect destructor-order UAF (FIXED 2026-07-15)
+- **Found by:** GDB auto-backtrace during a QA regression run (server
+  auto-restarted; zero player impact).
+- **Symptom:** SIGSEGV in `StreamPacketizer::ClearBuffers` -> `Lock::Relock`
+  on a destroyed mutex, from the connection thread during
+  `TCPConnection::DoDisconnect`.
+- **Root cause:** `~EVETCPConnection` was `{ /* do nothing */ }`.  C++
+  destroys derived members (`mInQueue` StreamPacketizer + its mutex)
+  BEFORE running `~TCPConnection`, whose `Disconnect()/WaitLoop()` is what
+  actually stops the connection thread -- which could still be inside the
+  virtual `ClearBuffers()` chain.  NETWORK-1 fixed the queue race inside
+  ClearBuffers; this was the object-lifetime race one level up.
+- **Fix:** `~EVETCPConnection` now calls `Disconnect(); WaitLoop();` so the
+  loop thread is provably stopped before members are destroyed.

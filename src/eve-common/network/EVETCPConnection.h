@@ -49,7 +49,13 @@ public:
      * @brief Creates empty EVE connection.
      */
     EVETCPConnection();
-    virtual ~EVETCPConnection()                         { /* do nothing here */ }
+    // NETWORK-2: stop the connection loop BEFORE our members die.  C++
+    // destroys derived members (mInQueue -- the StreamPacketizer and its
+    // mutex) before running ~TCPConnection, whose Disconnect()/WaitLoop()
+    // is what actually stops the loop thread.  That thread could still be
+    // inside our virtual ClearBuffers() -> StreamPacketizer::ClearBuffers()
+    // locking the already-destroyed mutex (live SIGSEGV, GDB-caught).
+    virtual ~EVETCPConnection()                         { Disconnect(); WaitLoop(); }
 
     /**
      * @brief Queues given PyRep into send queue.

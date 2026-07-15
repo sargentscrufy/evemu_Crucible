@@ -1,3 +1,12 @@
+*** Private Server Fork — phase-1-commerce checkpoint (2026-07-15) ***
+Full human-readable report: [PROGRESS.md](PROGRESS.md).  Highlights since the last entry:
+- [FEAT] Security (encounter) missions, absent upstream, now run the full retail arc: DB-driven Guristas mission content (7 missions, L1/L2), acceleration gate -> deadspace pocket, scenery, leader taunts, escorts that fight back, objective container drops, journal bookmarks, working agent-menu Warp (reverse-engineered from client localization + call-signature data). Bot-certified 9/9 end to end
+- [FEAT] Bot economy: arbitrage traders with personalities, NPC-corp market replenishment, escorted convoys, multi-system routing; market matching rebuilt (range-aware, partial fills, order crossing) and bot-certified 15/15
+- [FEAT] Industry validated end-to-end (reprocess/manufacture/ME/TE research/copies/PI CC); smartbombs implemented; standings loss + faction police response
+- [FIX] NPC-FIRE-1: any NPC the player shot first never started its weapon timers -- every reactively-aggroed rat on the server had been permanently silent
+- [FIX] The stuck-warping family closed out (DESTINY-12 watchdog, DESTINY-13 in-warp mode demotion) plus TARG-1/TARG-2 lifetime crashes, WEAPON-1/2, CAP-1 (empty capacitor sessions), PROP-1 (client crash targeting scenery), CAN-SLIM-1 (jetcan slims poisoned grid updates), EFFECT-2 (weapon fx rebuilt to live's per-cycle one-shot stream), NETWORK-2 (disconnect destructor-order UAF)
+- [QoL] Login MOTD dialog, full cap+shield on undock, 50% undock throttle, warp-in standoffs, boot-time purge of leaked mission objects
+
 *** Private Server Fork — phase-0-foundation (2026-07-08) ***
 - [FEAT] Drone control (DRONE-1/2/3): engage/return-home/return-to-bay wired to DroneAIMgr with ownership checks; return-to-bay auto-scoops on arrival (deferred outside the entity tic loop); off-grid drone state changes now reach the owner (no more "Drones in Distant Space" ghosts). Live-verified: launch, engage, recall, scoop
 - [FEAT] In-game dev feedback log (FEEDBACK-1): local chat is appended to server_cache/feedback.log with char/system/ship context lines on login and jumps; event-driven with 5MB rotation. Players narrate bugs in Local; admin pulls the file for analysis. Validated live via bot chat
