@@ -161,6 +161,18 @@ void DestinyManager::Process() {
 
 void DestinyManager::ProcessState() {
     using namespace Destiny;
+
+    // DESTINY-13b: self-heal mode/state divergence.  A live warp state with
+    // a non-WARP ball mode is unreachable for both the warp phase machine
+    // AND the DESTINY-12 watchdog -- the ship reads 'warping' forever while
+    // sitting still, and every Warp/Dock is refused.  Restore WARP mode and
+    // let the state machine (or the watchdog) finish the job.
+    if ((m_warpState != nullptr) and (m_ballMode != Ball::Mode::WARP)) {
+        _log(DESTINY__ERROR, "Destiny::ProcessState() - %s(%u) has a live warp state but ball mode %u; restoring WARP mode.",
+                mySE->GetName(), mySE->GetID(), m_ballMode);
+        m_ballMode = Ball::Mode::WARP;
+    }
+
     switch(m_ballMode) {
         case Ball::Mode::STOP: {
             if (IsMoving()) {
@@ -395,13 +407,15 @@ void DestinyManager::SetSpeedFraction(float fraction/*1.0*/, bool startMovement/
     }
 
     if ((m_ballMode == Destiny::Ball::Mode::WARP) and (m_warpState != nullptr)) {
-        // set state to Ball::Mode::GOTO after setting warp decel variables, so warp completion will decel properly
-        // DESTINY-6: only when actually IN warp (m_warpState set).  this
-        // also fired during the pre-warp ALIGN phase, silently demoting
-        // the pending warp to a sublight GOTO -- ships crawled for AU
-        // (the 07:52 wedge) and the demoted mode re-opened the undock
-        // stomp (ships flung to the 1e16 sentinel under load).
-        m_ballMode = Destiny::Ball::Mode::GOTO;
+        // DESTINY-13: NEVER demote an in-progress warp to GOTO.  The old
+        // 'so warp completion will decel properly' demotion left
+        // m_warpState allocated while ProcessState ran the GOTO branch:
+        // the warp phases never advanced (ship 'warping' at 0 m/s),
+        // IsWarping() stayed true so every Warp/Dock was refused, and the
+        // DESTINY-12 watchdog could not fire because it lives inside the
+        // WARP branch.  (Live 03:22 wedge: AB deactivation drove a speed
+        // update one tick after InitWarp.)  In-warp speed changes take
+        // effect on warp exit -- USF was already updated above.
         return;
     }
 
