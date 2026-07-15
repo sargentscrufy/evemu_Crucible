@@ -26,9 +26,18 @@ fi
 #Start eve-server
 echo "Starting eve-server..."
 cd /app/bin/
+# OPS-3: crash backtraces also go to the persistent server_cache volume --
+# stdout-only traces were destroyed whenever the container was RECREATED
+# (docker logs die with the container), which lost two live crash traces.
+# gdb's logging captures only its own console output (the backtraces), not
+# the server's stdout, so the crash files stay small.
+mkdir -p /app/server_cache/crash
 if [ "$RUN_WITH_GDB" == "TRUE" ]; then
     echo "=== Running EVEmu with gdb (batch backtrace on crash) ==="
-    gdb -batch -ex run -ex "bt full" -ex "thread apply all bt" ./eve-server
+    gdb -batch -ex run \
+        -ex "set logging file /app/server_cache/crash/bt-$(date +%Y%m%d-%H%M%S).log" \
+        -ex "set logging enabled on" \
+        -ex "bt full" -ex "thread apply all bt" ./eve-server
 else
     echo "=== Running EVEmu normally ==="
     ./eve-server

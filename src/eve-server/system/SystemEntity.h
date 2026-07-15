@@ -459,7 +459,8 @@ public:
     //ItemSystemEntity& operator=(ItemSystemEntity&& oth) =delete;
 
     // d'tor
-    virtual ~ItemSystemEntity()                         { /* Do nothing here */ }
+    // TARG-3: mirror the OSE teardown -- we own a TargetManager now
+    virtual ~ItemSystemEntity();
 
     /* class type pointer querys. */
     virtual ItemSystemEntity*   GetItemSE()             { return this; }

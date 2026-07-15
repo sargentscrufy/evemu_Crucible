@@ -406,6 +406,13 @@ ItemSystemEntity::ItemSystemEntity(InventoryItemRef self, EVEServiceManager &ser
 : SystemEntity(self, services, system),
 m_keyType(0)
 {
+    // TARG-3: every entity a player can target needs a TargetManager.
+    // ISEs (mission scenery, gates, probes) had none, and
+    // TargetManager::StartTargeting dereferences the TARGET's manager
+    // (TargetedAdd) with no null check -- targeting the mission silo was
+    // an instant server segfault.  (Masked before PROP-1: the client
+    // crashed on the NaN damage state before the lock ever resolved.)
+    m_targMgr = new TargetManager(this);
 }
 
 // copy c'tor
@@ -414,6 +421,17 @@ ItemSystemEntity::ItemSystemEntity(const ItemSystemEntity* oth)
 {
     sLog.Error("ISE::ISE()", "copy c'tor.");
     // wip
+}
+
+ItemSystemEntity::~ItemSystemEntity()
+{
+    // TARG-3: same teardown discipline as ObjectSystemEntity
+    if (m_targMgr != nullptr)
+        if (!sConsole.IsShutdown()) {
+            m_targMgr->ClearModules();
+            m_targMgr->ClearAllTargets(false);
+        }
+    SafeDelete(m_targMgr);
 }
 
 PyDict* ItemSystemEntity::MakeSlimItem() {

@@ -208,6 +208,14 @@ bool TargetManager::StartTargeting(SystemEntity *tSE, ShipItemRef sRef)
     // Calculate Time to Lock target:
     float lockTime = TimeToLock(sRef, tSE);
 
+    // TARG-3: never assume the target HAS a TargetManager -- targeting an
+    // entity without one (mission scenery, pre-fix) segfaulted the server
+    if (tSE->TargetMgr() == nullptr) {
+        _log(TARGET__WARNING, "%s(%u): target %s(%u) has no TargetManager; lock refused.",
+                mySE->GetName(), mySE->GetID(), tSE->GetName(), tSE->GetID());
+        return false;
+    }
+
     TargetEntry *te = new TargetEntry();
         te->state = TargMgr::State::Locking;
         te->timer.Start(lockTime *1000);      //timer has ms resolution
@@ -244,6 +252,13 @@ bool TargetManager::StartTargeting(SystemEntity *tSE, float lockTime, uint8 maxL
         _log(TARGET__TRACE, " %s(%u): Told to target %s(%u), but they are too far away.  Begin Approaching.", \
         mySE->GetName(), mySE->GetID(), tSE->GetName(), tSE->GetID());
         chase = true;
+        return false;
+    }
+
+    // TARG-3: same guard as the player path
+    if (tSE->TargetMgr() == nullptr) {
+        _log(TARGET__WARNING, "%s(%u): target %s(%u) has no TargetManager; lock refused.",
+                mySE->GetName(), mySE->GetID(), tSE->GetName(), tSE->GetID());
         return false;
     }
 
