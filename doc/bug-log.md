@@ -728,7 +728,7 @@ fixed in one pass (commit: rat spawn rework):
   Verified: flight 2 target-vs-calculated error dropped from 1e16 m to
   1,157 m.
 
-### CAP-1: ships load with a near-empty capacitor (open)
+### CAP-1: ships load with a near-empty capacitor (FIXED 2026-07-15)
 - Ships appear to start sessions/undock with almost no capacitor charge
   (no persisted AttrCapacitorCharge), so early warps get cap-clipped
   far short of the target -- a Badger managed only 0.5 AU of a 1.9 AU
@@ -737,6 +737,12 @@ fixed in one pass (commit: rat spawn rework):
   10 AU warp failure on 2026-07-08 07:52).
 - Direction: persist/restore cap charge, or initialize to full at ship
   load; also consider cap regen while docked.
+- **Fix (`Ship.cpp` ShipItem::Undock):** the full-recharge-on-undock code
+  already existed but was guarded by `!IsSessionChange()` -- and the
+  standard login -> undock flow is always inside the session-change
+  window, so the recharge never ran exactly when it mattered.  Guard
+  removed; shield + cap top to full on every undock (docked time
+  trivially exceeds cap recharge time -- retail-equivalent).
 
 ### MISSION arc findings (2026-07-09, QA pilot Sera Auvinen @ Spacelane Patrol L1)
 

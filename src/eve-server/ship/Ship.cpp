@@ -380,11 +380,15 @@ void ShipItem::Undock() {
     // on the off-chance player opens the fit window
     m_ModuleManager->UpdateChargeQty();
 
-    // Recharge shields and cap if session change isnt active (undocking too fast)
-    if (!m_pilot->IsSessionChange()) {
-        SetShipShield(1.0);
-        SetShipCapacitorLevel(1.0);
-    }
+    // CAP-1: recharge shields and cap on every undock.  The old
+    // !IsSessionChange() guard suppressed this for anyone undocking within
+    // the session-change window -- which includes the standard login ->
+    // undock flow, so ships started sessions with whatever drained cap
+    // they docked with (warps then got cap-clipped far short of target).
+    // Docked time trivially exceeds cap recharge time; full-on-undock is
+    // the retail-equivalent behavior.
+    SetShipShield(1.0);
+    SetShipCapacitorLevel(1.0);
 }
 
 void ShipItem::UpdateMass()
