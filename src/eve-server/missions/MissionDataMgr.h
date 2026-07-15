@@ -18,6 +18,7 @@
 
 
 class Client;
+class SystemManager;
 
 class MissionDataMgr
 : public Singleton< MissionDataMgr >
