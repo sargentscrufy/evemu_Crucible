@@ -2525,6 +2525,11 @@ void DestinyManager::SetUndockSpeed() {
         du.z = m_shipHeading.z;
     updates.push_back(du.Encode());
     SendDestinyUpdate(updates);
+
+    // UNDOCK-SPEED: the ejection burst above leaves the throttle pinned at
+    // 1.1x forever.  Settle to 50% -- the ship decelerates from the burst
+    // to half speed, and the client's speedo reflects the real throttle.
+    SetSpeedFraction(0.5f, true);
 }
 
 PyResult DestinyManager::AttemptDockOperation() {
