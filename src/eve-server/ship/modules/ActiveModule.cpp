@@ -934,6 +934,14 @@ void ActiveModule::ProcessActiveCycle() {
     }
 
     SetTimer(DoCycle());
+
+    // EFFECT-2: live sends a fresh OnSpecialFX for every module cycle (see
+    // the one-shot repeat=1 CCP capture in DestinyManager.cpp) -- we sent
+    // one trigger per ACTIVATION and relied on the client looping it,
+    // which it does not: turrets tracked but never played a firing
+    // animation.  Re-trigger per cycle like live.
+    if (!m_Stop)
+        ShowEffect(true, false);
 }
 
 void ActiveModule::SetTimer(uint32 time) {
@@ -1353,7 +1361,12 @@ void ActiveModule::ShowEffect(bool active/*false*/, bool abort/*false*/)
                 active,         // start    - if (start = 0) THEN remove effect
                 active,         // active   - if (start and active) THEN starting ONE-SHOT event of (duration)  (dunno what 'ONE-SHOT event' is)
                 timeLeft,       // duration in ms
-                m_repeat);      // repeat   - if (repeat > 0) THEN starting REPEAT event  ELSE (repeat == 0) THEN starting TOGGLE event
+                // EFFECT-2: send ONE-SHOT triggers (repeat=1) like live CCP
+                // captures and the working NPC weapon path.  Our raw
+                // m_repeat (1000+) routed the client's fxsequencer into its
+                // Activation bookkeeping (the path that crashes on ballpark
+                // teardown, EXCEPTION #13) instead of rendering the burst.
+                (m_repeat > 1) ? 1 : m_repeat);
 
 
     // Create Destiny Updates and GFx

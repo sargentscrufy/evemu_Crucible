@@ -1129,7 +1129,15 @@ PyDict *StructureSE::MakeSlimItem()
     /** @todo (Allan) *Timestamp will need to be set to time current state is started. */
     PyDict *slim = new PyDict();
     slim->SetItemString("name", new PyString(m_self->itemName()));
-    slim->SetItemString("itemID", new PyLong(m_data.itemID));
+    // CAN-SLIM-1: use the ITEM's id, not m_data.itemID -- the EVEPOS data
+    // struct is only populated for real POS structures, so every
+    // StructureSE child without it (ContainerSE = all jetcans and mission
+    // objective cans) broadcast slims with itemID 0.  The client then
+    // primed its location cache with a key-0 list row and ABORTED the
+    // whole AddBalls batch ('Something potentially bad happened with
+    // AddBalls', live client traceback), dropping everything else in
+    // that update.
+    slim->SetItemString("itemID", new PyLong(m_self->itemID()));
     slim->SetItemString("typeID", new PyInt(m_self->typeID()));
     slim->SetItemString("posState", new PyInt(m_data.state));
 
