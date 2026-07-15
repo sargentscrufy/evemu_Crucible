@@ -15,6 +15,7 @@ Sera (qatest) at the Perimeter L1 security agent:
     python secmission_qa.py
 """
 
+import math
 import os
 import re
 import subprocess
@@ -92,6 +93,11 @@ def run():
         mch.close(); return False
     transport = int(m.group(4))
     gate = int(gatereg.group(1))
+    # M3i: pocket + site coords for the approach leg (gate drops us 30km short)
+    pock = re.search(r"RegisterMissionGate - gate \d+ -> pocket \((-?\d+), (-?\d+), (-?\d+)\)", tail)
+    site = re.search(r"SpawnMissionSite - .* in \d+ at \((-?\d+), (-?\d+), (-?\d+)\)", tail)
+    pocket_xyz = [float(pock.group(i)) for i in (1, 2, 3)] if pock else None
+    site_xyz = [float(site.group(i)) for i in (1, 2, 3)] if site else None
 
     # --- 3. undock + WarpToLocation ------------------------------------
     # docked: online + instant antimatter load into all 7 rails
@@ -155,6 +161,24 @@ def run():
                                      "Fourteen head"))
     check("leader taunt on gate activation", taunt)
 
+    # --- 3c. close to engagement range -----------------------------------
+    # M3h drops the pilot 30km short of the pocket (retail standoff).  the
+    # rails are deep in falloff there (live QA: ~97% grazes, hauler
+    # effectively unkillable) -- drive the warp line toward the pocket
+    # before opening up, like a human pilot would.
+    if pocket_xyz and site_xyz:
+        dx = [pocket_xyz[i] - site_xyz[i] for i in range(3)]
+        n = math.sqrt(sum(c * c for c in dx)) or 1.0
+        hd = [c / n for c in dx]
+        try:
+            mch.call_bound(bey, "CmdGotoDirection", hd[0], hd[1], hd[2])
+            mch.call_bound(bey, "CmdSetSpeedFraction", 1.0)
+            log("closing ~25km to engagement range (~140s; expect escort aggro)")
+            mch.pump(140)
+            mch.call_bound(bey, "CmdSetSpeedFraction", 0.0)
+        except CallError as e:
+            log(f"approach: {str(e)[:60]}")
+
     # --- 4. kill the transport ------------------------------------------
     # lock it and open up with all seven rails; keep the bomb pulsing too.
     # warp duration varies with site distance -- retry the lock until the
@@ -175,7 +199,9 @@ def run():
         except CallError: pass
     killed = False
     t1 = time.time()
-    for i in range(90):
+    # 140 iterations: a 3-henchman spawn + the 30km approach leg can push a
+    # clean kill past the old 90 (live: hauler died ~30s after cutoff)
+    for i in range(140):
         try: mch.activate_module(dogma, sb_id, "empWave", None, 1000)
         except CallError: pass
         # turrets run dry after ~30 volleys of their 40-round clips --
