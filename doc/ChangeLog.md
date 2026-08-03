@@ -1,3 +1,17 @@
+*** Private Server Fork — playtest polish (2026-08-02 / 03) ***
+Live interactive playtest (SARGENTSCRUFY / Cold Steel 2) + stability polish.
+- [FIX] TURN-1: gate approach turn/snap — live target heading each tic, unit nlerp, no PositionHack on ClearTurn, publish CmdGotoDirection while turning
+- [FIX] JUMP-CLOAK-1/2: gate jump session cloak FX (30s duration OnSpecialFX14); uncloak never sends duration 0 (client TypeError)
+- [FIX] LOGIN-CLOAK-1: login-from-space stuck cloak — re-enable LoginCloak timer (20s), force UnCloak on login warp complete
+- [FIX] WARP-LAND soft residual facing travel; GRID-WARP-1 no RemoveBalls mid-warp (belt doesn't vanish)
+- [FIX] GUN-FX-1/2: Godma duration ms; FX before damage so kill-shots don't kill the client fxSequencer
+- [FIX] HOSTILE-1: combat NPCs securityStatus -10 (no "peaceful entity" confirm on rats)
+- [FIX] DRONE-4/5/6: Warden idle/halt, SetOwner on launch, bandwidth load reset, engage/return ownership helper
+- [FIX] CAP-2 capacitor HUD regen list; CAP-1 undock full tank
+- [QoL] Login Local MOTD + modal patch notes (working / known soft / BUG reporting)
+- [OPS] No mid-session redeploy while pilots in space (redeploys look like "crashes" — exit 143 SIGTERM)
+- Open: warp align timeout force-InitWarp (log noise), Neocom skill float TypeError on login, intentional destroyable belt rocks
+
 *** Private Server Fork — phase-1-commerce checkpoint (2026-07-15) ***
 Full human-readable report: [PROGRESS.md](PROGRESS.md).  Highlights since the last entry:
 - [FEAT] Security (encounter) missions, absent upstream, now run the full retail arc: DB-driven Guristas mission content (7 missions, L1/L2), acceleration gate -> deadspace pocket, scenery, leader taunts, escorts that fight back, objective container drops, journal bookmarks, working agent-menu Warp (reverse-engineered from client localization + call-signature data). Bot-certified 9/9 end to end
@@ -5,7 +19,7 @@ Full human-readable report: [PROGRESS.md](PROGRESS.md).  Highlights since the la
 - [FEAT] Industry validated end-to-end (reprocess/manufacture/ME/TE research/copies/PI CC); smartbombs implemented; standings loss + faction police response
 - [FIX] NPC-FIRE-1: any NPC the player shot first never started its weapon timers -- every reactively-aggroed rat on the server had been permanently silent
 - [FIX] The stuck-warping family closed out (DESTINY-12 watchdog, DESTINY-13 in-warp mode demotion) plus TARG-1/TARG-2 lifetime crashes, WEAPON-1/2, CAP-1 (empty capacitor sessions), PROP-1 (client crash targeting scenery), CAN-SLIM-1 (jetcan slims poisoned grid updates), EFFECT-2 (weapon fx rebuilt to live's per-cycle one-shot stream), NETWORK-2 (disconnect destructor-order UAF)
-- [QoL] Login MOTD dialog, full cap+shield on undock, 50% undock throttle, warp-in standoffs, boot-time purge of leaked mission objects
+- [QoL] Login MOTD dialog, full cap+shield on undock, undock throttle (100% full burn accepted / preferred in live play), warp-in standoffs, boot-time purge of leaked mission objects
 
 *** Private Server Fork — phase-0-foundation (2026-07-08) ***
 - [FEAT] Drone control (DRONE-1/2/3): engage/return-home/return-to-bay wired to DroneAIMgr with ownership checks; return-to-bay auto-scoops on arrival (deferred outside the entity tic loop); off-grid drone state changes now reach the owner (no more "Drones in Distant Space" ghosts). Live-verified: launch, engage, recall, scoop

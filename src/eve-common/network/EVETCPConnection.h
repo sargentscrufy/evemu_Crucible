@@ -49,12 +49,12 @@ public:
      * @brief Creates empty EVE connection.
      */
     EVETCPConnection();
-    // NETWORK-2: stop the connection loop BEFORE our members die.  C++
-    // destroys derived members (mInQueue -- the StreamPacketizer and its
-    // mutex) before running ~TCPConnection, whose Disconnect()/WaitLoop()
-    // is what actually stops the loop thread.  That thread could still be
-    // inside our virtual ClearBuffers() -> StreamPacketizer::ClearBuffers()
-    // locking the already-destroyed mutex (live SIGSEGV, GDB-caught).
+    // NETWORK-2 / SOAK-1: stop the connection loop BEFORE our members die.
+    // C++ destroys derived members (mInQueue -- the StreamPacketizer and its
+    // mutex) before running ~TCPConnection.  WaitLoop joins the IO thread
+    // so it cannot be inside ClearBuffers() after mInQueue is destroyed.
+    // DoDisconnect is idempotent (atomic flag) so ~TCPConnection's later
+    // ClearBuffers is a no-op on the already-disconnected socket path.
     virtual ~EVETCPConnection()                         { Disconnect(); WaitLoop(); }
 
     /**

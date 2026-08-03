@@ -123,7 +123,11 @@ void AsteroidSE::EncodeDestiny( Buffer& into )
         head.posX = x();
         head.posY = y();
         head.posZ = z();
-        head.flags = 0;
+        // GUN-FX-1: flags=0 left belt rocks as non-massive RIGIDs; the
+        // Crucible StandardWeapon (ProjectileFired/Laser) stretch path
+        // failed to draw beams to them even though damage applied. Match
+        // ObjectSystemEntity (IsMassive) so turrets can lock the stretch.
+        head.flags = Ball::Flag::IsMassive;
     into.Append( head );
     RIGID_Struct main;
         main.formationID = 0xFF;

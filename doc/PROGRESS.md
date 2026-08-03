@@ -1,7 +1,7 @@
 # EVEmu Crucible Private Server — Progress Report
 
-**Fork started:** 2026-07-07 · **This checkpoint:** 2026-07-15 · **172 commits**
-**Base:** EvEmu-Project/evemu_Crucible (via the sargentscrufy fork) · **Branch:** `phase-1-commerce`
+**Fork started:** 2026-07-07 · **This checkpoint:** 2026-08-03 · **branch `phase-1-commerce`**
+**Base:** EvEmu-Project/evemu_Crucible (via the sargentscrufy fork)
 
 ---
 
@@ -75,9 +75,9 @@ Certified by a 9-point automated QA bot that flies the whole mission like a play
 
 Alongside it, live play sessions with a real tester drove a rapid-fire polish
 loop: market quick-sell, warp-in distances that don't clip you into objects,
-capacitor full on undock, throttle settling at 50%, weapon effects rebuilt to
-match live packet captures, and the stuck-warping bug family hunted to
-extinction.
+capacitor full on undock, undock throttle (full burn / 100% is accepted — no
+need to settle at 50%), weapon effects rebuilt to match live packet captures,
+and the stuck-warping bug family hunted to extinction.
 
 ---
 
@@ -91,7 +91,7 @@ extinction.
 | **Combat systems** | Drone control (engage/return/scoop), smartbomb AoE, NPC reactive return-fire, NPC EWAR (points/scrams with release-on-death), standings loss on faction kills + faction police response, empire gate guards |
 | **World simulation** | Rat roaming/respawn, wave despawn, stale-spawn cleanup, wreck loot, gate-to-gate NPC traffic tools |
 | **Ops & QA** | Sanitizer CI + nightly smoke test, protocol debug proxy, GDB auto-backtrace on crash, deploy gate (no restart with pilots in space), connection front-end server, in-game BUG reporting to server logs, docker recovery scripts, portable x86-64-v2 builds |
-| **Player QoL** | Login MOTD dialog (patch notes), full cap+shield on undock, 50% throttle default, warp-in standoff distances, mission journal titles/briefings |
+| **Player QoL** | Login MOTD dialog (patch notes), full cap+shield on undock, undock at full throttle approved (live play preference), warp-in standoff distances, mission journal titles/briefings |
 
 ---
 
@@ -142,24 +142,36 @@ log flood (HANG-1), and more — full detail lives in [bug-log.md](bug-log.md).
 
 ## Open issues (what's next)
 
-1. **DESTINY-11** — unclamped collision/bump physics (highest-leverage remaining fix)
-2. **CRASH-1** — escort-dock segfault after multi-system fleet runs (GDB armed)
-3. **SPAWN-14** — belt spawns don't arm when the pilot lands in a non-belt sub-bubble
-4. **EFFECT-2 verification** — per-cycle weapon FX deployed, awaiting live confirmation
-5. **MUSIC-1** — mission sites don't switch to combat music
-6. **GATE-ORIENT** — acceleration gate model doesn't face the pocket (cosmetic)
-7. **M4 mission backlog** — site cleanup without restart, bookmark push without
-   relog, Local-channel NPC taunts, faction-matched rats per region
-8. **COMP-D/E** — module-state edge cases (low)
+### Closed / improved — interactive playtest 2026-08-02…03
+Human session (Admiral_Mullins / SARGENTSCRUFY, Rokh *Cold Steel 2*):
+- **TURN-1** — structural turn model (live heading, nlerp, no land/turn snaps)
+- **JUMP-CLOAK / LOGIN-CLOAK** — 30s gate cloak FX; 20s login cloak with timer + land uncloak
+- **WARP-LAND / GRID-WARP** — soft residual land facing travel; no grid wipe mid-warp
+- **GUN-FX** — beams stay up mid-fight (FX before damage; no stretch-to-corpse)
+- **HOSTILE-1** — rats free-fire (securityStatus −10; no peaceful confirm)
+- **DRONE-4/5/6** — Warden/control/bandwidth/ownership
+- **MOTD** — Local + login modal patch notes / known soft spots
+- **OPS** — do not redeploy mid-session (SIGTERM 143 looks like a crash)
+
+### Still open (priority for next docked deploy)
+1. **ALIGN-TIMEOUT** — warp still often force-InitWarp after `time > shipTimeToWarp` (log DestinyError; may feel like late align)
+2. **CLIENT-LOGIN** — Neocom `_UpdateSkillInfo` TypeError float/None; occasional `No ballpark` / `GetBalls` on session edges
+3. **FX radius** — rare `AttributeError: radius` when stretching FX to a missing ball
+4. **HUNT M2 kill** — pin/scram PASS; civ-gun kill still soft (bot cert)
+5. **SPAWN-14** — belt spawns in non-belt sub-bubble
+6. **MUSIC-1 human sign-off** — combat music in mission pockets
+7. **HUNT M3–M4** — CrimeWatch, convoy dispositions
+8. **Destroyable belt rocks** — intentional for gun testing (not a bug; decide for “retail” belts later)
+
+### Policy
+- Batch fixes; redeploy only when docked/logged out or on explicit request.
+- Real crashes = non-143 exit / OOM / GDB backtrace — not compose recreate.
 
 ---
 
 ## By the numbers
 
-- **172** commits in 8 days
-- **~80** tracked bug IDs closed, **~8** open
-- **12+** server crash classes eliminated; zero unexplained crashes remaining
-- **9/9** automated security-mission QA, **15/15** market certification
-- **50** bot-vs-bot battles validating combat math
-- **3** live play-testers' worth of production feedback triaged (13 BUG reports → 12 fixes)
-- **1** encrypted client reverse-engineered around, twice
+- Multi-week fork; continuous playtest-driven polish on `phase-1-commerce`
+- **~90+** tracked bug IDs closed; open list above
+- **9/9** automated security-mission QA, **15/15** market certification (prior cert suite)
+- Live play-tester feedback loop (Local `BUG` lines + session notes)

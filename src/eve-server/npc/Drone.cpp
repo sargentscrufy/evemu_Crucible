@@ -175,6 +175,16 @@ void DroneSE::IdleOrbit(ShipSE* pShipSE/*nullptr*/) {
     if (!m_online)
         return;         // error here?
 
+    if (pShipSE == nullptr or m_destiny == nullptr)
+        return;
+
+    // DRONE-5: Warden and other maxVelocity=0 combat drones NaN under Orbit.
+    float maxVel = m_self->GetAttribute(AttrMaxVelocity).get_float();
+    if (maxVel < 1.0f) {
+        m_destiny->Halt();
+        return;
+    }
+
     // TODO:  fix these speeds
     // set speed and begin orbit
     m_destiny->SetMaxVelocity(500);
@@ -228,13 +238,12 @@ void DroneSE::StateChange() {
             up->SetItem(1, list);
     }
 
-    // the controlling pilot's drone window tracks these updates, so they
-    // must reach him even when the drone is off-grid or unbubbled --
-    // otherwise scooping a distant drone leaves a permanent ghost entry
-    // under "Drones in Distant Space"
-    if ((m_pClient != nullptr)
-    and (m_pClient->GetShipSE() != nullptr)
-    and ((m_bubble == nullptr) or (m_pClient->GetShipSE()->SysBubble() != m_bubble))) {
+    // DRONE-6: always push state to the controlling pilot so the drone
+    // window updates even when bubblecast fails / pilot is mid-session
+    // edge.  Previously only off-grid pilots got a direct update, so
+    // same-bubble launches could leave the UI showing uncontrollable
+    // drones if the bubblecast was dropped.
+    if ((m_pClient != nullptr) and (m_pClient->GetShipSE() != nullptr)) {
         PyTuple* dup = static_cast<PyTuple*>(up->Clone());
         m_pClient->QueueDestinyUpdate(&dup);
     }

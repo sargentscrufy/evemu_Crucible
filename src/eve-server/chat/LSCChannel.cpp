@@ -309,24 +309,33 @@ void LSCChannel::SendMessage(Client * c, const char * message, bool self/*false*
 void LSCChannel::SendServerMOTD(Client* pClient) {
     std::string uptime;
     sEntityList.GetUpTime(uptime);
-    std::string msg = "<br>Welcome to EVEmu Server";
-    //msg += pClient->GetCharName();
-    msg += ".<br>Server Version: ";
+    // Private Crucible playtest MOTD — keep in sync with doc/ChangeLog.md
+    // and the login ServerMessage modal in Client::SelectCharacter.
+    std::string msg = "<br><color=0xff007fff><b>Welcome to EVEmu Crucible</b></color>";
+    msg += " <color=0xffffffff>(private phase-1-commerce playtest)</color><br>";
+    msg += "<br>Server build: ";
     msg += EVEMU_REVISION;
-    msg += "<br>Revision Date: ";
+    msg += " · ";
     msg += EVEMU_BUILD_DATE;
     msg += "<br>Uptime: ";
     msg += uptime;
-    msg += "<br>Current Population: ";
+    msg += " · Pilots online: ";
     msg += std::to_string(sEntityList.GetClientCount());
-    msg += "<br><br>Character Options:";
-    msg += "<br>Module AutoStop: ";
+    msg += "<br><br><color=0xff00ff00><b>Working now</b></color>";
+    msg += "<br>· Travel: soft warp land facing travel, grid objects stay visible mid-warp";
+    msg += "<br>· Gates: jump cloak ~30s (move breaks it); login-from-space cloak ~20s then clear";
+    msg += "<br>· Combat: belt rats in ≤0.9 sec (not pure 1.0), gun FX, drones engage/return/bay";
+    msg += "<br>· Economy: market seed, missions, industry basics";
+    msg += "<br><br><color=0xffffaa00><b>Known soft spots</b></color>";
+    msg += "<br>· Align may still force warp entry after timeout (server log noise)";
+    msg += "<br>· Client exceptions on login: Neocom skill float, occasional No ballpark";
+    msg += "<br>· Destroyable belt asteroids kept for weapons testing (intentional)";
+    msg += "<br>· No mid-session server redeploys while pilots are in space";
+    msg += "<br><br><color=0xff00ff00><b>Feedback</b></color>";
+    msg += "<br>Type in Local: <b>BUG</b> short description (captured to server feedback log)";
+    msg += "<br><br>Character options: Module AutoStop=";
     msg += (pClient->AutoStop() ? "On" : "Off");
-    msg += "<br>RAM Event: On";
-    //msg += (pClient->RAMEvent() ? "On" : "Off");
-    // check account roles for this one
-    msg += "<br>ShowAll: Off";
-    //msg += (pClient->ShowAll() ? "On" : "Off");
+    msg += " · RAM Event=On · ShowAll=Off";
 
     OnLSC_SendMessage sm;
     sm.sender = _FakeSenderInfo();

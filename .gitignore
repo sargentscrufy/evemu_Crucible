@@ -99,6 +99,10 @@ out/
 # evenmu runtime
 config/
 
+# Host ops: local DB dumps (account hashes/passwords), recovery logs — never commit
+tools/ops/backup/
+tools/ops/logs/
+
 # doxygen output
 doxygen/
 !doxygen/ChangeLog.md

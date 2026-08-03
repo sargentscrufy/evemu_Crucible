@@ -424,15 +424,9 @@ void ActiveModule::Activate(uint16 effectID, uint32 targetID/*0*/, int16 repeat/
     m_targMgr = pShip->TargetMgr();
     m_destinyMgr = pShip->DestinyMgr();
 
-    // Do initial cycle immediately while we start timer
-    SetTimer(DoCycle());
-
-    if (!m_timer.Enabled()) {
-        // if the timer wasnt set (for whatever reason), kill activation and return
-        Clear();
-        return;
-    }
-
+    // GUN-FX-2: FX first (while target ball still exists), then damage.
+    // DoCycle can kill and remove the target ball; FX-after-hit stretches
+    // to a missing ball and kills the client fxSequencer.
     ApplyEffect(FX::State::Active, true);
     if (IsValidTarget(targetID))
         ApplyEffect(FX::State::Target, true);
@@ -446,6 +440,15 @@ void ActiveModule::Activate(uint16 effectID, uint32 targetID/*0*/, int16 repeat/
         }
     } else {
         ShowEffect(true, false);
+    }
+
+    // Do initial cycle immediately while we start timer
+    SetTimer(DoCycle());
+
+    if (!m_timer.Enabled()) {
+        // if the timer wasnt set (for whatever reason), kill activation and return
+        Clear();
+        return;
     }
 
     SetModuleState(Module::State::Activated);
@@ -933,15 +936,16 @@ void ActiveModule::ProcessActiveCycle() {
         return;
     }
 
-    SetTimer(DoCycle());
-
-    // EFFECT-2: live sends a fresh OnSpecialFX for every module cycle (see
-    // the one-shot repeat=1 CCP capture in DestinyManager.cpp) -- we sent
-    // one trigger per ACTIVATION and relied on the client looping it,
-    // which it does not: turrets tracked but never played a firing
-    // animation.  Re-trigger per cycle like live.
+    // GUN-FX-2: fire the beam BEFORE damage.  DoCycle can kill the target
+    // and drop its ball from the client; sending OnSpecialFX afterward
+    // stretches StandardWeapon to a missing ball and the client throws
+    // AttributeError: 'NoneType' object has no attribute 'radius' -- that
+    // exception kills the fxSequencer for the rest of the fight while
+    // server damage keeps applying.  Live-style order: FX then hit.
     if (!m_Stop)
         ShowEffect(true, false);
+
+    SetTimer(DoCycle());
 }
 
 void ActiveModule::SetTimer(uint32 time) {
@@ -1347,20 +1351,53 @@ void ActiveModule::ShowEffect(bool active/*false*/, bool abort/*false*/)
         _log(EFFECTS__ERROR, "guid empty for %s using effectID %u", m_modRef->name(), m_effectID);
 
     uint16 chgTypeID(((m_chargeRef.get() != nullptr) ? m_chargeRef->typeID() : 0));
-    uint32 timeLeft(GetRemainingCycleTimeMS());
+    // GUN-FX-1: OnSpecialFX and OnGodmaShipEffect both take duration in
+    // MILLISECONDS (live CCP captures: duration=13110 / 9600 as float ms).
+    // Prefer full module cycle for weapon one-shots -- remaining-time can
+    // be near 0 at the timer edge and the client then draws no beam.
+    uint32 durationMs = GetRemainingCycleTimeMS();
+    if (m_modRef->HasAttribute(AttrDuration)) {
+        uint32 fullCycle = m_modRef->GetAttribute(AttrDuration).get_uint32();
+        if ((durationMs < 100) or m_turret or m_launcher)
+            durationMs = fullCycle;
+    }
+    if (durationMs < 100)
+        durationMs = 1000;
 
-    if (m_destinyMgr != nullptr)
-        m_destinyMgr->SendSpecialEffect(
+    // SOAK-1b: skip FX if the ship entity is already gone (logout/kill mid-
+    // cycle).  SendSpecialEffect -> SendDestinyUpdate would deref a freed SE.
+    if (m_destinyMgr == nullptr || m_shipRef.get() == nullptr)
+        return;
+    if (m_shipRef->GetPilot() == nullptr || m_shipRef->GetPilot()->GetShipSE() == nullptr)
+        return;
+
+    // GUN-FX-2: only stretch to a target the client still has as a ball.
+    // Prefer the live SystemEntity pointer; refuse dead / vanished SEs and
+    // never fall back to a stale m_targetID of a corpse (that is what
+    // triggered the client 'radius' AttributeError mid-fight).
+    uint32 fxTargetID = 0;
+    if ((m_targetSE != nullptr) and !m_targetSE->IsDead()) {
+        fxTargetID = m_targetSE->GetID();
+    } else if (IsValidTarget(m_targetID) and (m_sysMgr != nullptr)) {
+        SystemEntity* liveSE = m_sysMgr->GetSE(m_targetID);
+        if ((liveSE != nullptr) and !liveSE->IsDead())
+            fxTargetID = m_targetID;
+    }
+    // Self-target / no-target FX (boosters, etc.) or abort cleanup.
+    if (!IsValidTarget(fxTargetID))
+        fxTargetID = m_shipRef->itemID();
+
+    m_destinyMgr->SendSpecialEffect(
                 m_shipRef->itemID(),
                 m_modRef->itemID(),
                 m_modRef->typeID(),
-                IsValidTarget(m_targetID) ? m_targetID : m_shipRef->itemID(),
+                fxTargetID,
                 chgTypeID,
                 guidStr,
                 sFxDataMgr.isOffensive(m_effectID),
                 active,         // start    - if (start = 0) THEN remove effect
                 active,         // active   - if (start and active) THEN starting ONE-SHOT event of (duration)  (dunno what 'ONE-SHOT event' is)
-                timeLeft,       // duration in ms
+                static_cast<int32>(durationMs),
                 // EFFECT-2: send ONE-SHOT triggers (repeat=1) like live CCP
                 // captures and the working NPC weapon path.  Our raw
                 // m_repeat (1000+) routed the client's fxsequencer into its
@@ -1374,7 +1411,7 @@ void ActiveModule::ShowEffect(bool active/*false*/, bool abort/*false*/)
         ge.selfID = m_modRef->itemID();         //ENV_IDX_SELF = 0
         ge.charID = m_shipRef->ownerID();       //ENV_IDX_CHAR = 1
         ge.shipID = m_shipRef->itemID();        //ENV_IDX_SHIP = 2
-        ge.target = IsValidTarget(m_targetID) ? new PyInt(m_targetID) : PyStatic.NewNone();     //ENV_IDX_TARGET = 3
+        ge.target = IsValidTarget(fxTargetID) ? new PyInt(fxTargetID) : PyStatic.NewNone();     //ENV_IDX_TARGET = 3
         ge.area = new PyList();                 //ENV_IDX_AREA = 5 still dont know what this is.
         ge.effectID = m_effectID;               //ENV_IDX_EFFECT = 6
 
@@ -1388,8 +1425,10 @@ void ActiveModule::ShowEffect(bool active/*false*/, bool abort/*false*/)
         ge.subLoc = PyStatic.NewNone();  //ENV_IDX_OTHER = 4
     }
 
-    timeLeft /= 1000;
     //def OnGodmaShipEffect(self, itemID, effectID, t, start, active, environment, startTime, duration, repeat, randomSeed, error, actualStopTime = None, stall = True):
+    // GUN-FX-1: duration is milliseconds (DogmaIM.xmlp live captures show
+    // 13110 / 9600 floats).  We previously divided by 1000 and sent seconds,
+    // so a 5s rail cycle arrived as "5 ms" and the client skipped the beam.
     Notify_OnGodmaShipEffect shipEff;
         shipEff.itemID = ge.selfID;
         shipEff.effectID = ge.effectID;
@@ -1397,9 +1436,12 @@ void ActiveModule::ShowEffect(bool active/*false*/, bool abort/*false*/)
         shipEff.start = (active ? 1 : 0);
         shipEff.active = (active ? 1 : 0);
         shipEff.environment = ge.Encode();
-        shipEff.startTime = (abort ? (abortTime / EvE::Time::Second) : shipEff.timeNow - (timeLeft * EvE::Time::Second));
-        shipEff.duration = (abort ? 2000 : timeLeft);  // duration in seconds
-        shipEff.repeat = m_repeat;
+        // Filetime units: EvE::Time::Second = 10M ticks/s → 10k ticks/ms.
+        shipEff.startTime = (abort ? abortTime : shipEff.timeNow - (static_cast<int64>(durationMs) * (EvE::Time::Second / 1000)));
+        shipEff.duration = (abort ? 2000.0 : static_cast<double>(durationMs));
+        // Live weapon activations send repeat=1000 (continuous fire token).
+        // OnSpecialFX above uses one-shot repeat=1 for the beam burst.
+        shipEff.repeat = (m_repeat > 1) ? 1000 : m_repeat;
         // will need to check and update for data miners here  (any other cases?)
         if ((groupID() == EVEDB::invGroups::Salvager) and IsSuccess()) {
             // Create Destiny Updates:

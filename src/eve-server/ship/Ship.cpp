@@ -1,4 +1,6 @@
 
+#include <cmath>
+
 #include "Client.h"
 #include "EntityList.h"
 #include "EVEServerConfig.h"
@@ -2411,31 +2413,51 @@ m_allowFleetSMBUsage(false)
 
     m_towerPass = "";
     m_processTimer.Start(m_processTimerTick);
+    // DRONE-6: no controlled drones yet on ship-enter-space; clear any
+    // persisted bandwidth load left over from a prior session/crash so the
+    // next launch is not refused or left offline/inert.
+    m_shipRef->SetAttribute(AttrDroneBandwidthLoad, EvilZero, false);
     _log(SHIP__TRACE, "Created ShipSE %p for item %u", this, self->itemID());
 }
 
+// NOTE: arg order is (Capacity, Current, RechargeTimeMS) — matches call sites.
+// Header comment historically listed RechargeTimeMS before Current; keep body
+// order aligned with callers (Capacity, Charge, AttrRechargeRate).
 float ShipSE::CalculateRechargeRate(float Capacity, float Current, float RechargeTimeMS)
 {
     // C = Cmax * [ 1 + ( SQRT(C0/Cmax) - 1) * EXP((t0-t1)/tau) ] ^ 2
     // dC/dt = (SQRT(C/Cmax) - C/Cmax) * 2 * Cmax / tau
     // tau = "Cap Recharge Time" / 5.0
 
-    // prevent divide by zero.
-    RechargeTimeMS = (RechargeTimeMS < 1 ? 1 : RechargeTimeMS);
-    Current = (Current < 1 ? 1 : Current);
-    float Cmax = (Capacity < 1 ? 1 : Capacity);
+    // prevent divide by zero / NaN from empty-cap edge (C=0 → sqrt0-0 = 0 rate
+    // looked like "not regenerating" when clamp used Current=1 on a multi-kGJ
+    // battery — still tiny). Floor at 0.1% of capacity so empty cap still climbs.
+    float Cmax = (Capacity < 1.0f ? 1.0f : Capacity);
+    RechargeTimeMS = (RechargeTimeMS < 100.0f ? 100.0f : RechargeTimeMS);
+    float C = Current;
+    if (C < 0.0f)
+        C = 0.0f;
+    if (C > Cmax)
+        C = Cmax;
+    float floorC = Cmax * 0.001f;
+    if (floorC < 1.0f)
+        floorC = 1.0f;
+    if (C < floorC)
+        C = floorC;
 
     // tau = "cap recharge time" / 5.0
-    float tau = (RechargeTimeMS / 5000.0);
+    float tau = (RechargeTimeMS / 5000.0f);
     // (2*Cmax) / tau
-    float Cmax2_tau = ((Cmax * 2) / tau);
-    float C = Current;
+    float Cmax2_tau = ((Cmax * 2.0f) / tau);
     // C / Cmax
     float C_Cmax = (C / Cmax);
     // sqrt( C / Cmax)
-    float sC_Cmax = sqrt(C_Cmax);
-    // charge rate in Gj / sec
-    return (Cmax2_tau * (sC_Cmax - C_Cmax));
+    float sC_Cmax = sqrtf(C_Cmax);
+    // charge rate in GJ / sec (peak at 25% capacity)
+    float rate = (Cmax2_tau * (sC_Cmax - C_Cmax));
+    if (rate < 0.0f or !std::isfinite(rate))
+        rate = 0.0f;
+    return rate;
 }
 
 void ShipSE::Process() {
@@ -2803,6 +2825,24 @@ bool ShipSE::LaunchDrone(InventoryItemRef dRef) {
     Character* pChar = GetPilot()->GetChar().get();
     sLog.Magenta("ShipSE::LaunchDrone()","%s: Launching drone %u",  pChar->name(), dRef->itemID());
 
+    // DRONE-6: bandwidth load is not reliably cleared on server restart /
+    // ship-enter-space, so a stale AttrDroneBandwidthLoad can leave every
+    // launch "successful" as an offline inert ball the pilot cannot command.
+    // Recompute from drones we currently control before this launch.
+    EvilNumber liveLoad = EvilZero;
+    for (auto& cur : m_drones) {
+        if (cur.second != nullptr)
+            liveLoad += cur.second->GetAttribute(AttrDroneBandwidthUsed);
+    }
+    m_shipRef->SetAttribute(AttrDroneBandwidthLoad, liveLoad, false);
+
+    EvilNumber need = dRef->GetAttribute(AttrDroneBandwidthUsed);
+    EvilNumber capacity = m_shipRef->GetAttribute(AttrDroneBandwidth);
+    if ((liveLoad + need) > capacity) {
+        // Refuse without spawning an inert in-space drone.
+        return false;
+    }
+
     dRef->Move(GetLocationID(), flagNone, true);
     dRef->ChangeSingleton(true);
 
@@ -2818,9 +2858,14 @@ bool ShipSE::LaunchDrone(InventoryItemRef dRef) {
         data.ownerID = pChar->itemID();
     DroneSE* pDrone = new DroneSE(dRef, m_services, m_system, data);
 
+    // DRONE-6: wire Client*/controller IDs so CmdEngage/Return/Bay ownership
+    // checks and OnDroneStateChange resolve correctly (FindClientByCharID
+    // alone left edge cases with null m_pClient after relaunch).
+    pDrone->SetOwner(GetPilot());
+
     // tell new drone it's being launched.
     pDrone->Launch(this);
-    // add drone to launched drone map (whether onlined or not)
+    // add drone to launched drone map
     m_drones.emplace(dRef->itemID(), dRef.get());
 
     /*
@@ -2828,18 +2873,10 @@ bool ShipSE::LaunchDrone(InventoryItemRef dRef) {
     AttrDroneBandwidthUsed = 1272, <-- drone attribute
     AttrDroneBandwidthLoad = 1273, <-- ship attribute  (current used)
     */
-    //  if ship doesnt have bandwidth for drone, it will not online after launch (inert)
-    EvilNumber load = m_shipRef->GetAttribute(AttrDroneBandwidthLoad);
-    load += dRef->GetAttribute(AttrDroneBandwidthUsed);
-    if (load <= m_shipRef->GetAttribute(AttrDroneBandwidth)) {
-        pDrone->Online();
-        pDrone->GetAI()->SetIdle();
-        m_shipRef->SetAttribute(AttrDroneBandwidthLoad, load, false); // client dont care
-        return true;
-    }
-    //{'FullPath': u'UI/Messages', 'messageID': 258031, 'label': u'MaxBandwidthExceededBody'}(u"You don't have enough bandwidth to launch {droneName}. You need {bandwidthNeeded} Mbit/s but {droneName} requires {droneBandwidthUsed} Mbit/s.", None, {u'{droneName}': {'conditionalValues': [], 'variableType': 10, 'propertyName': None, 'args': 0, 'kwargs': {}, 'variableName': 'droneName'}, u'{droneBandwidthUsed}': {'conditionalValues': [], 'variableType': 10, 'propertyName': None, 'args': 0, 'kwargs': {}, 'variableName': 'droneBandwidthUsed'}, u'{bandwidthNeeded}': {'conditionalValues': [], 'variableType': 10, 'propertyName': None, 'args': 0, 'kwargs': {}, 'variableName': 'bandwidthNeeded'}})
-    //{'FullPath': u'UI/Messages', 'messageID': 258041, 'label': u'MaxBandwidthExceeded2Body'}(u"You don't have enough bandwidth to launch {droneName}. You need {droneBandwidthUsed} Mbit/s but only have {bandwidthLeft} Mbit/s available.", None, {u'{droneName}': {'conditionalValues': [], 'variableType': 10, 'propertyName': None, 'args': 0, 'kwargs': {}, 'variableName': 'droneName'}, u'{bandwidthLeft}': {'conditionalValues': [], 'variableType': 10, 'propertyName': None, 'args': 0, 'kwargs': {}, 'variableName': 'bandwidthLeft'}, u'{droneBandwidthUsed}': {'conditionalValues': [], 'variableType': 10, 'propertyName': None, 'args': 0, 'kwargs': {}, 'variableName': 'droneBandwidthUsed'}})
-    return false;
+    pDrone->Online(this);
+    pDrone->GetAI()->SetIdle();
+    m_shipRef->SetAttribute(AttrDroneBandwidthLoad, liveLoad + need, false);
+    return true;
 }
 
 void ShipSE::ScoopDrone(SystemEntity* pSE) {

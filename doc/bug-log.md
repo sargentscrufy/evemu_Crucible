@@ -5,6 +5,169 @@ refers to [crucible-feature-matrix.md](crucible-feature-matrix.md).
 
 ## Open
 
+### Still open after 2026-08-02/03 playtest (do not “fix” as regressions)
+1. **ALIGN-TIMEOUT** — force InitWarp when align/speed lag past shipTimeToWarp (DestinyError spam; feel TBD).
+2. **CLIENT-LOGIN Neocom** — `_UpdateSkillInfo` TypeError float/None on character select.
+3. **CLIENT session edges** — `No ballpark for update`, `GetBalls` on None (dock/login/jump).
+4. **FX radius** — rare StandardWeapon stretch to missing ball (`AttributeError: radius`).
+5. **HUNT M2** — bot kill soft; SPAWN-14 non-belt sub-bubble; MUSIC-1 human sign-off.
+6. **ROID destroyable** — intentional weapons test rocks.
+
+### Session 2026-08-03 — interactive playtest (post Docker 4.84 rebuild)
+
+**Deployed 2026-08-02 ~21:27 local:** `docker compose build server` +
+`up -d --force-recreate --no-deps server` (DB volume preserved). Image
+found system MariaDB via FindMySQL fix (skip slow tarball download). Boot:
+`EVEmu Server is Online`, Roaming Spawns on, Player Drones on, healthy.
+
+- **WARP-FX-1 (deployed):** long warp (Jita, ~40 AU) ran
+  with **no warp tunnel FX**. Server still completed WarpTo → forced
+  InitWarp (align/speed catchall) → WarpStop. Client logged
+  `AttributeError: 'NoneType' object has no attribute 'radius'` at the
+  WarpToStuff moment (ship ball missing when FX first fired at *align*
+  start). `InitWarp` never re-sent `CmdWarpTo` / `effects.Warping`, so a
+  dropped/failed first FX packet left a silent warp. Fix: re-broadcast
+  warp FX at InitWarp when a pilot is present (`DestinyManager.cpp`).
+- **WARP-LAND-1 (deployed 2026-08-02):** every hop (stations, belts,
+  ~5–40 AU) exits ~46 m/s residual / ~46 m short; ship **turns around**
+  on land instead of stopping facing travel (no bounce required). Root:
+  (1) velocity used `warp_vector` but `m_shipHeading` lagged at align-time;
+  residual + hard `Halt`/bare `CmdStop` reverse-corrected on client;
+  (2) `CmdGotoDirection` on land animated a turn when client facing
+  differed. Fix: lock heading to warp vector in InitWarp/WarpUpdate;
+  soft-land residual **along** travel heading, `SetBallVelocity(residual)`
+  + `CmdSetSpeedFraction(0)` + `CmdStop`, natural MoveObject decel (no
+  GotoDirection, no immediate Halt unless residual &lt;1 m/s). File:
+  `DestinyManager.cpp`.
+- **JUMP-CLOAK-1 (deployed 2026-08-02):** after stargate jump player
+  is **not cloaked for ~30s** like retail session/gate cloak. Server did
+  set `m_cloaked` in `Jump()` and start a 30s timer in `SetBallPark`, but
+  never sent `effects.Cloak` (timer-only path; comment avoided
+  `SetCloakTimer` for "flash"). `Cloak()` early-outs when already
+  flagged so FX could never be applied later. Invul was only 15s.
+  Fix: after `SendSetState` on gate/WH jump call `ApplyJumpCloak()`
+  (flag + `effects.Cloak`), restart timer for full 30s, match invul to
+  cloak duration; clear timer on early UnCloak (move). Files:
+  `Client.cpp`, `DestinyManager.cpp`/`.h`.
+- **TURN-1 (deployed 2026-08-02):** approaching a gate (or any Follow
+  retarget) the ship **turned, snapped forward, turned again**. Root
+  was structural, not a one-off residual: (1) `m_targetHeading` was
+  latched once in `BeginMovement` while `Follow` kept updating
+  `m_targetPoint`, so IsTurn measured live angle while Turn steered a
+  stale vector; (2) linear heading delta without re-normalize drifted
+  the unit sphere (acos OOB / snap recoveries); (3) `ClearTurn`
+  PositionHack-snapped the ship every time the turn finished. Fix:
+  refresh target heading from live target point every tic; nlerp unit
+  headings at agility-limited deg/tic; publish `CmdGotoDirection`
+  while turning so client prediction tracks; never PositionHack on
+  ClearTurn. File: `DestinyManager.cpp`.
+- **JUMP-CLOAK-2 (deployed 2026-08-02):** jump cloak *worked* but
+  looked **much shorter than 30s**. Root: `SendCloakFx` for session
+  cloak used OnSpecialFX10 with `active=0` and **no duration**, so the
+  client flashed the effect then dropped the visual while the server
+  30s timer kept running. Fix: session cloak uses OnSpecialFX14 with
+  `active=1` and `duration=Player::Timer::JumpCloak` (30000 ms);
+  Uncloak still cancels early on move. File: `DestinyManager.cpp`.
+- **LOGIN-CLOAK-1 (deployed 2026-08-02):** login from deadspace/in-space
+  left the ship **stuck cloaked**. Root: SelectCharacter called
+  `Cloak()` but `SetCloakTimer(LoginCloak)` was commented out, so
+  ProcessClient never auto-UnCloaked; JUMP-CLOAK-2 also made login use
+  30s jump FX and Uncloak duration=0 crashed the client. Fix: re-enable
+  LoginCloak timer (20s); login Cloak uses LoginCloak duration; Uncloak
+  duration 7500 (never 0); SetLoginWarpComplete forces UnCloak + clears
+  timer; SetCloakTimer can restart cleanly. Files: `Client.cpp`,
+  `DestinyManager.cpp`/`.h`.
+- **GUN-FX-1 (deployed 2026-08-02):** pilot railguns applied real
+  damage and destroyed belt asteroids (ROID-1 keep) but **no turret
+  beams / gun FX**. Root: (1) `OnGodmaShipEffect.duration` was divided
+  by 1000 (sent as seconds; live CCP captures use milliseconds e.g.
+  13110) so a ~5s cycle arrived as "5 ms" and the client skipped the
+  beam; (2) `AsteroidSE::EncodeDestiny` used RIGID `flags=0` so
+  StandardWeapon stretch could not lock onto rocks. Fix: keep Godma
+  duration in ms, force full module cycle for turret one-shots,
+  asteroid balls use `IsMassive` like other object SEs. Destroyable
+  asteroids intentionally kept for weapons testing. Files:
+  `ActiveModule.cpp`, `Asteroid.cpp`, `EVE_Defines.h`.
+- **GUN-FX-2 (deployed 2026-08-02):** gun beams worked early in a belt
+  fight then **stopped mid-fight while damage still applied**. Root:
+  cycle order was damage-then-FX; a kill-shot removed the target ball
+  before `OnSpecialFX`, so StandardWeapon stretched to a missing ball
+  and the client threw `AttributeError: 'NoneType' object has no
+  attribute 'radius'`, killing the fxSequencer for the rest of the
+  session. Fix: FX before `DoCycle`, and only stretch to a live
+  non-dead SE (never a stale corpse id). Files: `ActiveModule.cpp`.
+- **HOSTILE-1 (deployed 2026-08-02):** belt rats (incl. rogue drones)
+  popped "Aggression against this peaceful entity..." even while
+  shooting the pilot. Root: NPC slim `securityStatus` was `0.0`
+  (neutral); free-fire is keyed off outlaw status (≤ −5), not damage.
+  Fix: combat NPC slim ships `securityStatus = -10`. File:
+  `SystemEntity.cpp`.
+- **CAP-2 (deployed 2026-08-02):** after emptying capacitor with
+  rails, HUD stayed at 0 / "not regenerating" even though server
+  recharged. Root: cap `OnModuleAttributeChange` sent bare float
+  `oldValue`; live client needs a 4-list
+  `[oldCharge, time, rechargeMs, capacity]` to run its local regen
+  curve. Also floor empty-cap rate math so C≈0 still climbs. Files:
+  `AttributeMap.cpp`, `Ship.cpp`/`.h`.
+- **DRONE-4/5 (deployed 2026-08-02):** Warden II launched then
+  ignored commands; `position is NaN` / MoveObject errors. Root: (1)
+  launch calls `SetIdle()` while already Idle → early-return skipped
+  IdleOrbit so drones never got a motion state; (2) Warden has
+  `maxVelocity=0` and Orbit produces NaN/broken move. Fix: always
+  re-assert idle hold/orbit; Halt immobile drones; engage refreshes
+  owner pointer. Files: `DroneAI.cpp`, `Drone.cpp`, `EntityService.cpp`.
+- **DRONE-6 (deployed 2026-08-02):** drones launched but not
+  controllable after restart/relaunch. Roots: (1) stale
+  `AttrDroneBandwidthLoad` after crash left launches offline/inert;
+  (2) Launch never called `SetOwner`, so Return/Bay ownership checks
+  silently no-op'd; (3) `OnDroneStateChange` only direct-queued for
+  off-grid pilots; (4) Warden Return used Follow at maxVel 0; (5)
+  mid-range CheckDistance returned without firing. Fix: recompute/
+  clear bandwidth load on ship-enter-space and each launch; SetOwner
+  on launch; shared ownership helper for Engage/Return/Bay; always
+  push drone state to owner; Halt+arrive for immobile return; engage
+  anywhere in attack range. Orphan in-space Warden restored to bay.
+  Files: `Ship.cpp`, `EntityService.cpp`, `DroneAI.cpp`, `Drone.cpp`.
+- **GRID-WARP-1 (deployed 2026-08-02):** starting a warp made
+  asteroids and rats **vanish immediately** instead of being left behind
+  in the departure grid. Root: when warp accel carried the ship past
+  `GRID_RADIUS`, `SystemBubble::Untrack` called `RemoveBalls` for the
+  pilot — that packet deletes every dynamic ball on their client. Fix:
+  skip RemoveBalls when the pilot is warping out; skip mid-warp
+  SendAddBalls; on WarpStop `SendSetState` for a clean land ballpark.
+  Files: `SystemBubble.cpp`, `DestinyManager.cpp`.
+- **WARP-LAND-2 (source, needs redeploy):** after first land-facing deploy,
+  pilot saw **short land → turnaround → teleport** to a good stop. Soft
+  residual + CmdStop + SetState fought; k=1 exit left ~100 m short.
+  Fix: snap to `m_targetPoint` when remain &lt;500 m, hard stop, SetState
+  with 1 m/s heading hint then zero velocity (no residual coast). File:
+  `DestinyManager.cpp`.
+- **Dock range math** logs large negative perimeter distances while dock
+  still succeeds.
+- **Jita "Test Name Here" celestials** with `dungeonID 0` / radius 0 on
+  system load — placeholder dungeon entities.
+
+### Session 2026-07-27 — soak suite (hunt sprint long-run)
+
+- **SOAK-1 / NETWORK-1 SIGSEGV — FIXED 2026-07-27.** Captured under GDB
+  during 2h soak (fleet + secmission). Stack:
+  `DoDisconnect → ClearBuffers → StreamPacketizer::ClearBuffers → Lock`.
+  Root: `Process()` STATE_DISCONNECTING returned **true** after
+  `DoDisconnect()`, so the IO loop re-entered Process every 5ms on a
+  half-torn connection; concurrent DoDisconnect/ClearBuffers raced the
+  packetizer mutex. Fix: (1) return **false** after disconnect so the IO
+  thread exits; (2) set `STATE_DISCONNECTED` *before* ClearBuffers so
+  concurrent DoDisconnect bails. Files: `TCPConnection.cpp`.
+- **SOAK-2 / Missile::HitTarget UAF — FIXED 2026-07-27.** Dump
+  `bt-20260727-071833.log`: `Missile::HitTarget → GetSelf → IncRef` on a
+  freed target after the entity was destroyed mid-flight. Fix: store
+  `m_targetID` at launch and re-resolve via `SystemMgr()->GetSE()` at hit
+  time; null-safe attribute math. Files: `Missile.cpp` / `Missile.h`.
+- **Hunt M2 (soft):** scram holds under soak; civ-gun kill path softened
+  via entity attribute stage + 5x civ rails in `hunt_loot_test.py` for
+  cert. Docked-150mm + co-located AddTarget race still open as a separate
+  bot-harness issue.
+
 ### Session 2026-07-14 — security missions M3b (gates, pockets, scenery, L2)
 
 - **TARG-1 — FIXED (two segfaults caught by bot QA killing the mission
@@ -106,15 +269,22 @@ running "Retrieve the Reports" within the hour. Findings, all live-observed:
 - **Login-in-space placement offset (DESTINY-2 adjacent, data point):**
   resuming a char in space placed the ship ~0.5 AU from its DB-stored entity
   coordinates (bot relogin after teleport). Workaround: warp in-session.
-- **DESTINY-11 (open): collision/smartbomb bump velocity unclamped — target
-  punted off-grid.** Live repro: player Hurricane closed to smartbomb range
-  of the bot Badger and fired; the blast/hull bump launched her out of the
-  8000 km bubble within seconds (SetPosition spam → SystemBubble
-  ProcessWander exit) — reads as "she disappeared, not destroyed" on the
-  attacker's client while the server keeps her alive off-grid. Same
-  unclamped-bounce physics family as DESTINY-2. Guns kept cycling at the
-  out-of-range target with 100% misses (harmless but silly — consider
-  breaking lock at extreme range).
+- **DESTINY-11 — FIXED (code, awaiting bot re-cert): collision/smartbomb
+  bump velocity unclamped — target punted off-grid.** Live repro: player
+  Hurricane closed to smartbomb range of the bot Badger and fired; the
+  blast/hull bump launched her out of the 8000 km bubble within seconds
+  (SetPosition spam → SystemBubble ProcessWander exit) — reads as "she
+  disappeared, not destroyed" on the attacker's client while the server
+  keeps her alive off-grid. Same unclamped-bounce physics family as
+  DESTINY-2. Guns kept cycling at the out-of-range target with 100% misses
+  (mitigated by WEAPON-1 range-break).
+  **Fix (DestinyManager.cpp):** (1) hard-clamp sub-warp speed in
+  `MoveObject` to `m_maxShipSpeed` (prop mods already folded in via
+  SpeedBoost); (2) cap `m_maxOrbitSpeedFraction` to ≤1.0 — orbit math
+  exploded when `distance >> followDistance` after a punt; (3) `Bounce`
+  rejects caller speeds above ship max. Rebuilt into local
+  `evemu_server` image 2026-07-27; tackle_test PASS on the new binary.
+  Smartbomb close-contact re-cert still open (needs live/sb bot).
 
 - **MKT-6 — FIXED 2026-07-12 (05fef810): market appears completely empty when
   opened while undocked.** Live-diagnosed from proxy captures of the user's
@@ -992,9 +1162,15 @@ user asked for. All one-to-few lines, deployed together.
 - **GATE-ORIENT (OPEN, cosmetic):** acceleration gate model does not face
   the pocket; ball protocol carries no orientation for RIGID celestials.
   Needs research (dungeon rotation data / client model autofacing).
-- **MUSIC-1 (OPEN):** no combat music at sites; dunMusicUrl rides the
-  Warp_Gate type but the pilot skipped the gate room this run.  Verify on
-  a gate-room landing now that the gate ball is visible (M3g).
+- **MUSIC-1 (IMPROVED 2026-07-27 — needs human verify):** general combat
+  music remains a client heuristic (weapon FX / aggro / damage already
+  emitted).  Mission **dungeon** music is server-side via slim
+  `dunMusicUrl`.  Was only on Warp_Gate (room 1); pocket LCO scenery had
+  none, so pilots who skipped staring at the gate heard ambient in the
+  fight room.  Fix: `ItemSystemEntity::MakeSlimItem` now stamps
+  `dunMusicUrl=res:/Sound/Music/Ambient031combat.ogg` on Warp_Gate **and**
+  Large_Collidable_* props with `dunRoomName=Combat`.  **Human playtest
+  objective C2–C5** in `doc/USER_TEST_PLAYTEST.md`.
 
 ### NETWORK-2: disconnect destructor-order UAF (FIXED 2026-07-15)
 - **Found by:** GDB auto-backtrace during a QA regression run (server

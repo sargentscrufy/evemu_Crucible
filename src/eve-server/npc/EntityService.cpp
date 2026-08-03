@@ -115,6 +115,21 @@ EntityBound::EntityBound(EVEServiceManager &mgr, EntityService& parent, SystemMa
     this->Add("CmdReconnectToDrones", &EntityBound::CmdReconnectToDrones);
 }
 
+// DRONE-6: ownership by Client* alone fails after relaunch/session edges
+// where m_pClient is null but the item still belongs to the pilot.
+static bool EnsureDroneOwner(DroneSE* pDrone, Client* pClient)
+{
+    if (pDrone == nullptr or pClient == nullptr)
+        return false;
+    if (pDrone->GetOwner() == pClient)
+        return true;
+    if ((pDrone->GetOwnerID() != pClient->GetCharacterID())
+    and (pDrone->GetSelf()->ownerID() != pClient->GetCharacterID()))
+        return false;
+    pDrone->SetOwner(pClient);
+    return true;
+}
+
 PyResult EntityBound::CmdEngage(PyCallArgs &call, PyList* droneIDs, PyInt* targetID) {
  // ret = entity.CmdEngage(droneIDs, targetID)
     /*
@@ -198,8 +213,11 @@ PyResult EntityBound::CmdEngage(PyCallArgs &call, PyList* droneIDs, PyInt* targe
         if ((pSE == nullptr) or (pSE->GetDroneSE() == nullptr))
             continue;
         DroneSE* pDrone = pSE->GetDroneSE();
-        if (pDrone->GetOwner() != pClient)  // control only your own drones
+        if (!EnsureDroneOwner(pDrone, pClient))
             continue;
+        if (!pDrone->IsEnabled()) {
+            pDrone->Online(pClient->GetShipSE());
+        }
         pDrone->SetBayRecall(false);    // engage cancels a pending bay recall
         // Target() locks (range/scan checked), then engages and attacks
         // via CheckDistance(); idles the drone on lock failure
@@ -323,7 +341,7 @@ PyResult EntityBound::CmdReturnHome(PyCallArgs &call, PyList* droneIDs) {
         if ((pSE == nullptr) or (pSE->GetDroneSE() == nullptr))
             continue;
         DroneSE* pDrone = pSE->GetDroneSE();
-        if (pDrone->GetOwner() != pClient)
+        if (!EnsureDroneOwner(pDrone, pClient))
             continue;
         pDrone->SetBayRecall(false);
         pDrone->GetAI()->ClearAllTargets();
@@ -376,7 +394,7 @@ PyResult EntityBound::CmdReturnBay(PyCallArgs &call, PyList* droneIDs) {
             if ((pSE == nullptr) or (pSE->GetDroneSE() == nullptr))
                 continue;
             DroneSE* pDrone = pSE->GetDroneSE();
-            if (pDrone->GetOwner() != pClient)
+            if (!EnsureDroneOwner(pDrone, pClient))
                 continue;
             pDrone->SetBayRecall(true);
             pDrone->GetAI()->ClearAllTargets();

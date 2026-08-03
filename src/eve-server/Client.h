@@ -212,6 +212,8 @@ public:
     void MoveToPosition(const GPoint &pt);
     void MoveItem(uint32 itemID, uint32 location, EVEItemFlags flag);
     void SetCloakTimer(uint32 time=Player::Timer::Default);     // send time=0 to disable
+    // Disable jump-cloak timer only (no UnCloak). Used when destiny already uncloaked.
+    void DisableCloakTimer()                                 { m_cloakTimer.Disable(); }
     void SetInvulTimer(uint32 time=Player::Timer::Default);     // send time=0 to disable
     void SetUncloakTimer(uint32 time=Player::Timer::Default);     // send time=0 to disable
     void SetBallParkTimer(uint32 time=Player::Timer::Default);     // send time=0 to disable

@@ -324,11 +324,15 @@
 #define IsFakeItem(itemID) \
  (itemID >= minFakeItem)
 
+// Includes stations, bunkers, temp entities, customs offices, player items,
+// asteroids (450M range — destroyable rocks for weapons testing / ROID-1),
+// drones, and NPCs (via the minCustomsOffice open-ended catch-all).
 #define IsValidTarget(itemID) \
  (((itemID >= minOutpost) && (itemID <= maxStation)) \
  || ((itemID >= minControlBunker) && (itemID <= maxNPCItem)) \
  || ((itemID >= minTempItemID) && (itemID <= minPIStructure)) \
- || (itemID >= minCustomsOffice))
+ || (itemID >= minCustomsOffice) \
+ || IsAsteroidID(itemID))
 
 #define IsTempItem(itemID) \
  ((itemID >= minTempItemID) && (itemID < minPIStructure))

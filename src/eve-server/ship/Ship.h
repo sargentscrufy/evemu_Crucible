@@ -361,7 +361,8 @@ public:
 
     ShipItemRef GetShipItemRef()                        { return m_shipRef; }
 
-    float CalculateRechargeRate(float Capacity, float RechargeTimeMS, float Current);
+    // Order: Capacity, Current charge, RechargeTimeMS (AttrRechargeRate).
+    float CalculateRechargeRate(float Capacity, float Current, float RechargeTimeMS);
 
     void AbandonDrones();
     bool LaunchDrone(InventoryItemRef dRef);

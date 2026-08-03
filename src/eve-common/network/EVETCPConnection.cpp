@@ -135,6 +135,10 @@ bool EVETCPConnection::RecvData( char* errbuf )
 
 void EVETCPConnection::ClearBuffers()
 {
+    // SOAK-1: drain send queue first, then the inbound packetizer under its
+    // own lock.  ClearBuffers is re-entrant-safe (empty queues no-op) so
+    // destructor + IO-thread DoDisconnect both calling it is OK as long as
+    // the object is still alive (WaitLoop joins the IO thread first).
     TCPConnection::ClearBuffers();
     mTimeoutTimer.Start();
     MutexLock lock( mMInQueue );

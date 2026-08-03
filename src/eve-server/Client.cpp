@@ -314,9 +314,12 @@ bool Client::SelectCharacter(int32 charID/*0*/)
 
         MoveToLocation(m_locationID, m_loginWarpRandomPoint);
 
-        // Cloak the player and uncloak them as soon as they start the login
-        // warp.
-        pShipSE->DestinyMgr()->Cloak();
+        // LOGIN-CLOAK-1: cloak during login warp-in (retail-style session
+        // cloak while aligning/warping back to logout spot).  Must pair with
+        // SetCloakTimer below -- without the timer, ProcessClient never
+        // auto-UnCloaks, and a failed/aborted LoginWarp left the pilot
+        // permanently cloaked (stuck after deadspace relog).
+        pShipSE->DestinyMgr()->Cloak(static_cast<int32>(Player::Timer::LoginCloak));
     } else {
         MoveToLocation(m_locationID, pos);
         if (m_ship->typeID() == itemTypeCapsule) {
@@ -350,7 +353,11 @@ bool Client::SelectCharacter(int32 charID/*0*/)
     // if applicable, the login warp gets triggered here
     SetStateTimer(Player::State::Login, Player::Timer::Login);
     SetInvulTimer(Player::Timer::WarpInInvul);
-    //SetCloakTimer(Player::Timer::LoginCloak);
+    // LOGIN-CLOAK-1: re-enabled.  Cloak() above only sets the flag+FX;
+    // this timer is what ProcessClient uses to auto-UnCloak if LoginWarp
+    // never runs UnCloak (or client missed the uncloak packet).
+    if (sDataMgr.IsSolarSystem(m_locationID))
+        SetCloakTimer(Player::Timer::LoginCloak);
 
     // set ship cap and shields to full
     m_ship->SetShipShield(1.0);
@@ -358,6 +365,18 @@ bool Client::SelectCharacter(int32 charID/*0*/)
 
     // send MOTD and server data to 'local' chat channel
     this->m_lsc->SendServerMOTD(this);
+
+    // Login modal (patch notes) — short; Local has the full MOTD.
+    // Keep wording aligned with LSCChannel::SendServerMOTD.
+    SendInfoModalMsg(
+        "EVEmu Crucible — private playtest\n\n"
+        "Recent: soft warp lands, gate jump cloak (~30s), login cloak fix,\n"
+        "gun FX mid-fight, belt rats ≤0.9, drones engage/return, market+missions.\n\n"
+        "Known: align-timeout force-warp (log noise), Neocom float TypeError\n"
+        "on login, intentional destroyable belt rocks for gun testing.\n\n"
+        "Report issues in Local: BUG short description\n"
+        "Build: %s",
+        EVEMU_REVISION);
 
     return (m_loaded = true);
 }
@@ -545,6 +564,9 @@ void Client::ProcessClient() {
                             }
                         }
                     }
+                    // Uncloak as login warp starts (retail: cloak drops when
+                    // you enter warp).  WarpStop also forces UnCloak via
+                    // SetLoginWarpComplete as a second safety net.
                     pShipSE->DestinyMgr()->UnCloak();
                     pShipSE->DestinyMgr()->WarpTo(m_loginWarpPoint);
                     } break;
@@ -938,8 +960,15 @@ void Client::SetBallPark() {
         pShipSE->DestinyMgr()->SendSetState();
         m_ballparkTimer.Disable();
         if (IsGateJump()) {
-            SetInvulTimer(Player::Timer::JumpInvul);
-            // dont use timer method here...(jumping ship will flash at destination)
+            // JUMP-CLOAK-1: retail gate cloak ~30s (or until move). Invul
+            // matches cloak. Jump() already set m_cloaked for SetState
+            // mass.cloak; ApplyJumpCloak pushes effects.Cloak after ballpark
+            // so the pilot actually sees the session cloak (old path only
+            // started the timer -- no FX -- and Cloak() early-out skipped FX).
+            SetInvulTimer(0);   // clear any leftover so full 30s restarts
+            SetInvulTimer(Player::Timer::JumpCloak);
+            pShipSE->DestinyMgr()->ApplyJumpCloak();
+            m_cloakTimer.Disable();   // full restart (Start won't reset if live)
             m_cloakTimer.Start(Player::Timer::JumpCloak);
             m_clientState = Player::State::Idle;
         }
@@ -949,7 +978,10 @@ void Client::SetBallPark() {
             JumpInEffect();
         }
         if (IsWormholeJump()) {
-            SetInvulTimer(Player::Timer::JumpInvul);
+            SetInvulTimer(0);
+            SetInvulTimer(Player::Timer::JumpCloak);
+            pShipSE->DestinyMgr()->ApplyJumpCloak();
+            m_cloakTimer.Disable();
             m_cloakTimer.Start(Player::Timer::JumpCloak);
             m_clientState = Player::State::Idle;
         }
@@ -1635,19 +1667,24 @@ void Client::SetCloakTimer(uint32 time/*Player::Timer::Default*/)
         return;
     }
 
+    // LOGIN-CLOAK-1: allow full restart (Disable+Start) when already enabled
+    // so login/jump always get a clean countdown instead of early-return
+    // leaving a stale timer (and stuck cloak if that timer already expired
+    // without uncloaking).
     if (m_cloakTimer.Enabled()) {
-        _log(CLIENT__ERROR, "%s: Cloak Timer called but timer already enabled with %ums remaining.", m_char->name(), m_cloakTimer.GetRemainingTime());
-        EvE::traceStack();
-        return;
+        _log(CLIENT__TIMER, "%s: Cloak Timer restart (%ums was remaining) -> %ums.",
+             m_char->name(), m_cloakTimer.GetRemainingTime(), time);
+        m_cloakTimer.Disable();
     }
 
     _log(CLIENT__TIMER, "%s: Cloak Timer set at %ums.   current state time is %ums", m_char->name(), time, m_cloakTimer.GetCurrentTime());
     m_cloakTimer.Start(time);
+    // Login already called Cloak() before SetCloakTimer; skip double FX.
     if (m_login)
         return;
     if (pShipSE != nullptr)
         if (pShipSE->DestinyMgr() != nullptr)
-            pShipSE->DestinyMgr()->Cloak();
+            pShipSE->DestinyMgr()->Cloak(static_cast<int32>(time));
 }
 
 void Client::SetUncloakTimer(uint32 time/*Player::Timer::Default*/)
@@ -2990,4 +3027,17 @@ void Client::SetLoginWarpComplete() {
 
     m_loginWarpPoint = NULL_ORIGIN;
     m_loginWarpRandomPoint = NULL_ORIGIN;
+
+    // LOGIN-CLOAK-1: hard guarantee cloak ends when the login warp lands.
+    // Covers cases where UnCloak before WarpTo was skipped, client missed
+    // the uncloak packet (duration-0 TypeError), or the cloak timer is
+    // still running after a short warp.
+    if ((pShipSE != nullptr) and (pShipSE->DestinyMgr() != nullptr)
+    and pShipSE->DestinyMgr()->IsCloaked()) {
+        pShipSE->DestinyMgr()->UnCloak();
+    }
+    // Stop the auto-uncloak timer so it cannot re-fire into a no-op later
+    // and so the next gate jump can Start a clean JumpCloak timer.
+    if (m_cloakTimer.Enabled())
+        m_cloakTimer.Disable();
 }

@@ -967,41 +967,22 @@ void LSCService::CreateStaticChannels() {
 // basic template
     //CreateChannel(channelID, ownerID, "name", "motd", "password" or nullptr, "*title*", LSC::Type::normal, cspa, 0, 0, true);
 
-//Help
-// Incursion Rookie Help MOTD
+//Help — private playtest channels (not TQ spam rules)
     str.str("");
-    str << "<br><color=0xff007fff><b>Welcome to the EVEmu <u>EVE Online: Crucible</u> Emulator</b></color><br><br>";
-    str << "<color=0xff00ff00><b>Topic:</b></color>  ";
-    str << "<color=0xffffffff>EVE-Online related rookie help.</color><br><br>";
-    str << "<color=0xff00ff00><b>Rules:</b></color>  ";
-    str << "<color=0xffffffff>No WTB, WTS, WTT, PC, advertising, recruiting, scamming, offering private help in any form or begging in this channel.<br>";
-    str << "No CAPS or text-decoration.</color><br><br>";
-    str << "<color=0xff00ff00><b>Language:</b></color>  ";
-    str << "<color=0xffffffff>This channel is ENGLISH ONLY.</color><br><br>";
-    str << "<color=0xff00ff00><b>How to contact a GM:</b> </color>  ";
-    str << "<color=0xffffffff>Right now, our petition service isnt operational, so to contact a GM, post on the forums.</color><br><br>";
-    //str << "<color=0xffffffff>File a petition (F12 - Petitions - New Petition)</color><br><br>";
-    str << "<color=0xff00ff00><b>ISK Advertising:</b></color>  ";
-    str << "<color=0xffff0000>Contrary to what they spam, EVEmu does not authorize any person or site to sell ISK for RL cash.</color><br><br>";
-    str << "<color=0xff00ff00><b>Please Note:</b></color><br>";
-    str << "<color=0xffffffff>There are no third party applications (.exe) that will magically give you any type of ship you wish or hack your wallet. Please report characters advertising these types of links IMMEDIATELY via petition and DO NOT download and try them. <br><br>";
-    // str << "Sister of EVE storyline starts in <url=showinfo:5//30005001><u>Arnon</url></b></u> <b>with <url=showinfo:1378//3019356><u>Sister Alitura</url></b></u>. <br><br></color>";
+    str << "<br><color=0xff007fff><b>EVEmu Crucible — Rookie Help</b></color><br><br>";
+    str << "<color=0xffffffff>Private phase-1-commerce playtest. Ask about travel, fitting, markets, missions.</color><br><br>";
+    str << "<color=0xff00ff00><b>Feedback:</b></color>  ";
+    str << "<color=0xffffffff>In <b>Local</b> type <b>BUG</b> then a short description (server captures it).</color><br><br>";
+    str << "<color=0xffffaa00><b>Known soft:</b></color>  ";
+    str << "<color=0xffffffff>align-timeout force-warp log noise; Neocom float on login; belt rocks may be shootable for gun tests.</color><br>";
     CreateChannel(1, 1, "Rookie Help", str.str().c_str(), nullptr, "help", LSC::Type::normal, cspa, 263238, -1, true);
-// Incursion Help MOTD
     str.str("");
-    str << "<br><color=0xff007fff><b>Welcome to the EVEmu <u>EVE Online: Crucible</u> Emulator</color><br><br>";
-    str << "<color=0xff00ff00><b>Topic:</b></color>  ";
-    str << "<color=0xffffffff>EVE-Online related help.</color><br><br>";
-    str << "<color=0xff00ff00><b>Rules:</b></color>  ";
-    str << "<color=0xffffffff>No WTB, WTS, WTT, PC, advertising, recruiting, scamming, offering private help in any form or begging in this channel.<br>";
-    str << "No CAPS or text-decoration.</color><br><br>";
-    str << "<color=0xff00ff00><b>Language:</b></color>  ";
-    str << "<color=0xffffffff>This channel is ENGLISH ONLY.</color><br><br>";
-    str << "<color=0xff00ff00><b>How to contact a GM:</b> </color>  ";
-    str << "<color=0xffffffff>Right now, our petition service isnt operational, so to contact a GM, post on the forums.</color><br><br>";
-    //str << "<color=0xffffffff>File a petition (F12 - Petitions - New Petition)</color><br><br>";
-    str << "<color=0xff00ff00><b>ISK Advertising:</b></color>  ";
-    str << "<color=0xffff0000>Contrary to what they spam, EVEmu does not authorize any person or site to sell ISK for RL cash.</color><br><br>";
+    str << "<br><color=0xff007fff><b>EVEmu Crucible — Help</b></color><br><br>";
+    str << "<color=0xffffffff>General help for this private Crucible emulator.</color><br><br>";
+    str << "<color=0xff00ff00><b>Working:</b></color>  ";
+    str << "<color=0xffffffff>warp land, jump cloak, belt rats ≤0.9, guns/drones, market, security missions.</color><br><br>";
+    str << "<color=0xff00ff00><b>Report:</b></color>  ";
+    str << "<color=0xffffffff>Local chat: <b>BUG</b> description · no mid-session redeploys while you fly.</color><br>";
     CreateChannel(2, 1, "Help", str.str().c_str(), nullptr, "help", LSC::Type::normal, cspa, 263238, -1/*263262*/, true);
 //Empires/Factions
     CreateChannel(10, 1, "Caldari", "Caldari Faction", nullptr, "caldari", LSC::Type::normal, cspa, 263329, -1/*263268*/, true);

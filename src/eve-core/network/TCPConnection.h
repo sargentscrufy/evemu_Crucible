@@ -29,6 +29,7 @@
 #include "network/Socket.h"
 #include "threading/Mutex.h"
 #include "utils/Buffer.h"
+#include <atomic>
 
 /** Size of error buffer TCPConnection uses. */
 static const uint32 TCPCONN_ERRBUF_SIZE = 1024;
@@ -224,6 +225,9 @@ protected:
 
     /** Thread */
     std::thread* mThread;
+
+    /** SOAK-1: once true, DoDisconnect/ClearBuffers are no-ops (idempotent). */
+    std::atomic<bool> mDisconnectDone;
 };
 
 #endif /* !__NETWORK__TCP_CONNECTION_H__INCL__ */

@@ -140,17 +140,33 @@ int8 DroneAIMgr::GetState() {
 
 void DroneAIMgr::Return() {
     m_assignedShip = m_pDrone->GetHomeShip();
+    if ((m_assignedShip == nullptr) or (m_pDrone->DestinyMgr() == nullptr)) {
+        SetIdle();
+        return;
+    }
+    // DRONE-6: maxVelocity=0 combat drones (Warden etc.) cannot Follow;
+    // orbit/follow produces NaN. Hold still and treat as arrived so bay
+    // scoop can run on the next Process tick.
+    float maxVel = m_pDrone->GetSelf()->GetAttribute(AttrMaxVelocity).get_float();
+    if (maxVel < 1.0f) {
+        m_pDrone->DestinyMgr()->Halt();
+        m_state = DroneAI::State::Departing;
+        return;
+    }
     m_pDrone->DestinyMgr()->SetMaxVelocity(m_chaseSpeed);
     m_pDrone->DestinyMgr()->Follow(m_assignedShip, m_entityOrbitRange);
     m_state = DroneAI::State::Departing;
 }
 
 void DroneAIMgr::SetIdle() {
-    if (m_state == DroneAI::State::Idle)
-        return;
-    // not doing anything....idle.
-    _log(DRONE__AI_TRACE, "Drone %s(%u): SetIdle: returning to idle.",
-         m_pDrone->GetName(), m_pDrone->GetID());
+    // DRONE-4: launch path starts m_state=Idle then calls SetIdle(); the
+    // early-return skipped IdleOrbit so drones sat dead and ignored commands.
+    // Always re-assert idle behaviour (orbit/hold) when assigned a ship.
+    const bool alreadyIdle = (m_state == DroneAI::State::Idle);
+    if (!alreadyIdle) {
+        _log(DRONE__AI_TRACE, "Drone %s(%u): SetIdle: returning to idle.",
+             m_pDrone->GetName(), m_pDrone->GetID());
+    }
     m_state = DroneAI::State::Idle;
 
     // disable ewar timers
@@ -159,22 +175,39 @@ void DroneAIMgr::SetIdle() {
     m_mainAttackTimer.Disable();
     m_warpScramblerTimer.Disable();
 
-    // orbit assigned ship
+    // DRONE-5: maxVelocity 0 combat/sentry-style drones (e.g. Warden) NaN
+    // and spam MoveObject errors if forced into Orbit. Hold still instead.
+    if (m_assignedShip == nullptr)
+        return;
+    float maxVel = m_pDrone->GetSelf()->GetAttribute(AttrMaxVelocity).get_float();
+    if (maxVel < 1.0f) {
+        if (m_pDrone->DestinyMgr() != nullptr)
+            m_pDrone->DestinyMgr()->Halt();
+        return;
+    }
     m_pDrone->IdleOrbit(m_assignedShip);
 }
 
 void DroneAIMgr::SetEngaged(SystemEntity* pTarget) {
-    if (m_state == DroneAI::State::Engaged)
-        return;
+    // DRONE-6: allow re-engage on a new target while already Engaged
+    // (previous early-return left drones stuck on a dead/stale target).
     _log(DRONE__AI_TRACE, "Drone %s(%u): SetEngaged: %s(%u) begin engaging.",
          m_pDrone->GetName(), m_pDrone->GetID(), pTarget->GetName(), pTarget->GetID());
     // actively fighting
     //   not sure of the actual orbit speed of npc's, but their 'cruise speed' seems a bit slow.
     //   this sets orbit speed between cruise speed and quarter of max speed (whether mwb or ab)
     //   this will also enable this npc to have a variable speed, instead of fixed upon creation.
-    m_pDrone->DestinyMgr()->SetMaxVelocity(MakeRandomFloat(m_cruiseSpeed, (m_chaseSpeed /4)));
-    m_pDrone->DestinyMgr()->Orbit(pTarget, m_entityOrbitRange);  //try to get inside orbit range
+    float maxVel = m_pDrone->GetSelf()->GetAttribute(AttrMaxVelocity).get_float();
+    if (maxVel < 1.0f) {
+        // Immobile sentry-style drone: hold position and fire (no Orbit).
+        if (m_pDrone->DestinyMgr() != nullptr)
+            m_pDrone->DestinyMgr()->Halt();
+    } else {
+        m_pDrone->DestinyMgr()->SetMaxVelocity(MakeRandomFloat(m_cruiseSpeed, (m_chaseSpeed /4)));
+        m_pDrone->DestinyMgr()->Orbit(pTarget, m_entityOrbitRange);  //try to get inside orbit range
+    }
     m_state = DroneAI::State::Engaged;
+    m_pDrone->SetTarget(pTarget);
 }
 
 void DroneAIMgr::CheckDistance(SystemEntity* pSE)
@@ -190,13 +223,17 @@ void DroneAIMgr::CheckDistance(SystemEntity* pSE)
             ClearTarget(pSE);
         }
         return;
-    } else if (dist < m_entityFlyRange) { //within weapon max (and within falloff)
+    }
+
+    // DRONE-6: previously mid-range (fly..attack) fell through to a bare
+    // return and never fired.  Engage and attack anywhere inside attack
+    // range; immobile drones hold still, mobile drones orbit when close.
+    if (dist < m_entityFlyRange) {
         SetEngaged(pSE); //engage and orbit
-    } else if (dist < m_entityChaseRange) { //within follow
-       // SetFollowing(pSE);
-    } else if (dist < m_entityAttackRange) { //within sight
-       // SetChasing(pSE);
-        return;
+    } else {
+        // still in engagement range but outside preferred orbit -- hold /
+        // fire (mobile drones would chase here once chase AI is finished)
+        SetEngaged(pSE);
     }
 
     if (!m_mainAttackTimer.Enabled())
@@ -344,11 +381,13 @@ void DroneAIMgr::AttackTarget(SystemEntity* pTarget) {
     uint32 gfxID = 0;
     if (m_pDrone->GetSelf()->HasAttribute(AttrGfxTurretID))// graphicID for turret for drone type ships
         gfxID = m_pDrone->GetSelf()->GetAttribute(AttrGfxTurretID).get_uint32();
+    // GUN-FX / DRONE-6: repeat=0 encodes as None and chokes the client
+    // fxSequencer; one-shot repeat=1 matches live NPC weapon path.
     m_pDrone->DestinyMgr()->SendSpecialEffect(m_pDrone->GetSelf()->itemID(),
                                              m_pDrone->GetSelf()->itemID(),
                                              m_pDrone->GetSelf()->typeID(), //m_pDrone->GetSelf()->GetAttribute(AttrGfxTurretID).get_int(),
                                              pTarget->GetID(),
-                                             0,guid,1,1,1,m_attackSpeed,0,gfxID);
+                                             0,guid,1,1,1,m_attackSpeed,1,gfxID);
 
     Damage d(m_pDrone,
              m_pDrone->GetSelf(),

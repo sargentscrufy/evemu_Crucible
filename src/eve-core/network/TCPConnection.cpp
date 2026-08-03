@@ -41,7 +41,9 @@ TCPConnection::TCPConnection()
   mSockState(STATE_DISCONNECTED),
   mrIP(0),
   mrPort(0),
-  mRecvBuf(nullptr)
+  mRecvBuf(nullptr),
+  mThread(nullptr),
+  mDisconnectDone(false)
 {
 }
 
@@ -50,7 +52,9 @@ TCPConnection::TCPConnection(Socket* socket, uint32 mrIP, uint16 mrPort)
   mSockState(STATE_CONNECTED),
   mrIP(mrIP),
   mrPort(mrPort),
-  mRecvBuf(nullptr)
+  mRecvBuf(nullptr),
+  mThread(nullptr),
+  mDisconnectDone(false)  // fresh connection; disconnect allowed once
 {
     // Start worker thread
     StartLoop();
@@ -125,6 +129,7 @@ bool TCPConnection::Connect(uint32 rIP, uint16 rPort, char* errbuf)
     mrIP = rIP;
     mrPort = rPort;
     mSockState = STATE_CONNECTED;
+    mDisconnectDone = false;  // SOAK-1: allow a later disconnect cycle
     // Start processing thread if necessary
     if (oldState == STATE_DISCONNECTED)
         StartLoop();
@@ -237,12 +242,16 @@ bool TCPConnection::Process() {
             return true;
         }
         case STATE_DISCONNECTING: {
+            // Flush remaining sends then disconnect and *exit* the IO loop.
+            // Returning true here re-entered Process() every 5ms after the
+            // socket was already torn down (SOAK-1 / exit-139 under multi-
+            // client disconnect storms).
             if (!SendData(errbuf)) {
                 _log(TCP_CLIENT__TRACE, "Process() - Disconnecting SendData() Failed at %s: %s", GetAddress().c_str(), errbuf);
                 return false;
             }
             DoDisconnect();
-            return true;
+            return false;
         }
         case STATE_DISCONNECTED:
         default: {
@@ -359,17 +368,26 @@ bool TCPConnection::RecvData(char* errbuf)
 
 void TCPConnection::DoDisconnect()
 {
+    // SOAK-1 / NETWORK-1: exactly-once disconnect.  Atomic flag stops a
+    // second DoDisconnect (IO loop end + destructor, or double StartLoop
+    // race) from re-entering ClearBuffers while the packetizer is mid-free.
+    if (mDisconnectDone.exchange(true))
+        return;
+
     MutexLock lock(mMSock);
 
     state_t state = GetState();
-    if ((state != STATE_CONNECTED) && (state != STATE_DISCONNECTING))
+    if ((state != STATE_CONNECTED) && (state != STATE_DISCONNECTING)
+            && (state != STATE_CONNECTING)) {
+        // still mark done so later callers skip
         return;
+    }
+
+    mSockState = STATE_DISCONNECTED;
 
     ClearBuffers();
     mrIP = mrPort = 0;
     SafeDelete(mSock);
-
-    mSockState = STATE_DISCONNECTED;
 }
 
 void TCPConnection::ClearBuffers()
@@ -400,13 +418,19 @@ void TCPConnection::TCPConnectionLoop()
 {
     mMLoopRunning.Lock();
     uint32 start = GetTickCount();
-    while (Process()) {
-        // do the stuff for thread sleeping
-        start = GetTickCount() - start;
-        if (TCPCONN_LOOP_GRANULARITY > start)
-            Sleep(TCPCONN_LOOP_GRANULARITY - start);
-        start = GetTickCount();
+    // Always unlock mMLoopRunning even if Process/DoDisconnect throw so
+    // WaitLoop in the destructor cannot hang (and then tear members while
+    // this thread is still inside ClearBuffers).
+    try {
+        while (Process()) {
+            start = GetTickCount() - start;
+            if (TCPCONN_LOOP_GRANULARITY > start)
+                Sleep(TCPCONN_LOOP_GRANULARITY - start);
+            start = GetTickCount();
+        }
+        DoDisconnect();
+    } catch (...) {
+        try { DoDisconnect(); } catch (...) {}
     }
-    DoDisconnect();
     mMLoopRunning.Unlock();
 }

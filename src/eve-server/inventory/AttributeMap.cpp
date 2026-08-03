@@ -374,22 +374,29 @@ bool AttributeMap::Change(uint16 attrID, EvilNumber& old_val, EvilNumber& new_va
         modChange.attributeID = attrID;
         modChange.time = GetFileTimeNow();
         modChange.newValue = new_val.GetPyObject();
-        modChange.oldValue = old_val.GetPyObject();
-        /*  not sure about this one yet, used in cap charge (more?)....oldValue is list for this server rsp
-         *
-                  [PyTuple 7 items]
-                    [PyString "OnModuleAttributeChange"]
-                    [PyInt 649670823]
-                    [PyIntegerVar 1005885567714]
-                    [PyInt 18]
-                    [PyIntegerVar 129756563388570240]
-                    [PyFloat 680.554999862301]
-                    [PyList 4 items]
-                      [PyFloat 526.692785423517]        <<- old value
-                      [PyIntegerVar 129756563391382864] <<- old time?
-                      [PyFloat 104400]                  <<- recharge time ??
-                      [PyFloat 4860]                    <<-  ??
-        */
+        // CAP-2: capacitor charge updates on live use a 4-element oldValue
+        // list so the client can run its local regen curve.  A bare float
+        // left the client stuck at the drained value after modules emptied
+        // the cap (server still recharged, HUD stayed empty).
+        //
+        // Live shape:
+        //   oldValue = [oldCharge, oldTime, rechargeRate_ms, capacity]
+        if (attrID == AttrCapacitorCharge) {
+            double rechargeMs = 0.0;
+            double capacity = 0.0;
+            if (mItem.HasAttribute(AttrRechargeRate))
+                rechargeMs = mItem.GetAttribute(AttrRechargeRate).get_float();
+            if (mItem.HasAttribute(AttrCapacitorCapacity))
+                capacity = mItem.GetAttribute(AttrCapacitorCapacity).get_float();
+            PyList* oldList = new PyList(4);
+                oldList->SetItem(0, old_val.GetPyObject());
+                oldList->SetItem(1, new PyLong(GetFileTimeNow()));
+                oldList->SetItem(2, new PyFloat(rechargeMs));
+                oldList->SetItem(3, new PyFloat(capacity));
+            modChange.oldValue = oldList;
+        } else {
+            modChange.oldValue = old_val.GetPyObject();
+        }
     return SendChanges(modChange.Encode());
 }
 

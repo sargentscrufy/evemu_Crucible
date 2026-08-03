@@ -69,6 +69,9 @@ protected:
     SystemEntity* m_targetSE;
     SystemEntity* m_fromSE;
     InventoryItemRef m_modRef;
+    // SOAK-2: re-resolve target by ID at hit time — the raw m_targetSE
+    // pointer can dangle if the target was destroyed/left before impact.
+    uint32 m_targetID;
 
     void HitTarget();
     void EndOfLife();

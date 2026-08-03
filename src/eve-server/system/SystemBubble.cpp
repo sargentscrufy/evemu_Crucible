@@ -404,7 +404,19 @@ void SystemBubble::Add(SystemEntity* pSE) {
 
         Client* pClient(pSE->GetPilot());
 
-        SendAddBalls( pSE );
+        // GRID-WARP-1: mid-warp transit through empty/mid bubbles must not
+        // SendAddBalls — that would mix destination/mid entities with the
+        // departure grid we intentionally left on the client.  WarpStop
+        // SendSetState rebuilds a clean land ballpark.
+        const bool warpingIn = (pSE->DestinyMgr() != nullptr)
+            and pSE->DestinyMgr()->IsWarping();
+        if (!warpingIn) {
+            SendAddBalls( pSE );
+        } else {
+            _log(DESTINY__BUBBLE_TRACE,
+                 "SystemBubble::Add() - pilot %u warping into bubble %u; skip SendAddBalls",
+                 pSE->GetID(), m_bubbleID);
+        }
 
         if (!m_players.empty()) {
             AddBallExclusive(pSE);  // adds new player to all players in bubble, if any
@@ -493,14 +505,30 @@ void SystemBubble::Untrack(SystemEntity *pSE) {
 
         m_players.erase(charId);
 
-        _log(
-            DESTINY__BUBBLE_TRACE,
-            "SystemBubble::Remove() - Removing entity %u from bubble %u - removing balls",
-            pseId,
-            m_bubbleID
-        );
-
-        RemoveBalls(pSE);
+        // GRID-WARP-1: a pilot leaving the bubble *while warping* must NOT
+        // get RemoveBalls. That packet deletes every dynamic entity from
+        // their client (asteroids, rats, wrecks) the instant they cross the
+        // grid edge — so the belt vanishes before the tunnel finishes
+        // instead of receding behind them. Jump/dock still need the full
+        // wipe. Destination SendSetState on WarpStop rebuilds the land grid.
+        const bool warpingOut = (pSE->DestinyMgr() != nullptr)
+            and pSE->DestinyMgr()->IsWarping();
+        if (!warpingOut) {
+            _log(
+                DESTINY__BUBBLE_TRACE,
+                "SystemBubble::Remove() - Removing entity %u from bubble %u - removing balls",
+                pseId,
+                m_bubbleID
+            );
+            RemoveBalls(pSE);
+        } else {
+            _log(
+                DESTINY__BUBBLE_TRACE,
+                "SystemBubble::Remove() - pilot %u warping out of bubble %u; keeping client balls (no RemoveBalls)",
+                pseId,
+                m_bubbleID
+            );
+        }
     }
 
     // notify everybody else in the bubble of the removal

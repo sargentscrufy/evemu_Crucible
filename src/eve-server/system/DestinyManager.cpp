@@ -30,6 +30,7 @@
 
 #include "Client.h"
 #include "EntityList.h"
+// Player::Timer::JumpCloak for session-cloak FX duration (JUMP-CLOAK-2)
 
 #include "StaticDataMgr.h"
 #include "log/logsys.h"
@@ -739,10 +740,9 @@ void DestinyManager::Bump(SystemEntity* pSE)
 
 void DestinyManager::Bounce(GVector direction, float speed)
 {
-    // bounce code here (not used yet)
-    /*  this code will update ship movement after being bumped
-     *  all items will drift to a complete stop, unless other movement is called.
-     */
+    // bounce / collision response.  DESTINY-11: never accept a caller-
+    // supplied speed above the ship's sub-warp max — unclamped bumps were
+    // the path that punted targets off-grid under close contact.
     m_ballMode = Destiny::Ball::Mode::GOTO;
     m_stop = false;
     m_stateStamp = sEntityList.GetStamp();
@@ -750,7 +750,13 @@ void DestinyManager::Bounce(GVector direction, float speed)
     m_shipAccelTime = 0.1f;
     m_userSpeedFraction = 1.0f;
     m_timeFraction = 1.0f;
-    m_maxSpeed = m_maxShipSpeed;
+    if ((speed <= 0.0f) or (speed > m_maxShipSpeed))
+        speed = m_maxShipSpeed;
+    m_maxSpeed = speed;
+    if (!direction.isZero()) {
+        direction.normalize();
+        m_shipHeading = direction;
+    }
     m_velocity = m_shipHeading * m_maxSpeed;
 
     std::vector<PyTuple*> updates;
@@ -940,6 +946,21 @@ void DestinyManager::MoveObject() {
         }
     }
 
+    // DESTINY-11: hard clamp sub-warp speed.  Prop mods already fold into
+    // m_maxShipSpeed via SpeedBoost(); anything above that is runaway math
+    // (orbit fraction >1, activeSpeedFraction >1, bounce/collision) that
+    // punted ships off the 8000 km grid under smartbomb/close-range contact
+    // (live: Hurricane vanished from the Badger's bubble while still alive).
+    // Warp uses a separate path and is not affected here.
+    if ((speed > m_maxShipSpeed) and (m_maxShipSpeed > 0.0f)) {
+        _log(DESTINY__WARNING,
+                "Destiny::MoveObject() - %s(%u) sub-warp speed %.1f > max %.1f -- clamping (DESTINY-11)",
+                mySE->GetName(), mySE->GetID(), speed, m_maxShipSpeed);
+        speed = m_maxShipSpeed;
+    } else if (speed < 0.0f) {
+        speed = 0.0f;
+    }
+
     //set velocity and position for this tic
     m_velocity = m_shipHeading * speed;
     SetPosition(m_position + m_velocity, sConfig.debug.PositionHack);   // (PositionHack == true) here will force position update to client
@@ -975,7 +996,7 @@ void DestinyManager::MoveObject() {
             CheckBump();
 }
 
-bool DestinyManager::IsTurn() {    //this is working.  dont change
+bool DestinyManager::IsTurn() {
     if (m_targetPoint.isZero()) {
         _log(DESTINY__ERROR, "Destiny::IsTurn() - %s(%u): TargetPoint is null.", mySE->GetName(), mySE->GetID());
         if (mySE->HasPilot())
@@ -984,41 +1005,43 @@ bool DestinyManager::IsTurn() {    //this is working.  dont change
         Halt();
         return false;
     }
-    // if ship is stopped, there is no turn.  immediately begin movement in desired direction
+
+    // TURN-1: target heading is ALWAYS the live direction to m_targetPoint.
+    // The old path set m_targetHeading once in BeginMovement and never
+    // refreshed it while Follow/Approach updated m_targetPoint -- so the
+    // turn aimed at a stale vector while IsTurn measured against the live
+    // direction.  Result: turn, snap-to-live, turn again (gate approach
+    // "wiggle").  One source of truth each tick.
+    GVector toVec(m_position, m_targetPoint);
+    if (toVec.isZero()) {
+        return false;
+    }
+    toVec.normalize();
+    m_targetHeading = toVec;
+
+    // Ensure ship heading is a unit vector (Turn used to accumulate without
+    // re-normalizing, so |heading| drifted and acos(dot) went NaN/OOB).
+    if (m_shipHeading.isZero()) {
+        m_shipHeading = toVec;
+        return false;
+    }
+    m_shipHeading.normalize();
+
+    // Stopped / near-stop: face target immediately -- no turn animation needed.
     if ((m_timeFraction < 0.1) and (m_activeSpeedFraction < 0.1)) {
-        GVector toVec(m_position, m_targetPoint);
-        toVec.normalize();
         m_shipHeading = toVec;
         return false;
     }
 
-    // check for turning angle.  returns true if angle is enough to change movement variables
-    // create isosceles triangle where legs are current direction and destination, then find angle between legs
-    //  it will set m_radians in the range of [-pi,pi].
-    /** @todo revisit this to verify angle calcs */
-    GVector toVec(m_position, m_targetPoint);
-    toVec.normalize();
-    float dot(toVec.dotProduct(m_shipHeading));
-    if ((dot > 1.0f) or (dot < -1.0f)) {
-        sLog.Error("Destiny::IsTurn()", "%s(%u) - shipHeading has screwed up.  dot is %.5f", mySE->GetName(), mySE->GetID(), dot);
-        _log(DESTINY__ERROR, "Destiny::IsTurn() m_shipHeading: %.3f,%.3f,%.3f.  m_targetHeading: %.3f,%.3f,%.3f, toVec:%.3f,%.3f,%.3f", \
-                m_shipHeading.x, m_shipHeading.y, m_shipHeading.z, m_targetHeading.x, m_targetHeading.y, m_targetHeading.z, toVec.x, toVec.y, toVec.z);
-        // try to correct for bad heading vector and retest...
-             if (m_shipHeading.x > 1.0f)  { m_shipHeading.x -= 1; }
-        else if (m_shipHeading.x < 1.0f)  { m_shipHeading.x += 1; }
-             if (m_shipHeading.y > 1.0f)  { m_shipHeading.y -= 1; }
-        else if (m_shipHeading.y < 1.0f)  { m_shipHeading.y += 1; }
-             if (m_shipHeading.z > 1.0f)  { m_shipHeading.z -= 1; }
-        else if (m_shipHeading.z < 1.0f)  { m_shipHeading.z += 1; }
-        dot = toVec.dotProduct(m_shipHeading);
-        if ((dot > 1.0f) or (dot < -1.0f)) {
-            sLog.Error("Destiny::IsTurn()", "%s(%u) - shipHeading has screwed up AGAIN.  dot is %.5f", mySE->GetName(), mySE->GetID(), dot);
-            return false;
-        }
-    }
+    float dot = toVec.dotProduct(m_shipHeading);
+    // Clamp for numerical safety before acos.
+    if (dot > 1.0f)  dot = 1.0f;
+    if (dot < -1.0f) dot = -1.0f;
+
     m_radians = std::acos(dot);
-    float degrees(EvE::Trig::Rad2Deg(m_radians));
-    if (degrees < TURN_ALIGNMENT/*4*/) {
+    float degrees = EvE::Trig::Rad2Deg(m_radians);
+    if (degrees < TURN_ALIGNMENT) {
+        // Soft finish: lock heading to target without a hard PositionHack snap.
         m_shipHeading = toVec;
         return false;
     }
@@ -1058,9 +1081,22 @@ bool DestinyManager::IsTurn() {    //this is working.  dont change
  * }
  */
 
-//from new source at eve/client/script/ui/services\flightControls.py
-//  self.curve = trinity.Tr2QuaternionLerpCurve()
-void DestinyManager::Turn() {   // tracking within 900m for Frigates, 1k4m for BS.  05Jun17
+// TURN-1: proper heading authority.
+// Live client turns with a quaternion slerp (flightControls.Tr2Quaternion
+// LerpCurve).  We were doing linear vector interpolation on a non-unit
+// m_shipHeading that never re-normalized, against a m_targetHeading that
+// was only set once at BeginMovement -- so mid-approach the ship "turned,
+// snapped forward, turned again" as IsTurn measured live angle while Turn
+// steered at a stale vector and then hard-snapped when degrees < 4.
+//
+// Model now:
+//   1. IsTurn refreshes m_targetHeading from live m_targetPoint every tic
+//   2. Turn nlerps unit shipHeading toward unit targetHeading by a
+//      rate limited by ship agility (deg/tic)
+//   3. Always re-normalize heading
+//   4. Publish CmdGotoDirection so client prediction tracks the server
+//   5. ClearTurn no longer PositionHack-snaps the ship
+void DestinyManager::Turn() {
     if (mySE->HasPilot())
         if (mySE->GetPilot()->IsUndock())
             return;
@@ -1072,89 +1108,79 @@ void DestinyManager::Turn() {   // tracking within 900m for Frigates, 1k4m for B
             ClearTurn();
         return;
     }
-    /*when changing directions....
-     *  m_moveTime will have to be reset - handled in UpdateVelocity()
-     *  m_shipHeading will have to be reset - reset here and used in MoveObject() (our calling function)
-     *  check for decel, then call UpdateVelocity() to set variables as needed.  Move() will handle the rest.
-     *
-     * this below isnt right, hack is almost close
-     *   m_degPerTic = (60.0f - m_shipAgility) / 10;  ([this file]:2317, reset for ab/mwd [this file]:2154)
-     */
 
-    // this is off for rookie ship (maybe others)
-    float turnTime(m_shipAgility / 2.2);
+    float degrees = EvE::Trig::Rad2Deg(m_radians);
+    // Agility-scaled max degrees we may rotate this tic.  m_degPerTic is
+    // derived from ship agility in UpdateShipVariables / SpeedBoost.
+    float maxDegThisTic = m_degPerTic;
+    if (maxDegThisTic < 0.5f)
+        maxDegThisTic = 0.5f;   // floor so very agile ships still turn
+    if (maxDegThisTic > 45.0f)
+        maxDegThisTic = 45.0f;  // ceiling so freighters don't spin on a dime
+
     if (!m_turning) {
         m_turning = true;
-        //m_radians is set in IsTurn() on every tic
-        m_turnFraction = std::sqrt((std::cos(m_radians) + 1) / 2);
-        //this isnt used yet...used as comparison for testing time calc's
-        m_alignTime = (EvE::Trig::Rad2Deg(m_radians) / m_degPerTic);
+        // Retail: large turns bleed speed.  turnFraction is the speed
+        // fraction we hold during the turn (cos half-angle).
+        m_turnFraction = std::sqrt((std::cos(m_radians) + 1.0f) / 2.0f);
+        if (m_turnFraction < 0.15f)
+            m_turnFraction = 0.15f;
+        m_alignTime = degrees / maxDegThisTic;
         if (is_log_enabled(DESTINY__TURN_TRACE))
-            _log(DESTINY__TURN_TRACE, "Destiny::Turn() - %s(%u): Agility:%.3f, Inertia:%.3f, alignTime:%.3f, turnTime:%.3f, turnFraction:%.3f, m_degPerTic:%.3f", \
-                mySE->GetName(), mySE->GetID(), m_shipAgility, m_shipInertia, m_alignTime, turnTime, m_turnFraction, m_degPerTic);
-    }
-
-    // logic to determine speed changes for turning
-    if (m_turnTic == 1)
-        if (m_turnFraction < m_timeFraction)
-            UpdateVelocity(true);
-
-    // need to check turnFraction vs m_timeFraction to hold speed when turning.
-
-    /*  class          agility
-     * Capsule          .06
-     * Shuttle          1.6
-     * Rookie           5
-     * Frigates         3 - 6 (adv. 3 - 4)  (2s) 1s         < 0.15 not enough.
-     * Destroyers       4 - 5
-     * Cruisers         4 - 8
-     * T3 Cruiser       2.4 - 2.8
-     * HAC              5 - 7
-     * Battlecruisers   6 - 9
-     * Battleships      8 - 14      (12s) 4s        0.15 works well  0.2 is very well.   > 0.25 is too much.
-     * Industrials      8 - 12
-     * Marauder         ~12
-     * Orca             40          (40s) 18s   0.05 turnPercent seems to work very well.  > 0.1 is wrong.
-     * Freighters       ~60
-     * Supercarrier     ~60
-     * Command          ~9
-     * Transport        5 or 19
-     * Barges           10 - 18
-     * Dreadnought      ~55
-     * Zephyr           5
-     */
-    // set ship turn amount based on position in turn, current speed and ship agility
-    GVector deltaHeading(m_shipHeading, m_targetHeading);
-    float turnPercent(0.1f);
-    float degrees(EvE::Trig::Rad2Deg(m_radians));
-    if (degrees > 100) {
-        if (m_decel and (m_turnTic > turnTime)) {
-            // turn half of remaining turn (simulate greatest turn angle when (turn > 90*) and (speed < time)
-            turnPercent = 0.3f;
-        } else {
-            turnPercent = m_degPerTic / (degrees - 100);
-        }
-    } else if (degrees > m_degPerTic) {
-        turnPercent = m_degPerTic / (degrees * 0.5);
-    } else {
-        // degrees < m_degPerTic, so complete turn and continue accel
-        if (m_decel)
+            _log(DESTINY__TURN_TRACE,
+                 "Destiny::Turn() - %s(%u): Agility:%.3f, Inertia:%.3f, alignTime:%.3f, turnFraction:%.3f, maxDeg/tic:%.3f, degrees:%.3f",
+                 mySE->GetName(), mySE->GetID(), m_shipAgility, m_shipInertia,
+                 m_alignTime, m_turnFraction, maxDegThisTic, degrees);
+        // Bleed speed once on turn start if we are going faster than the
+        // turn allows -- not every re-entry, and never a PositionHack.
+        if (m_turnTic == 1 and (m_turnFraction < m_timeFraction))
             UpdateVelocity(true);
     }
 
-    if (turnPercent > 0.9f) {
-        _log(DESTINY__ERROR, "Destiny::Turn() - turnTic:%u, degRemain:%.3f, turnPercent:%.2f", m_turnTic, degrees, turnPercent);
-        turnPercent = 0.9;
+    // Nlerp fraction: how much of the remaining angle we close this tic.
+    float t = maxDegThisTic / degrees;
+    if (t > 1.0f)
+        t = 1.0f;
+    if (t < 0.0f)
+        t = 0.0f;
+
+    // Unit-sphere nlerp: heading' = normalize( heading*(1-t) + target*t )
+    GVector next(
+        m_shipHeading.x * (1.0f - t) + m_targetHeading.x * t,
+        m_shipHeading.y * (1.0f - t) + m_targetHeading.y * t,
+        m_shipHeading.z * (1.0f - t) + m_targetHeading.z * t);
+    if (next.isZero()) {
+        // 180-degree flip singularity -- pick any perpendicular step via target.
+        next = m_targetHeading;
     }
-    deltaHeading *= turnPercent;
-    m_shipHeading += deltaHeading;
+    next.normalize();
+    m_shipHeading = next;
+
+    // Publish heading so the client does not free-sim a different turn and
+    // then get snapped by the next velocity packet.  CmdGotoDirection is the
+    // same packet Goto uses; Follow keeps its ball mode, we only share face.
+    if ((m_turnTic % 2) == 0) {   // every other tic is enough; 1 Hz full would spam
+        CmdGotoDirection du;
+            du.entityID = mySE->GetID();
+            du.x = m_shipHeading.x;
+            du.y = m_shipHeading.y;
+            du.z = m_shipHeading.z;
+        PyTuple* up = du.Encode();
+        SendSingleDestinyUpdate(&up);   // consumed
+    }
+
     if (is_log_enabled(DESTINY__TURN_TRACE))
-        _log(DESTINY__TURN_TRACE, "Destiny::Turn() - tf:%.3f, turnTic:%u, degRemain:%.3f  (deltaHeading:%.5f, %.5f, %.5f * turnPercent:%.2f) = shipHeading:%.3f, %.3f, %.3f", \
-            m_timeFraction, m_turnTic, degrees, deltaHeading.x, deltaHeading.y, deltaHeading.z, turnPercent, m_shipHeading.x, m_shipHeading.y, m_shipHeading.z);
+        _log(DESTINY__TURN_TRACE,
+             "Destiny::Turn() - tf:%.3f, turnTic:%u, degRemain:%.3f, t:%.3f -> head:%.3f,%.3f,%.3f",
+             m_timeFraction, m_turnTic, degrees * (1.0f - t), t,
+             m_shipHeading.x, m_shipHeading.y, m_shipHeading.z);
 }
 
 void DestinyManager::ClearTurn() {
-    SetPosition(m_position, sConfig.debug.PositionHack);   // (PositionHack == true) here will force position update to client
+    // TURN-1: do NOT PositionHack here.  Snapping the ship on every turn
+    // completion was a major source of the visible "snap back forward"
+    // after a turn toward a gate.  Heading is already unit and aligned;
+    // position is continuous from MoveObject.
     m_turnTic = 0;
     m_turning = false;
     m_radians = 0.0f;
@@ -1623,6 +1649,10 @@ void DestinyManager::InitWarp() {
 
     GVector warp_vector(m_position, m_targetPoint);
     warp_vector.normalize();
+    // WARP-LAND-1: face the destination from the first warp tick so land
+    // residual / CmdStop never apply a stale or reverse heading.
+    m_shipHeading = warp_vector;
+    m_targetHeading = warp_vector;
 
     if (is_log_enabled(DESTINY__WARP_TRACE)) {
         _log(
@@ -1711,6 +1741,29 @@ void DestinyManager::InitWarp() {
         mySE->GetSelf()->SetAttribute(AttrCapacitorCharge, m_capNeeded);
         mySE->GetShipSE()->Warp();
         m_capNeeded = 0;
+
+        // WARP-FX-1: WarpTo() already sent CmdWarpTo + effects.Warping at
+        // *align* start, but the real client often misses that (ballpark
+        // not ready / AttributeError on .radius) and InitWarp after the
+        // align-timeout catchall never re-sent FX -- warp ran server-side
+        // with no tunnel.  Re-broadcast at the moment warp actually begins.
+        std::vector<PyTuple*> updates;
+        CmdWarpTo wt;
+        wt.entityID = mySE->GetID();
+        wt.dest_x = m_targetPoint.x;
+        wt.dest_y = m_targetPoint.y;
+        wt.dest_z = m_targetPoint.z;
+        wt.distance = m_stopDistance;
+        wt.warpSpeed = GetWarpSpeed();
+        updates.push_back(wt.Encode());
+        OnSpecialFX10 sfx;
+        sfx.guid = "effects.Warping";
+        sfx.entityID = mySE->GetID();
+        sfx.isOffensive = false;
+        sfx.start = true;
+        sfx.active = true;
+        updates.push_back(sfx.Encode());
+        SendDestinyUpdate(updates);
     }
 
     //clear targets
@@ -1834,6 +1887,12 @@ void DestinyManager::WarpDecel(uint16 sec_into_warp) {
 void DestinyManager::WarpUpdate(double currentShipSpeed) {
     //  update position and velocity for all stages.
     //  this method is ~1000m off actual.  could be due to rounding.   -allan 9Jan15
+    // WARP-LAND-1: keep heading locked to travel direction for the whole
+    // warp. Velocity already used warp_vector; heading used to lag at the
+    // align-time value (or worse after the align-timeout force-InitWarp),
+    // so WarpStop residual + CmdStop could reverse-face the client.
+    m_shipHeading = m_warpState->warp_vector;
+    m_targetHeading = m_warpState->warp_vector;
     m_velocity = (m_warpState->warp_vector * currentShipSpeed);
     SetPosition(m_targetPoint - (m_warpState->warp_vector * m_targetDistance));
 
@@ -1885,46 +1944,108 @@ void DestinyManager::WarpUpdate(double currentShipSpeed) {
 }
 
 void DestinyManager::WarpStop(double currentShipSpeed) {
+    // WARP-LAND-3: retail leave-warp is residual *along* travel heading then
+    // natural decel. Hard v=0 + CmdStop freezes whatever intermediate
+    // facing the client had mid-correction ("turns then snaps off course").
+    // No SendSetState (crashes). No GotoDirection (animates a turn).
+    GVector landHeading = m_shipHeading;
+    double remain = m_targetDistance;
+    if ((m_warpState != nullptr) and !m_warpState->warp_vector.isZero()) {
+        landHeading = m_warpState->warp_vector;
+    } else if (!m_velocity.isZero()) {
+        landHeading = m_velocity;
+        landHeading.normalize();
+    }
+    if (!landHeading.isZero())
+        landHeading.normalize();
+
+    double residual = currentShipSpeed;
+    if (residual < 0.0)
+        residual = 0.0;
+    if ((m_speedToLeaveWarp > 0.0f) and (residual > m_speedToLeaveWarp))
+        residual = m_speedToLeaveWarp;
+    // Keep a small forward residual so the client has a facing vector.
+    if ((residual < 10.0) and !landHeading.isZero())
+        residual = 10.0;
+
+    if (!landHeading.isZero()) {
+        m_shipHeading = landHeading;
+        m_targetHeading = landHeading;
+    }
+
     if (is_log_enabled(DESTINY__WARP_TRACE)) {
-        _log(DESTINY__WARP_TRACE, "Destiny::WarpStop(): %s(%u) - Warp complete. Exit velocity %.4f m/s with %.2f m left to go.", \
-                mySE->GetName(), mySE->GetID(), currentShipSpeed, m_targetDistance);
-        _log(DESTINY__WARP_TRACE, "Destiny::WarpStop(): %s(%u): Ship currently at %.2f,%.2f,%.2f.", \
-                mySE->GetName(), mySE->GetID(), m_position.x, m_position.y, m_position.z);
+        _log(DESTINY__WARP_TRACE, "Destiny::WarpStop(): %s(%u) - Warp complete. residual %.4f m/s remain %.2f m.", \
+                mySE->GetName(), mySE->GetID(), residual, remain);
+        _log(DESTINY__WARP_TRACE, "Destiny::WarpStop(): %s(%u): at %.2f,%.2f,%.2f heading %.3f,%.3f,%.3f", \
+                mySE->GetName(), mySE->GetID(), m_position.x, m_position.y, m_position.z,
+                m_shipHeading.x, m_shipHeading.y, m_shipHeading.z);
     }
     if (mySE->IsShipSE()) {
         _log(AUTOPILOT__MESSAGE, "Destiny::WarpStop(): %s(%u) - Warp complete.", mySE->GetName(), mySE->GetID());
         mySE->GetPilot()->SetLoginWarpComplete();
     }
-    // DESTINY-3: the old code shoved m_targetPoint 10km forward along the
-    // warp vector here, moving the post-warp coast/approach point past the
-    // intended landing spot (and into station models on dock warps).
-    // Land where the warp math says we land.
-    // SetSpeedFraction() checks for m_state = Warp and warpstate != null to set decel variables correctly with warp decel.
-    //   have to call this BEFORE deleting or reseting m_state or WarpState.
-    SetSpeedFraction(0.0f);
-    m_stop = true;
+
     SafeDelete(m_warpState);
     m_targBubble = nullptr;
     if ((mySE->IsNPCSE()) and (mySE->GetNPCSE()->GetAIMgr() != nullptr)) {
         mySE->GetNPCSE()->GetAIMgr()->WarpOutComplete();
     }
 
-    // broadcast the authoritative stopped state exactly once at warp
-    // exit: PHYS-1 removed the per-tick Stop spam whose side effect was
-    // correcting residual client-side velocity (e.g. a pre-warp bounce),
-    // which left ships visually drifting backwards after landing
-    CmdStop stopDu;
-        stopDu.entityID = mySE->GetID();
-    PyTuple* stopUp = stopDu.Encode();
-    SendSingleDestinyUpdate(&stopUp);
+    ClearTurn();
+    ClearOrbit();
+    m_targetEntity.first = 0;
+    m_targetEntity.second = nullptr;
+    m_ballMode = Destiny::Ball::Mode::STOP;
+    m_stop = true;
+    m_accel = false;
+    m_turning = false;
+    m_userSpeedFraction = 0.0f;
+    m_maxSpeed = m_maxShipSpeed;
+    m_velocity = m_shipHeading * residual;
+    if (!m_shipHeading.isZero())
+        m_targetPoint = m_position + (m_shipHeading * 1.0e16);
 
-    // TODO: when exiting warp, and attempting to warp again shortly after, the
-    // ball mode reaches a weird state where it goes from Warp to a regular
-    // move. Halting the ship after warp completes seems to fix this, but it's
-    // not a good fix, because the client shows that the ship moves a few meters
-    // forward while decelerating - meaning that the client and server are
-    // briefly out of sync because the server thinks the ship is halted.
-    Halt();
+    // Decel residual along travel heading via MoveObject (no Halt yet).
+    if ((m_maxShipSpeed > 1.0f) and (residual > 0.5)) {
+        m_prevSpeed = static_cast<float>(residual);
+        m_prevSpeedFraction = static_cast<float>(residual / m_maxShipSpeed);
+        if (m_prevSpeedFraction > 1.0f)
+            m_prevSpeedFraction = 1.0f;
+        m_activeSpeedFraction = m_prevSpeedFraction;
+        m_timeFraction = 0.01f;
+        m_decel = true;
+        m_shipAccelTime = m_shipMaxAccelTime * m_prevSpeedFraction;
+        if (m_shipAccelTime < 0.5f)
+            m_shipAccelTime = 0.5f;
+        m_moveTime = GetTimeMSeconds();
+        m_stateStamp = sEntityList.GetStamp();
+    } else {
+        m_prevSpeed = 0.0f;
+        m_prevSpeedFraction = 0.0f;
+        m_activeSpeedFraction = 0.0f;
+        m_timeFraction = 0.0f;
+        m_decel = false;
+        m_velocity = GVector(NULL_ORIGIN);
+    }
+
+    // Client: residual along travel only + speed fraction 0 (decel).
+    // Do not CmdStop here — that freezes mid-turn facing.
+    std::vector<PyTuple*> updates;
+    SetBallVelocity bv;
+        bv.entityID = mySE->GetID();
+        bv.x = m_velocity.x;
+        bv.y = m_velocity.y;
+        bv.z = m_velocity.z;
+    updates.push_back(bv.Encode());
+    CmdSetSpeedFraction ssf;
+        ssf.entityID = mySE->GetID();
+        ssf.fraction = 0.0;
+    updates.push_back(ssf.Encode());
+    SendDestinyUpdate(updates);
+
+    // Dest entities only (no full SetState — client crash risk).
+    if (mySE->HasPilot() and (mySE->SysBubble() != nullptr))
+        mySE->SysBubble()->SendAddBalls(mySE);
 }
 
 //called whenever an entity is going away and can no longer be used as a target
@@ -2404,6 +2525,14 @@ void DestinyManager::Orbit(SystemEntity *pSE, uint32 distance/*0*/) {
 
     double velocity = m_maxShipSpeed * ((distance / m_followDistance) + 0.065); // dunno where i got this from but seems to work very well.
     m_maxOrbitSpeedFraction = velocity / m_maxShipSpeed;
+    // DESTINY-11: when distance >> followDistance (e.g. after a hull/collision
+    // punt, or a stale orbit target thousands of km away) this fraction
+    // explodes past 1.0 and MoveObject multiplies sub-warp speed by it —
+    // ships leave the 8000 km grid in a few ticks. Cap at full ship speed.
+    if (m_maxOrbitSpeedFraction > 1.0)
+        m_maxOrbitSpeedFraction = 1.0;
+    else if (m_maxOrbitSpeedFraction < 0.05)
+        m_maxOrbitSpeedFraction = 0.05;
 
     double circ = EvE::Trig::Pi2 * m_followDistance;
     m_orbitTime = circ / velocity;
@@ -2963,11 +3092,23 @@ void DestinyManager::Jump(bool showCloak)
         mySE->SysBubble()->RemoveExclusive(mySE);
 }
 
-void DestinyManager::Cloak() {
+void DestinyManager::Cloak(int32 durationMs/*20000*/) {
     if (m_cloaked)
         return;
     m_cloaked = true;
-    SendCloakFx(true);
+    // LOGIN-CLOAK-1: login uses LoginCloak (20s); jump uses ApplyJumpCloak (30s).
+    SendCloakFx(true, false, durationMs);
+    if (mySE->SysBubble() != nullptr)
+        mySE->SysBubble()->RemoveExclusive(mySE);
+}
+
+// JUMP-CLOAK-1: Jump() only sets m_cloaked (no FX) so SetState can encode
+// mass.cloak=1 without a pre-ballpark flash. Cloak() early-outs when already
+// flagged, so gate land never sent effects.Cloak and the pilot saw no 30s
+// session cloak. Call this after SendSetState on gate/WH arrival.
+void DestinyManager::ApplyJumpCloak() {
+    m_cloaked = true;
+    SendCloakFx(true, false, static_cast<int32>(Player::Timer::JumpCloak));
     if (mySE->SysBubble() != nullptr)
         mySE->SysBubble()->RemoveExclusive(mySE);
 }
@@ -2976,7 +3117,12 @@ void DestinyManager::UnCloak() {
     if (!m_cloaked)
         return;
     m_cloaked = false;
-    SendCloakFx();
+    SendCloakFx(false);
+    // Drop the jump-cloak timer if the pilot broke cloak early (move/warp).
+    // Leaving it running blocked a clean 30s restart on the next jump
+    // (Timer::Start does not reset startTime while enabled).
+    if (mySE->HasPilot())
+        mySE->GetPilot()->DisableCloakTimer();
     if (mySE->SysBubble() != nullptr)
         mySE->SysBubble()->AddBallExclusive(mySE);
 }
@@ -3171,33 +3317,50 @@ void DestinyManager::SendAnchorLift() const {
     */
 
 /** @todo verify 'start' and 'active' here... */
-void DestinyManager::SendCloakFx(bool apply/*false*/, bool module/*false*/) const {
-    PyTuple *up(nullptr);
+void DestinyManager::SendCloakFx(bool apply/*false*/, bool module/*false*/, int32 durationMs/*30000*/) const {
+    // JUMP-CLOAK-2 / LOGIN-CLOAK-1: session/login cloak must use OnSpecialFX14
+    // with a real duration.  Old OnSpecialFX10 sent active=0 and no duration
+    // (short flash).  duration 0 encodes as None (xmlp none_marker) and the
+    // client TypeErrors on Uncloak math -- always use >= 1 for uncloak.
+    OnSpecialFX14 effect;
+    effect.entityID = mySE->GetID();
+    effect.moduleID = 0;
+    effect.moduleTypeID = 0;
+    effect.targetID = PyStatic.NewNone();
+    effect.chargeTypeID = PyStatic.NewNone();
+    effect.area = new PyList();
+    effect.isOffensive = false;
+    effect.graphicInfo = PyStatic.NewNone();
+    effect.startTime = GetFileTimeNow();
+    effect.repeat = 0;
+
     if (module) {
-        OnSpecialFX14 effect;
-        effect.entityID = mySE->GetID();
-        effect.isOffensive = 0;
         if (apply) {
             effect.guid = "effects.Cloaking";
             effect.start = 1;
             effect.active = 1;
+            effect.duration = -1;   // continuous until Uncloak
         } else {
             effect.guid = "effects.Uncloak";
+            effect.start = 1;
+            effect.active = 0;
+            effect.duration = 7500; // live classification; never 0
         }
-        up = effect.Encode();
+    } else if (apply) {
+        effect.guid = "effects.Cloak";
+        effect.start = 1;
+        effect.active = 1;
+        // LoginCloak=20s, JumpCloak=30s — caller chooses via durationMs.
+        if (durationMs < 1)
+            durationMs = static_cast<int32>(Player::Timer::JumpCloak);
+        effect.duration = durationMs;
     } else {
-        OnSpecialFX10 effect;
-        if (apply) {
-            effect.guid = "effects.Cloak";
-        } else {
-            effect.guid = "effects.Uncloak";
-        }
-        effect.entityID = mySE->GetID();
-        effect.isOffensive = 0;
+        effect.guid = "effects.Uncloak";
         effect.start = 1;
         effect.active = 0;
-        up = effect.Encode();
+        effect.duration = 7500;
     }
+    PyTuple* up = effect.Encode();
     SendSingleDestinyUpdate(&up);   // consumed
 }
 
@@ -3469,8 +3632,14 @@ void DestinyManager::SendDestinyUpdate(std::vector<PyTuple*> &updates, bool self
 }
 
 void DestinyManager::SendDestinyUpdate( std::vector<PyTuple*>& updates, std::vector<PyTuple*>& events, bool self_only/*false*/) const {
-    // this check shouldnt be needed...
-    if (!mySE->SystemMgr()->IsLoaded()) {
+    // SOAK-1b: scram/module ShowEffect can fire after the owning ship SE
+    // was removed/freed (client logout mid-module-cycle).  Guard before
+    // any mySE-> dereference (live SIGSEGV: SystemEntity::SystemMgr on
+    // garbage this during WarpScramble deactivate).
+    if (mySE == nullptr)
+        return;
+    SystemManager* sys = mySE->SystemMgr();
+    if (sys == nullptr || !sys->IsLoaded()) {
         return;
     }
 

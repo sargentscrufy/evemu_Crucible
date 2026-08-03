@@ -112,10 +112,11 @@ Already working for PvP, no changes needed: damage pipeline is
 source-agnostic, players can lock/shoot players, wreck spawns on kill
 with cargo/module drops (50% roll, rigs destroyed — Damage.cpp:515-547),
 wreck looting works, killmails persist, victim pods eject.  Blockers:
-- **A-1 warp scramble is non-functional** (highest priority): the
-  CmdWarpToStuff check exists, but scrambler/disruptor/stab module
-  handlers are commented out (ActiveModule.cpp:806-815) — nothing can
-  tackle, so kills can't be forced.  Fix first.
+- **A-1 warp scramble — FIXED + VALIDATED (TACKLE-1):** handlers live in
+  `ActiveModule.cpp` (Warp_Scrambler group adds/clears
+  `AttrWarpScrambleStatus`); bot-certified by `tools/simfleet/tackle_test.py`.
+  NPC-EWAR-1 also applies rat points.  (This section was stale as of the
+  2026-07-15 checkpoint.)
 - **A-2 CrimeWatch is an uninstantiated stub** (CrimeWatch.cpp:39-41):
   no suspect/criminal flags, no kill rights, no loot rights.  Sec-status
   loss on aggression does work (Damage.cpp:457-470).

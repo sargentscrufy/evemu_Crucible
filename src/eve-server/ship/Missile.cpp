@@ -41,6 +41,7 @@ Missile::Missile( InventoryItemRef self, EVEServiceManager& services, SystemMana
   m_modRef(modRef),
   m_targetSE(tSE),
   m_fromSE(pSE),
+  m_targetID(tSE != nullptr ? tSE->GetID() : 0),
   m_hitTimer(0),
   m_lifeTimer(0),
   m_damageMod(1),
@@ -236,7 +237,22 @@ void Missile::HitTarget() {
     // COMP-B: a launcher fired with no locked target spawns a missile with
     // a null target; without this guard HitTarget null-derefs and segfaults
     // the node.  no target -> the missile simply expires.
+    //
+    // SOAK-2: never trust the raw m_targetSE pointer across the flight
+    // window — the target may have been destroyed (Killed/Delete) leaving
+    // a dangling SE*.  Re-resolve by itemID through the live SystemManager.
+    m_targetSE = nullptr;
+    if (m_targetID != 0 && SystemMgr() != nullptr)
+        m_targetSE = SystemMgr()->GetSE(m_targetID);
+
     if (m_targetSE == nullptr) {
+        m_alive = false;
+        return;
+    }
+
+    InventoryItemRef tgtItem = m_targetSE->GetSelf();
+    if (tgtItem.get() == nullptr) {
+        m_targetSE = nullptr;
         m_alive = false;
         return;
     }
@@ -257,11 +273,17 @@ void Missile::HitTarget() {
      * MIN being a function that chooses the lower of the given vaules,
      * ln is natural logarithm.
      */
-    double Sr = m_targetSE->GetSelf()->GetAttribute(AttrSignatureRadius).get_float();    // this is a default number, based on itemtype
+    double Sr = tgtItem->GetAttribute(AttrSignatureRadius).get_float();    // this is a default number, based on itemtype
+    if (Sr <= 0.0)
+        Sr = 40.0; // sane frigate-scale fallback; never divide-by-zero below
     double Er = m_self->GetAttribute(AttrAoeCloudSize).get_float(); // Explosion Radius
     double Ev = m_self->GetAttribute(AttrAoeVelocity).get_float(); // Explosion Velocity
     double DRF = m_self->GetAttribute(AttrAoeDamageReductionFactor).get_float(); // Damage Reduction Factor
     double DRS = m_self->GetAttribute(AttrAoeDamageReductionSensitivity).get_float(); // Damage Reduction Sensitivity
+    if (Er <= 0.0) Er = 1.0;
+    if (Ev <= 0.0) Ev = 1.0;
+    if (DRF <= 0.0) DRF = 1.0;
+    if (DRS <= 0.0 || DRS == 1.0) DRS = 1.0001; // avoid log(1)=0 / div0
 
     GPoint Vel = m_targetSE->GetVelocity();
     double V = Vel.length();

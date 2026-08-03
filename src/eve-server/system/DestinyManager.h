@@ -166,7 +166,9 @@ public:
 
     //Destiny Update stuff:
     void Jump(bool showCloak=true);
-    void Cloak();
+    // durationMs: session/login cloak visual length. 0 = continuous module-style.
+    // Default LoginCloak so accidental Cloak() callers don't use jump length.
+    void Cloak(int32 durationMs = 20000);
     void UnCloak();
 
     PyResult AttemptDockOperation();
@@ -187,7 +189,11 @@ public:
     void SendJettisonPacket() const;
     void SendAnchorDrop() const;
     void SendAnchorLift() const;
-    void SendCloakFx(bool apply=false, bool module=false) const;
+    // durationMs used when apply && !module (session/jump/login cloak visual).
+    void SendCloakFx(bool apply=false, bool module=false, int32 durationMs=30000) const;
+    // Gate/WH jump cloak: force flag + effects.Cloak even if already flagged
+    // (Jump() sets m_cloaked silently so SetState can encode mass.cloak=1).
+    void ApplyJumpCloak();
     void SendSpecialEffect10(uint32 entityID, uint32 targetID, std::string guid, bool isOffensive, bool start, bool isActive) const;
     void SendSpecialEffect(uint32 entityID, uint32 moduleID, uint32 moduleTypeID, uint32 targetID, uint32 chargeTypeID, std::string guid, bool isOffensive, bool start, bool isActive, int32 duration, uint32 repeat, int32 graphicInfo = 0) const;
 
