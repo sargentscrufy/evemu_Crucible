@@ -1172,6 +1172,17 @@ user asked for. All one-to-few lines, deployed together.
   Large_Collidable_* props with `dunRoomName=Combat`.  **Human playtest
   objective C2–C5** in `doc/USER_TEST_PLAYTEST.md`.
 
+### FIT-1: CharFittingMgr ship fitting save/load (FIXED 2026-08-12)
+- **Source:** upstream staging #317 (a5fe2b), ported with one adapt.
+- **Symptom:** GetFittings / SaveFitting / DeleteFitting /
+  UpdateNameAndDescription were stubs returning nullptr; fittings UI could
+  not persist. Base chrShipFittings still used obsolete shipDNA column.
+- **Fix:** wire CharFittingMgr to CharacterDB helpers; migration
+  20250928104038-charFittingMgr.sql drops shipDNA, adds name/description,
+  creates shipFittings item rows. Adapt: do not SQL-escape values on read.
+  SaveManyFittings still stub (same as upstream). Apply migration on private DB.
+  Upstream-gift candidate.
+
 ### NETWORK-3: ProcessNet packet leak + EVESession handler nulling (FIXED 2026-08-12)
 - **Source:** upstream staging #311 (d74a231), surgical port — Client/EVESession
   only (skipped Buffer/Dockerfile/CMake).

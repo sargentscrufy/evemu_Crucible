@@ -1,6 +1,7 @@
 *** Private Server Fork - upstream triage ports (2026-08-12) ***
 Cherry-picks / adapts from EvEmu-Project staging + open PRs; keep fork separate.
 - [FIX] NETWORK-3: ProcessNet per-packet SafeDelete leak; EVESession never nulls handler (upstream #311)
+- [FEAT] FIT-1: CharFittingMgr save/load + shipFittings migration (upstream #317; no escape-on-read)
 
 *** Private Server Fork — playtest polish (2026-08-02 / 03) ***
 Live interactive playtest (SARGENTSCRUFY / Cold Steel 2) + stability polish.
