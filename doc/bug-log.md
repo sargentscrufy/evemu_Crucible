@@ -1172,6 +1172,15 @@ user asked for. All one-to-few lines, deployed together.
   Large_Collidable_* props with `dunRoomName=Combat`.  **Human playtest
   objective C2–C5** in `doc/USER_TEST_PLAYTEST.md`.
 
+### NETWORK-3: ProcessNet packet leak + EVESession handler nulling (FIXED 2026-08-12)
+- **Source:** upstream staging #311 (d74a231), surgical port — Client/EVESession
+  only (skipped Buffer/Dockerfile/CMake).
+- **Symptom:** Client::ProcessNet nulled each PyPacket* inside the pop loop
+  then SafeDelete once after the loop, so every packet except the last leaked.
+  EVEClientSession also set mPacketHandler to null during Reset/ctor windows.
+- **Fix:** SafeDelete(p) inside the loop; never null mPacketHandler — init and
+  Reset to &EVEClientSession::_HandleVersion. Upstream-gift candidate.
+
 ### NETWORK-2: disconnect destructor-order UAF (FIXED 2026-07-15)
 - **Found by:** GDB auto-backtrace during a QA regression run (server
   auto-restarted; zero player impact).

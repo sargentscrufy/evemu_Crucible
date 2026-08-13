@@ -36,9 +36,7 @@
 #include "EVEVersion.h"
 
 EVEClientSession::EVEClientSession(EVETCPConnection** n)
-: mNet(*n),
-mPacketHandler(nullptr)
-{
+: mNet(*n), mPacketHandler(&EVEClientSession::_HandleVersion) {
     *n = nullptr;
 }
 
@@ -48,19 +46,18 @@ EVEClientSession::~EVEClientSession() {
 }
 
 void EVEClientSession::Reset() {
-    mPacketHandler = nullptr;
+    mPacketHandler = &EVEClientSession::_HandleVersion;
 
-    if (GetState() != TCPConnection::STATE_CONNECTED)
+    if (GetState() != TCPConnection::STATE_CONNECTED) {
         // Connection has been lost, there's no point in reset
         return;
+    }
 
     VersionExchangeServer version;
     _GetVersion(version);
 
     PyRep* res(version.Encode());
     mNet->QueueRep(res);
-
-    mPacketHandler = &EVEClientSession::_HandleVersion;
 }
 
 void EVEClientSession::QueuePacket(PyPacket* packet) {

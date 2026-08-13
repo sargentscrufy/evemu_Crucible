@@ -1,3 +1,7 @@
+*** Private Server Fork - upstream triage ports (2026-08-12) ***
+Cherry-picks / adapts from EvEmu-Project staging + open PRs; keep fork separate.
+- [FIX] NETWORK-3: ProcessNet per-packet SafeDelete leak; EVESession never nulls handler (upstream #311)
+
 *** Private Server Fork — playtest polish (2026-08-02 / 03) ***
 Live interactive playtest (SARGENTSCRUFY / Cold Steel 2) + stability polish.
 - [FIX] TURN-1: gate approach turn/snap — live target heading each tic, unit nlerp, no PositionHack on ClearTurn, publish CmdGotoDirection while turning

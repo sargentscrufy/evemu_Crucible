@@ -228,11 +228,9 @@ bool Client::ProcessNet()
             _SendException(p->dest, p->source.callID, p->type, WRAPPEDEXCEPTION, &e.ssException);
         }
 
-        p = nullptr;
+        SafeDelete(p);
     }
 
-    // cleanup
-    SafeDelete(p);
     // send queue
     _SendQueuedUpdates();
 
