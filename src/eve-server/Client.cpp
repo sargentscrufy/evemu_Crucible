@@ -306,9 +306,10 @@ bool Client::SelectCharacter(int32 charID/*0*/)
     if (sDataMgr.IsSolarSystem(m_locationID)) {
         pos = m_ship->position();
 
+        // DESTINY/#323 adapt: stay at DB-saved logout coords instead of
+        // spawning 0.5 AU away and forcing a login warp every relog.
         m_loginWarpPoint = pos;
-        m_loginWarpRandomPoint = m_ship->position();
-        m_loginWarpRandomPoint.MakeRandomPointOnSphere(0.5*ONE_AU_IN_METERS);
+        m_loginWarpRandomPoint = pos;
 
         MoveToLocation(m_locationID, m_loginWarpRandomPoint);
 
@@ -562,11 +563,32 @@ void Client::ProcessClient() {
                             }
                         }
                     }
-                    // Uncloak as login warp starts (retail: cloak drops when
-                    // you enter warp).  WarpStop also forces UnCloak via
-                    // SetLoginWarpComplete as a second safety net.
-                    pShipSE->DestinyMgr()->UnCloak();
-                    pShipSE->DestinyMgr()->WarpTo(m_loginWarpPoint);
+                    // DESTINY/#323 adapt: after DESTINY-2/10 clamps, skip the
+                    // login warp when already near the landing point (typical
+                    // when we no longer offset spawn by 0.5 AU).
+                    const double LOGIN_WARP_SKIP_DISTANCE_M = 1000.0;
+                    GPoint curPos = pShipSE->DestinyMgr()->GetPosition();
+                    GVector toLand(curPos, m_loginWarpPoint);
+                    if (toLand.length() <= LOGIN_WARP_SKIP_DISTANCE_M) {
+                        if (toLand.length() > 1.0) {
+                            // Station perimeter push may have nudged landing;
+                            // snap rather than warp for sub-km corrections.
+                            pShipSE->DestinyMgr()->SetPosition(m_loginWarpPoint, true);
+                            m_ship->SetPosition(m_loginWarpPoint);
+                        }
+                        pShipSE->DestinyMgr()->Stop();
+                        pShipSE->DestinyMgr()->UnCloak();
+                        SetLoginWarpComplete();
+                        UpdateBubble();
+                        _log(CLIENT__WARNING, "LoginWarp: %s already within %.0fm of landing; skipped warp.",
+                             GetName(), LOGIN_WARP_SKIP_DISTANCE_M);
+                    } else {
+                        // Uncloak as login warp starts (retail: cloak drops when
+                        // you enter warp).  WarpStop also forces UnCloak via
+                        // SetLoginWarpComplete as a second safety net.
+                        pShipSE->DestinyMgr()->UnCloak();
+                        pShipSE->DestinyMgr()->WarpTo(m_loginWarpPoint);
+                    }
                     } break;
                 case Player::State::Jump: {
                     _log(CLIENT__TIMER, "ProcessClient()::CheckState():  case: Jump");
@@ -660,15 +682,13 @@ void Client::UpdateBubble() {
 // player was in space when they last logged out.
 //
 // The login warp-in process is a multi-step process. First, the player's ship
-// is immediately moved to a position around 0.5 AU away from their logged-out
-// position.
+// is placed at its DB-saved logout coordinates (no 0.5 AU offset). If that
+// landing point survives DESTINY-2/10 clamps within 1 km of the ship, the
+// LoginWarp tick skips WarpTo; otherwise it warps to the (possibly clamped)
+// landing point.
 //
-// However, merely setting the position isn't enough. The client needs to
-// subsequently synchronize the state of the player & the surrounding bubble
-// with the server, so `UpdateBubble` is called. This is important because
-// during the process of establishing the warp vector, the player's ship is
-// going to be aligning to warp for a few seconds, and so the client needs to
-// know what's in its current bubble for that duration.
+// `UpdateBubble` still runs so the client syncs the surrounding bubble before
+// any align/warp, or before we settle Idle on a skipped warp.
 //
 // During the development of `WarpIn()`, it was observed that the behavior of
 // the ship was inconsistent if `Destiny->WarpTo()` was called immediately after
@@ -699,13 +719,20 @@ void Client::WarpIn() {
 }
 
 void Client::WarpOut() {
-    sLog.Blue("Client::WarpOut()", "Client Destructor for %s(%u) called WarpOut().  Finish code here.", GetName(), m_char->itemID());
+    sLog.Blue("Client::WarpOut()", "Client Destructor for %s(%u) called WarpOut().", GetName(), m_char->itemID());
     char ci[45];
     snprintf(ci, sizeof(ci), "Logout: %s(%u)", GetName(), m_char->itemID());
     m_ship->SetCustomInfo(ci);
     if (!InPod())
         m_ship->SetFlag(flagShipOffline);
-    pShipSE->SetPosition(m_ship->position());
+    // DESTINY/#323 adapt: persist live destiny coords before teardown so the
+    // next login lands where the ship actually was, not a stale item pos.
+    if ((pShipSE != nullptr) and (pShipSE->DestinyMgr() != nullptr)) {
+        const GPoint& live = pShipSE->DestinyMgr()->GetPosition();
+        m_ship->SetPosition(live);
+        pShipSE->SetPosition(live);
+    }
+    m_ship->SaveShip();
     DestroyShipSE();
     return;
     /*

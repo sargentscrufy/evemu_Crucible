@@ -266,9 +266,9 @@ running "Retrieve the Reports" within the hour. Findings, all live-observed:
   AddTargetModule's refusal to register non-mining modules on asteroids
   (post-ROID-1, guns must be in the rock's module map for the
   death/depletion deactivation chain).
-- **Login-in-space placement offset (DESTINY-2 adjacent, data point):**
-  resuming a char in space placed the ship ~0.5 AU from its DB-stored entity
-  coordinates (bot relogin after teleport). Workaround: warp in-session.
+- **Login-in-space placement offset (DESTINY-2 adjacent) - FIXED as DESTINY-14
+  2026-08-12:** was the intentional 0.5 AU random login spawn + forced login
+  warp; see DESTINY-14 entry.
 - **DESTINY-11 — FIXED (code, awaiting bot re-cert): collision/smartbomb
   bump velocity unclamped — target punted off-grid.** Live repro: player
   Hurricane closed to smartbomb range of the bot Badger and fired; the
@@ -1171,6 +1171,16 @@ user asked for. All one-to-few lines, deployed together.
   `dunMusicUrl=res:/Sound/Music/Ambient031combat.ogg` on Warp_Gate **and**
   Large_Collidable_* props with `dunRoomName=Combat`.  **Human playtest
   objective C2–C5** in `doc/USER_TEST_PLAYTEST.md`.
+
+### DESTINY-14: login-in-space 0.5 AU offset + forced login warp (FIXED 2026-08-12)
+- **Source:** idea-port from upstream open PR #323 commit `e81d449` only
+  (ignored later client-era noise). Kept DESTINY-2/10 clamps + LOGIN-CLOAK-1.
+- **Symptom:** every in-space relog spawned ~0.5 AU from saved entity coords
+  (MakeRandomPointOnSphere) and always ran LoginWarp.
+- **Fix:** spawn at DB-saved logout pos; after DESTINY-2/10 clamps, skip WarpTo
+  when within 1 km (Stop/UnCloak/SetLoginWarpComplete/UpdateBubble, sub-km snap);
+  otherwise WarpTo as before. WarpOut persists live destiny position via SaveShip.
+  Upstream-gift candidate (login-side only).
 
 ### FIT-1: CharFittingMgr ship fitting save/load (FIXED 2026-08-12)
 - **Source:** upstream staging #317 (a5fe2b), ported with one adapt.
